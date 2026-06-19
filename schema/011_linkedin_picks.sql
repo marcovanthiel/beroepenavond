@@ -3,3 +3,4 @@ UPDATE speakers SET linkedin='https://www.linkedin.com/in/marcovanthiel/' WHERE 
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/wouter-van-der-geest-3a623534/' WHERE id='spk_imp_wouter-van-der-geest';
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/caspar-pompe-3868343/' WHERE id='spk_imp_casper-pompe';
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/janvanaggelen/' WHERE id='spk_imp_jan-van-aggelen';
+UPDATE speakers SET linkedin='https://www.linkedin.com/in/meijering/' WHERE id='spk_imp_john-meijering';
