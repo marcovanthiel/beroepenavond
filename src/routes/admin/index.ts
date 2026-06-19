@@ -32,6 +32,13 @@ import { classroomsApp } from './classrooms';
 import { floorplansApp } from './floorplans';
 import { sessionsApp } from './sessions';
 import { editorApp } from './floorplan-editor';
+import { inboxApp } from './inbox';
+import { subscribersApp } from './subscribers';
+import { announcementsApp } from './announcements';
+import { usersApp } from './users';
+import { accountApp } from './account';
+import { mediaApp } from './media';
+import { auditApp } from './audit';
 
 export const adminApp = new Hono<AdminEnv>();
 
@@ -107,44 +114,52 @@ adminApp.get('/', async (c) => {
   const db = c.env.DB;
   const q = (sql: string) =>
     db.prepare(sql).first<{ n: number }>().then((r) => r?.n ?? 0);
-  const [pages, beroepen, speakers, classrooms, floorplans, sessions, mapped] =
+  const [beroepen, speakers, sessions, mapped, newMsgs, subs, news] =
     await Promise.all([
-      q('SELECT COUNT(*) n FROM pages'),
       q('SELECT COUNT(*) n FROM beroepen'),
       q('SELECT COUNT(*) n FROM speakers'),
-      q('SELECT COUNT(*) n FROM classrooms'),
-      q('SELECT COUNT(*) n FROM floorplans'),
       q('SELECT COUNT(*) n FROM sessions_program'),
       q("SELECT COUNT(*) n FROM classrooms WHERE map_shape IS NOT NULL AND map_shape <> ''"),
+      q("SELECT COUNT(*) n FROM submissions WHERE status IN ('new','read')"),
+      q("SELECT COUNT(*) n FROM subscribers WHERE status='active'"),
+      q('SELECT COUNT(*) n FROM announcements'),
     ]);
   const ev = await db
     .prepare('SELECT title, date FROM events WHERE is_active = 1 LIMIT 1')
     .first<{ title: string; date: string }>();
+  const recent = await db
+    .prepare('SELECT id, type, name, email, created_at FROM submissions ORDER BY created_at DESC LIMIT 6')
+    .all<{ id: number; type: string; name: string | null; email: string | null; created_at: number }>();
 
-  const stat = (n: number, label: string, href: string) =>
-    `<a class="stat" href="${href}"><div class="stat__n">${n}</div><div class="stat__l">${esc(
-      label
-    )}</div></a>`;
+  const stat = (n: number, label: string, href: string, accent = false) =>
+    `<a class="stat" href="${href}"><div class="stat__n" ${accent && n > 0 ? 'style="color:#d4493f"' : ''}>${n}</div><div class="stat__l">${esc(label)}</div></a>`;
+
+  const recentRows = (recent.results ?? [])
+    .map(
+      (r) => `<tr><td>${r.type === 'volunteer' ? '🙋' : '✉️'}</td>
+        <td><a href="/admin/inbox/${r.id}">${esc(r.name ?? r.email ?? 'Onbekend')}</a></td>
+        <td class="muted">${new Date(r.created_at * 1000).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td></tr>`
+    )
+    .join('');
 
   const body = `
-    <header class="page-head"><h1>Dashboard</h1></header>
+    <header class="page-head"><h1>Dashboard</h1><div class="page-head__actions"><a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a></div></header>
     <div class="card">
       <h2>Actieve editie</h2>
       <p>${ev ? `<strong>${esc(ev.title)}</strong> — ${esc(ev.date)}` : 'Geen actieve editie ingesteld.'}</p>
     </div>
     <div class="stat-grid">
-      ${stat(pages, "Pagina's", '/admin/pages')}
+      ${stat(newMsgs, 'Openstaande berichten', '/admin/inbox', true)}
+      ${stat(subs, 'Nieuwsbrief-abonnees', '/admin/subscribers')}
       ${stat(beroepen, 'Beroepen', '/admin/beroepen')}
       ${stat(speakers, 'Sprekers', '/admin/speakers')}
-      ${stat(classrooms, 'Lokalen', '/admin/classrooms')}
-      ${stat(floorplans, 'Plattegronden', '/admin/floorplans')}
       ${stat(sessions, 'Sessies', '/admin/sessions')}
       ${stat(mapped, 'Lokalen op kaart', '/admin/floorplan-editor')}
+      ${stat(news, 'Nieuwsberichten', '/admin/nieuws')}
     </div>
     <div class="card">
-      <h2>Snel aan de slag</h2>
-      <p class="muted">Beheer de inhoud van de site, vul het programma en
-      teken de plattegrond. Wijzigingen zijn direct live.</p>
+      <h2>Laatste inzendingen</h2>
+      ${recentRows ? `<table class="data" style="width:100%">${recentRows}</table>` : '<p class="muted">Nog geen inzendingen.</p>'}
     </div>`;
 
   return renderAdminLayout(c, { title: 'Dashboard', activeKey: 'dashboard', body });
@@ -165,6 +180,13 @@ adminApp.route('/classrooms', classroomsApp);
 adminApp.route('/floorplans', floorplansApp);
 adminApp.route('/sessions', sessionsApp);
 adminApp.route('/floorplan-editor', editorApp);
+adminApp.route('/inbox', inboxApp);
+adminApp.route('/subscribers', subscribersApp);
+adminApp.route('/nieuws', announcementsApp);
+adminApp.route('/users', usersApp);
+adminApp.route('/account', accountApp);
+adminApp.route('/media', mediaApp);
+adminApp.route('/audit', auditApp);
 
 // Onbekende /admin/* → terug naar dashboard.
 adminApp.notFound((c) => redirectErr(c, '/admin', 'Onbekende beheerpagina.'));

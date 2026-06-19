@@ -123,6 +123,52 @@ naar apex via de Worker-middleware. Geen verdere DNS-actie nodig.
 `wrangler` weigert op Node 20. Gebruik:
 `export PATH="/opt/homebrew/opt/node@22/bin:$PATH"` vóór `wrangler …`.
 
+## Sessie 3 — volledige publieke site + backend + admin (LIVE)
+
+### Publieke site (alles in huisstijl DM Sans + lime, responsive, a11y)
+- **Design-system** uitgebreid in `style.css` (cards, grids, forms,
+  catalogus, sprekers, nieuws, notices, social-footer). `layout.ts`:
+  skip-link, breadcrumbs, hero-CTA's, JSON-LD, OG/canonical,
+  nieuwsbrief-mini-form + social in footer. Homepage kreeg de gedeelde
+  nav (signature-body blijft).
+- **Nieuwe pagina's**: `/uitleg-beroepen` = volledige **beroepencatalogus**
+  (zoek + categoriefilter, client-side), `/voorlichters` (sprekers-grid),
+  `/nieuws` + `/nieuws/:slug`, `/faq`, `/privacy` (AVG), `/contact`,
+  `/aanmelden` (voorlichter), `/nieuwsbrief`. Dynamische content via
+  `src/views/sections.ts`; gerouteerd in `routes/public.ts`.
+- **SEO**: dynamische `/sitemap.xml` (uit pages + nieuws), JSON-LD Event
+  op home, OG/canonical overal.
+
+### Backend / formulieren
+- 3 formulieren met honeypot-spam-bescherming → opslaan in `submissions`
+  (contact/volunteer) en `subscribers` (nieuwsbrief, light double-opt-in
+  met confirm/uitschrijf-token). Tabellen in `schema/004_extra.sql`.
+- **E-mail via Resend** (`src/lib/email.ts`): notificatie naar org +
+  bevestiging naar inzender + nieuwsbrief-confirm. Config-gestuurd
+  (settings `mail_*` + secret `RESEND_API_KEY`, al gezet). **Graceful**:
+  zonder geverifieerd domein worden inzendingen wél opgeslagen, maar gaat
+  er geen mail uit.
+
+### Admin (uitgebreid)
+- Nieuw: **Inbox** (contact/voorlichter afhandelen + "→ maak spreker"),
+  **Nieuwsbrief** (lijst + CSV-export), **Nieuws**-CRUD (cover-upload),
+  **Gebruikers** (rollen, alleen admin), **Mijn account** (naam +
+  wachtwoord), **Media-bibliotheek** (R2 lijst/upload/verwijderen),
+  **Audit-log**. Dashboard toont openstaande berichten + laatste
+  inzendingen.
+
+### ⏳ Openstaand voor Marco (2 dashboard-acties)
+1. **E-mail aanzetten**: DNS-records voor `inijmegen.com` toevoegen in
+   Cloudflare (zie `docs/EMAIL_DNS.md`). Daarna verstuurt Resend mail
+   vanaf `noreply@inijmegen.com`. (Domein staat al in het Resend-account,
+   status `not_started` tot de records er zijn.)
+2. **CI-token R2-permissie** (zie hierboven) zodat push→auto-deploy weer
+   groen wordt. Tot dan: handmatig `npx wrangler deploy` (met Node 22).
+
+Schema-migraties: `001`→`005`. Lokaal/remote toepassen met
+`npm run db:apply:remote` of per bestand
+`npx wrangler d1 execute beroepenavond --remote --file=schema/00X_*.sql`.
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt

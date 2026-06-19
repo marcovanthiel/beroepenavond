@@ -9,6 +9,9 @@ export interface Env {
   // Secret (wrangler secret put / .dev.vars) voor het signen van
   // sessie-cookies met HMAC-SHA256.
   SESSION_SECRET: string;
+  // Resend API-key voor uitgaande e-mail (optioneel: zonder key worden
+  // inzendingen wél opgeslagen, maar geen mail verstuurd).
+  RESEND_API_KEY?: string;
   // Vars uit wrangler.toml
   SITE_NAME: string;
   SITE_HOST: string;

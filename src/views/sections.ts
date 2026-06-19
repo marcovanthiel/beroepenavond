@@ -1,0 +1,271 @@
+/**
+ * Generatoren voor dynamische publieke content die als `appendHtml`
+ * onder een pagina-hero komt: beroepencatalogus, voorlichters-grid,
+ * nieuwsoverzicht en de publieke formulieren.
+ */
+import type { D1Database } from '@cloudflare/workers-types';
+import type { SettingsMap } from '../env';
+import { renderMarkdown } from '../lib/markdown';
+
+function esc(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+// ----------------------------------------------------------------------
+// Beroepencatalogus
+// ----------------------------------------------------------------------
+
+export async function renderBeroepenCatalog(db: D1Database): Promise<string> {
+  const cats = await db
+    .prepare('SELECT id, name, color FROM categories ORDER BY sort_order')
+    .all<{ id: string; name: string; color: string | null }>();
+  const ber = await db
+    .prepare(
+      'SELECT category_id, name, description_md FROM beroepen ORDER BY category_id, sort_order, name'
+    )
+    .all<{ category_id: string; name: string; description_md: string | null }>();
+
+  const byCat = new Map<string, { name: string; desc: string | null }[]>();
+  for (const b of ber.results ?? []) {
+    const list = byCat.get(b.category_id) ?? [];
+    list.push({ name: b.name, desc: b.description_md });
+    byCat.set(b.category_id, list);
+  }
+
+  const filterButtons = [
+    `<button class="active" data-cat="all" type="button">Alle</button>`,
+    ...(cats.results ?? []).map(
+      (c) =>
+        `<button data-cat="${esc(c.id)}" type="button"><span class="chip__dot" style="background:${esc(c.color ?? '#88bc1d')};display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>${esc(c.name)}</button>`
+    ),
+  ].join('');
+
+  const sections = (cats.results ?? [])
+    .map((c) => {
+      const items = byCat.get(c.id) ?? [];
+      if (!items.length) return '';
+      const grid = items
+        .map(
+          (b) =>
+            `<div class="beroep" data-name="${esc(b.name.toLowerCase())}"><b>${esc(b.name)}</b>${b.desc ? `<p>${esc(b.desc)}</p>` : ''}</div>`
+        )
+        .join('');
+      return `<section class="cat-section" data-cat="${esc(c.id)}" id="cat-${esc(c.id)}">
+        <div class="cat-section__head">
+          <span class="chip__dot" style="background:${esc(c.color ?? '#88bc1d')};width:14px;height:14px;border-radius:50%;display:inline-block"></span>
+          <h3>${esc(c.name)}</h3>
+          <span class="cat-section__count">${items.length} beroepen</span>
+        </div>
+        <div class="beroep-grid">${grid}</div>
+      </section>`;
+    })
+    .join('');
+
+  return `
+    <div class="catalog-tools">
+      <input type="search" class="catalog-search" id="beroepSearch" placeholder="Zoek een beroep…" aria-label="Zoek een beroep">
+    </div>
+    <div class="cat-filter" id="catFilter">${filterButtons}</div>
+    <div id="catalog">${sections}</div>
+    <p class="catalog-empty" id="catalogEmpty">Geen beroepen gevonden voor je zoekopdracht.</p>
+    <script>
+    (function(){
+      var search=document.getElementById('beroepSearch');
+      var filter=document.getElementById('catFilter');
+      var empty=document.getElementById('catalogEmpty');
+      var sections=[].slice.call(document.querySelectorAll('.cat-section'));
+      var activeCat='all';
+      function apply(){
+        var q=(search.value||'').trim().toLowerCase();
+        var anyVisible=false;
+        sections.forEach(function(sec){
+          var catOk=activeCat==='all'||sec.getAttribute('data-cat')===activeCat;
+          var visibleItems=0;
+          [].slice.call(sec.querySelectorAll('.beroep')).forEach(function(it){
+            var match=catOk&&(!q||it.getAttribute('data-name').indexOf(q)>-1);
+            it.style.display=match?'':'none';
+            if(match)visibleItems++;
+          });
+          sec.style.display=visibleItems>0?'':'none';
+          if(visibleItems>0)anyVisible=true;
+        });
+        empty.style.display=anyVisible?'none':'block';
+      }
+      search.addEventListener('input',apply);
+      filter.addEventListener('click',function(e){
+        var b=e.target.closest('button'); if(!b)return;
+        activeCat=b.getAttribute('data-cat');
+        [].slice.call(filter.querySelectorAll('button')).forEach(function(x){x.classList.toggle('active',x===b);});
+        apply();
+      });
+    })();
+    </script>`;
+}
+
+// ----------------------------------------------------------------------
+// Voorlichters / sprekers
+// ----------------------------------------------------------------------
+
+export async function renderVoorlichters(db: D1Database): Promise<string> {
+  const rows = await db
+    .prepare(
+      'SELECT full_name, job_title, organization, bio_md, portrait_url FROM speakers WHERE is_public = 1 ORDER BY full_name'
+    )
+    .all<{ full_name: string; job_title: string | null; organization: string | null; bio_md: string | null; portrait_url: string | null }>();
+  const list = rows.results ?? [];
+  if (!list.length) {
+    return `<div class="callout"><p>De voorlichters voor deze editie worden
+      binnenkort bekendgemaakt. Wil je zelf een beroep presenteren?
+      <a href="/aanmelden">Meld je aan als voorlichter</a>.</p></div>`;
+  }
+  const cards = list
+    .map((s) => {
+      const avatar = s.portrait_url
+        ? `<img class="speaker-card__avatar" src="${esc(s.portrait_url)}" alt="${esc(s.full_name)}" loading="lazy">`
+        : `<div class="speaker-card__ph" aria-hidden="true">${esc(initials(s.full_name))}</div>`;
+      return `<article class="card-box speaker-card">
+        ${avatar}
+        <h3>${esc(s.full_name)}</h3>
+        ${s.job_title ? `<p class="role">${esc(s.job_title)}</p>` : ''}
+        ${s.organization ? `<p class="org">${esc(s.organization)}</p>` : ''}
+      </article>`;
+    })
+    .join('');
+  return `<div class="grid grid--auto">${cards}</div>`;
+}
+
+// ----------------------------------------------------------------------
+// Nieuws-overzicht
+// ----------------------------------------------------------------------
+
+function dateNL(unix: number): string {
+  const d = new Date(unix * 1000);
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+export async function renderNieuwsList(db: D1Database): Promise<string> {
+  const rows = await db
+    .prepare(
+      'SELECT slug, title, summary, cover_url, published_at FROM announcements WHERE is_published = 1 ORDER BY published_at DESC'
+    )
+    .all<{ slug: string; title: string; summary: string | null; cover_url: string | null; published_at: number }>();
+  const list = rows.results ?? [];
+  if (!list.length) {
+    return `<div class="callout"><p>Er is nog geen nieuws. Houd deze pagina in
+      de gaten — of <a href="/nieuwsbrief">meld je aan voor updates</a>.</p></div>`;
+  }
+  const cards = list
+    .map(
+      (n) => `<a class="card-box news-card" href="/nieuws/${esc(n.slug)}">
+        ${n.cover_url ? `<img class="news-card__img" src="${esc(n.cover_url)}" alt="" loading="lazy">` : ''}
+        <div class="news-card__body">
+          <time>${dateNL(n.published_at)}</time>
+          <h3>${esc(n.title)}</h3>
+          ${n.summary ? `<p>${esc(n.summary)}</p>` : ''}
+        </div>
+      </a>`
+    )
+    .join('');
+  return `<div class="grid grid--2">${cards}</div>`;
+}
+
+export async function renderNieuwsItem(
+  db: D1Database,
+  slug: string
+): Promise<{ title: string; summary: string | null; html: string; cover: string | null; date: number } | null> {
+  const n = await db
+    .prepare(
+      'SELECT title, summary, body_md, cover_url, published_at FROM announcements WHERE slug = ? AND is_published = 1'
+    )
+    .bind(slug)
+    .first<{ title: string; summary: string | null; body_md: string; cover_url: string | null; published_at: number }>();
+  if (!n) return null;
+  const html = `
+    <p class="crumbs" style="padding:0 0 10px">${dateNL(n.published_at)}</p>
+    ${n.cover_url ? `<img src="${esc(n.cover_url)}" alt="" style="width:100%;border-radius:6px;margin-bottom:24px">` : ''}
+    <div class="prose">${renderMarkdown(n.body_md)}</div>
+    <p style="margin-top:30px"><a class="btn btn--ghost" href="/nieuws">← Al het nieuws</a></p>`;
+  return { title: n.title, summary: n.summary, html, cover: n.cover_url, date: n.published_at };
+}
+
+// ----------------------------------------------------------------------
+// Formulieren
+// ----------------------------------------------------------------------
+
+type Vals = Record<string, string>;
+
+function val(v: Vals | undefined, k: string): string {
+  return esc(v?.[k] ?? '');
+}
+
+export function contactFormHtml(settings: SettingsMap, values?: Vals): string {
+  return `
+    <div class="grid grid--2" style="align-items:start">
+      <form class="form card-box" method="post" action="/contact">
+        <div class="form__row cols-2">
+          <div class="field"><label>Naam <span class="req">*</span></label>
+            <input type="text" name="name" value="${val(values, 'name')}" required></div>
+          <div class="field"><label>E-mail <span class="req">*</span></label>
+            <input type="email" name="email" value="${val(values, 'email')}" required></div>
+        </div>
+        <div class="field"><label>Onderwerp</label>
+          <input type="text" name="subject" value="${val(values, 'subject')}"></div>
+        <div class="field"><label>Bericht <span class="req">*</span></label>
+          <textarea name="message" required>${val(values, 'message')}</textarea></div>
+        <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary btn--lg">Versturen</button>
+        </div>
+        <p class="form-consent">Je gegevens worden alleen gebruikt om je vraag te
+          beantwoorden. Zie ons <a href="/privacy">privacybeleid</a>.</p>
+      </form>
+      <div>
+        <div class="card-box">
+          <h3>Direct contact</h3>
+          <p><strong>E-mail</strong><br><a href="mailto:${esc(settings['contact_email'] || '')}">${esc(settings['contact_email'] || '')}</a></p>
+          ${settings['org_phone'] ? `<p><strong>Telefoon</strong><br>${esc(settings['org_phone'])}</p>` : ''}
+          <p><strong>Locatie van de avond</strong><br>${esc(settings['venue_name'] || '')}<br>${esc(settings['venue_address'] || '')}</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+export function volunteerFormHtml(settings: SettingsMap, values?: Vals): string {
+  return `
+    <form class="form card-box" method="post" action="/aanmelden">
+      <div class="form__row cols-2">
+        <div class="field"><label>Naam <span class="req">*</span></label>
+          <input type="text" name="name" value="${val(values, 'name')}" required></div>
+        <div class="field"><label>E-mail <span class="req">*</span></label>
+          <input type="email" name="email" value="${val(values, 'email')}" required></div>
+        <div class="field"><label>Telefoon</label>
+          <input type="tel" name="phone" value="${val(values, 'phone')}"></div>
+        <div class="field"><label>Organisatie / werkgever</label>
+          <input type="text" name="organization" value="${val(values, 'organization')}"></div>
+      </div>
+      <div class="field"><label>Welk beroep wil je presenteren? <span class="req">*</span></label>
+        <input type="text" name="profession" value="${val(values, 'profession')}" required placeholder="bijv. Architect, Verpleegkundige, Piloot…"></div>
+      <div class="field"><label>Toelichting (optioneel)</label>
+        <textarea name="message" placeholder="Vertel kort over jezelf en je vak.">${val(values, 'message')}</textarea></div>
+      <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="form__actions">
+        <button type="submit" class="btn btn--primary btn--lg">Aanmelding versturen</button>
+      </div>
+      <p class="form-consent">Na je aanmelding nemen we contact op met de
+        details voor de avond op ${esc(settings['event_date_long'] || '')}.
+        Zie ons <a href="/privacy">privacybeleid</a>.</p>
+    </form>`;
+}

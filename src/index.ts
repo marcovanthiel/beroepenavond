@@ -54,13 +54,35 @@ app.get('/assets/*', serveAsset);
 app.get('/robots.txt', serveAsset);
 app.get('/favicon.ico', serveAsset);
 app.get('/favicon.svg', serveAsset);
-app.get('/sitemap.xml', serveAsset);
+// /sitemap.xml wordt dynamisch gegenereerd (zie hieronder), niet als asset.
 
 // 4. Media uit R2 (publiek leesbaar): /media/<key>.
 app.get('/media/*', async (c) => {
   const key = new URL(c.req.url).pathname.replace(/^\/media\//, '');
   if (!key) return renderError(c, 404, 'Niet gevonden');
   return serveMedia(c.env, key);
+});
+
+// 4b. Dynamische sitemap uit gepubliceerde pagina's + nieuws.
+app.get('/sitemap.xml', async (c) => {
+  const host = `https://${c.env.SITE_HOST}`;
+  const [pages, news] = await Promise.all([
+    c.env.DB.prepare('SELECT slug, updated_at FROM pages WHERE is_published = 1').all<{ slug: string; updated_at: number }>(),
+    c.env.DB.prepare('SELECT slug, updated_at FROM announcements WHERE is_published = 1').all<{ slug: string; updated_at: number }>(),
+  ]);
+  const urls: { loc: string; lastmod?: number }[] = [];
+  for (const p of pages.results ?? []) urls.push({ loc: host + p.slug, lastmod: p.updated_at });
+  for (const n of news.results ?? []) urls.push({ loc: `${host}/nieuws/${n.slug}`, lastmod: n.updated_at });
+  const body =
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls
+      .map(
+        (u) =>
+          `  <url><loc>${u.loc}</loc>${u.lastmod ? `<lastmod>${new Date(u.lastmod * 1000).toISOString().slice(0, 10)}</lastmod>` : ''}</url>`
+      )
+      .join('\n') +
+    `\n</urlset>\n`;
+  return new Response(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8' } });
 });
 
 // 5. Beheer-paneel.

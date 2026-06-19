@@ -18,7 +18,7 @@
 import type { Context } from 'hono';
 import { html, raw } from 'hono/html';
 import type { Env } from '../env';
-import { getCategoriesWithBeroepen, getSettings } from '../lib/db';
+import { getCategoriesWithBeroepen, getNavPages, getSettings } from '../lib/db';
 
 function escape(s: string): string {
   return s
@@ -29,10 +29,15 @@ function escape(s: string): string {
 }
 
 export async function renderHome(c: Context<{ Bindings: Env }>) {
-  const [settings, cats] = await Promise.all([
+  const [settings, cats, navItems] = await Promise.all([
     getSettings(c.env.DB),
     getCategoriesWithBeroepen(c.env.DB),
+    getNavPages(c.env.DB),
   ]);
+
+  const navHtml = navItems
+    .map((p) => `<li><a href="${p.slug}">${escape(p.nav_label || p.title)}</a></li>`)
+    .join('');
 
   const eventYear = settings['event_year'] || '2026';
   const eventDate = settings['event_date_long'] || 'Donderdag 20 november 2026';
@@ -65,6 +70,31 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     .map((ch) => `&#${ch.charCodeAt(0)};`)
     .join('');
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: `Beroepenavond Nijmegen ${eventYear}`,
+    description:
+      'Voorlichtingsavond waarop scholieren kennismaken met meer dan 70 beroepen.',
+    startDate: `${c.env.EVENT_DATE}T18:30:00+01:00`,
+    endDate: `${c.env.EVENT_DATE}T21:30:00+01:00`,
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    isAccessibleForFree: true,
+    location: {
+      '@type': 'Place',
+      name: settings['venue_name'] || 'Canisius College Nijmegen',
+      address: settings['venue_address'] || 'Berg en Dalseweg 207, 6522 BR Nijmegen',
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: settings['organization'] || 'Rotary Club Nijmegen-Stad en Land',
+      url: `https://${c.env.SITE_HOST}`,
+    },
+    image: `https://${c.env.SITE_HOST}/assets/img/mannetje.jpg`,
+    url: `https://${c.env.SITE_HOST}/`,
+  };
+
   return c.html(html`<!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -78,10 +108,28 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/style.css">
+<meta property="og:title" content="Beroepenavond ${eventYear} — Nijmegen">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/mannetje.jpg">
+<link rel="canonical" href="https://${c.env.SITE_HOST}/">
+<script type="application/ld+json">${raw(JSON.stringify(jsonLd))}</script>
 </head>
 <body class="home">
+<a class="skip-link" href="#main">Naar inhoud</a>
+<header class="site-header site-header--home">
+  <nav class="nav" aria-label="Hoofdmenu">
+    <a class="nav__logo" href="/"><span>Beroepenavond</span><small>Nijmegen</small></a>
+    <button class="nav__toggle" id="navToggle" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links" id="navLinks">
+      ${raw(navHtml)}
+      <li><a class="nav__cta" href="/aanmelden">Word voorlichter</a></li>
+    </ul>
+  </nav>
+</header>
 
-<div class="home-wrap">
+<div class="home-wrap" id="main">
 
   <!-- block-8a: "DONDERDAG 20 NOVEMBER" -->
   <section class="b-8a">
@@ -170,6 +218,11 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
       const open = item.classList.toggle('open');
       btn.setAttribute('aria-expanded', String(open));
     });
+  });
+  var t = document.getElementById('navToggle'), l = document.getElementById('navLinks');
+  if (t && l) t.addEventListener('click', function () {
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', String(open));
   });
 </script>
 </body>

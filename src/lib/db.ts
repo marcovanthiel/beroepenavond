@@ -38,10 +38,11 @@ export async function getSettings(db: D1Database): Promise<SettingsMap> {
 }
 
 export async function getNavPages(db: D1Database): Promise<PageRow[]> {
+  // nav_order >= 900 = bewust buiten het hoofdmenu (alleen via footer/links).
   const res = await db
     .prepare(
       'SELECT slug, title, nav_label, nav_order FROM pages ' +
-        'WHERE is_published = 1 ORDER BY nav_order ASC'
+        'WHERE is_published = 1 AND nav_order < 900 ORDER BY nav_order ASC'
     )
     .all<PageRow>();
   return res.results ?? [];

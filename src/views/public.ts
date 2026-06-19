@@ -2,12 +2,19 @@ import type { Context } from 'hono';
 import type { Env, PageRow } from '../env';
 import { getNavPages, getSettings, interpolate } from '../lib/db';
 import { renderMarkdown } from '../lib/markdown';
-import { renderLayout } from './layout';
+import { renderLayout, type HeroCta } from './layout';
+
+export interface RenderExtra {
+  jsonLd?: unknown;
+  heroCtas?: HeroCta[];
+  notice?: { type: 'ok' | 'err'; text: string } | null;
+}
 
 export async function renderPage(
   c: Context<{ Bindings: Env }>,
   page: PageRow,
-  appendHtml = ''
+  appendHtml = '',
+  extra: RenderExtra = {}
 ) {
   const [settings, navItems] = await Promise.all([
     getSettings(c.env.DB),
@@ -21,6 +28,10 @@ export async function renderPage(
       metaDescription: page.meta_description,
       navItems,
       activeSlug: page.slug,
+      breadcrumbs: page.slug === '/' ? undefined : [{ label: page.title }],
+      canonicalPath: page.slug,
+      notice: extra.notice ?? null,
+      jsonLd: extra.jsonLd,
       hero: page.hero_title
         ? {
             eyebrow: page.hero_eyebrow,
@@ -28,8 +39,33 @@ export async function renderPage(
             lede: page.hero_lede ? interpolate(page.hero_lede, settings) : null,
             image: page.hero_image,
             compact: page.slug !== '/',
+            ctas: extra.heroCtas,
           }
         : null,
+      bodyHtml,
+      settings,
+    })
+  );
+}
+
+/** Losse, gebrande mededelingspagina (bedankt / bevestigd / uitgeschreven). */
+export async function renderNotice(
+  c: Context<{ Bindings: Env }>,
+  opts: { title: string; eyebrow?: string; message: string; type?: 'ok' | 'err'; backHref?: string; backLabel?: string }
+) {
+  const [settings, navItems] = await Promise.all([
+    getSettings(c.env.DB),
+    getNavPages(c.env.DB),
+  ]);
+  const bodyHtml = `
+    <div class="notice notice--${opts.type ?? 'ok'}">${opts.message}</div>
+    <p><a href="${opts.backHref ?? '/'}" class="btn btn--primary">${opts.backLabel ?? 'Terug naar home'}</a></p>`;
+  return c.html(
+    renderLayout({
+      title: opts.title,
+      navItems,
+      activeSlug: '',
+      hero: { eyebrow: opts.eyebrow ?? null, title: opts.title, compact: true },
       bodyHtml,
       settings,
     })
