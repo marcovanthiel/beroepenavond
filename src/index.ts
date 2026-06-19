@@ -25,14 +25,22 @@ app.use('*', async (c, next) => {
 });
 
 // 2. Security-headers op alle Worker-responses.
+//    ASSETS.fetch() en c.redirect() returnen responses met immutable
+//    headers. Daarom wrappen we de respons altijd in een nieuwe Response.
 app.use('*', async (c, next) => {
   await next();
-  const h = c.res.headers;
-  h.set('X-Content-Type-Options', 'nosniff');
-  h.set('X-Frame-Options', 'SAMEORIGIN');
-  h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  h.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  const orig = c.res;
+  const res = new Response(orig.body, {
+    status: orig.status,
+    statusText: orig.statusText,
+    headers: new Headers(orig.headers),
+  });
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  c.res = res;
 });
 
 // 3. Statische assets via de ASSETS-binding.
