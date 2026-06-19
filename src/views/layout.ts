@@ -41,7 +41,7 @@ ${opts.metaDescription ? raw(`<meta property="og:description" content="${opts.me
 <meta property="og:type" content="website">
 <meta property="og:locale" content="nl_NL">
 <meta name="theme-color" content="#a3d935">
-<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
