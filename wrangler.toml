@@ -1,0 +1,38 @@
+name = "beroepenavond"
+main = "src/index.ts"
+compatibility_date = "2026-06-19"
+workers_dev = false
+
+# Worker rendert publieke site server-side uit D1, en host /admin/*
+# voor het bestuur. Statische assets (CSS, hero-foto's, plattegrond
+# als raster, favicon) via ASSETS-binding gemount onder /assets/*.
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# Worker beslist welke responses passeren; we hebben geen 1-op-1
+# bestand → URL mapping nodig (alle routes komen uit src/index.ts).
+run_worker_first = true
+
+# D1 voor evenementen, sessies, sprekers, klaslokalen, plattegrond,
+# users, sessions, settings, audit-log.
+[[d1_databases]]
+binding = "DB"
+database_name = "beroepenavond"
+database_id = "8bb285c2-b8be-40bb-98c3-8e58635c47d9"
+
+# R2 voor plattegrond-PDFs en spreker-portretten. Bucket nog niet
+# aangemaakt — Marco doet dat via dashboard of we wachten op
+# token-permissie.
+# [[r2_buckets]]
+# binding = "ASSETS_R2"
+# bucket_name = "beroepenavond-assets"
+
+[vars]
+SITE_NAME = "Beroepenavond Nijmegen"
+SITE_HOST = "inijmegen.com"
+ORGANIZATION = "Rotary Club Nijmegen-Stad en Land"
+LOCATION_NAME = "Canisius College Nijmegen"
+EVENT_DATE = "2026-11-20"
+EVENT_TITLE = "Beroepenavond 2026"
+CONTACT_EMAIL = "info@beroepenavondnijmegen.nl"

@@ -1,0 +1,235 @@
+/* Beroepenavond Nijmegen — public stylesheet */
+:root {
+  --c-ink:        #1f2937;
+  --c-muted:      #4b5563;
+  --c-soft:       #6b7280;
+  --c-bg:         #f8fafc;
+  --c-card:       #ffffff;
+  --c-line:       #e5e7eb;
+  --c-primary:    #2b6cb0;     /* Canisius/Rotary-blauw */
+  --c-primary-2:  #1f4f86;
+  --c-accent:     #f6ad55;     /* warm oranje, beroepenavond-vibe */
+  --c-accent-2:   #ed8936;
+  --c-success:    #38a169;
+  --shadow-sm:    0 1px 2px rgba(15,23,42,.06);
+  --shadow-md:    0 8px 24px -10px rgba(15,23,42,.18);
+  --r:            14px;
+  --maxw:         1100px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--c-ink);
+  background: var(--c-bg);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif; line-height: 1.18; }
+h1 { font-size: clamp(2.1rem, 4vw, 3.2rem); margin: 0 0 .4em; letter-spacing: -.012em; }
+h2 { font-size: clamp(1.5rem, 2.5vw, 2.1rem); margin: 2.2em 0 .55em; color: var(--c-primary-2); }
+h3 { font-size: 1.18rem; margin: 1.7em 0 .4em; color: var(--c-primary); }
+p  { margin: 0 0 1.05em; }
+a  { color: var(--c-primary); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+a:hover { color: var(--c-accent-2); }
+ul, ol { padding-left: 1.4em; }
+li { margin-bottom: .35em; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--c-line); }
+th { background: #f1f5f9; font-weight: 600; color: var(--c-primary-2); }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+/* Header */
+.site-header {
+  background: var(--c-primary);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  gap: 16px;
+}
+.nav__logo {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.22rem;
+  color: #fff;
+  text-decoration: none;
+  letter-spacing: -.005em;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.nav__logo small {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: .72rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.72);
+  margin-top: 2px;
+}
+.nav__links {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.nav__links a {
+  color: rgba(255,255,255,.86);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: .95rem;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+}
+.nav__links a:hover,
+.nav__links a.active {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+}
+.nav__toggle {
+  display: none;
+  background: transparent;
+  border: 0;
+  width: 40px; height: 40px;
+  cursor: pointer;
+  color: #fff;
+}
+.nav__toggle span {
+  display: block;
+  width: 22px; height: 2px;
+  background: currentColor;
+  margin: 5px auto;
+  transition: .2s;
+}
+@media (max-width: 760px) {
+  .nav { padding: 14px 18px; }
+  .nav__toggle { display: block; }
+  .nav__links {
+    position: absolute;
+    inset: 100% 0 auto 0;
+    background: var(--c-primary);
+    flex-direction: column;
+    gap: 0;
+    padding: 12px 18px 18px;
+    box-shadow: var(--shadow-md);
+    display: none;
+  }
+  .nav__links.open { display: flex; }
+  .nav__links a { padding: 12px 14px; }
+}
+
+/* Hero */
+.hero {
+  position: relative;
+  color: #fff;
+  padding: 76px 0 60px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--c-primary-2) 0%, var(--c-primary) 100%);
+}
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+.hero__bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(31,79,134,.88) 0%, rgba(43,108,176,.72) 50%, rgba(43,108,176,.45) 100%);
+}
+.hero__inner { position: relative; z-index: 1; }
+.hero__eyebrow {
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+  margin-bottom: 18px;
+}
+.hero h1 {
+  color: #fff;
+  max-width: 740px;
+  margin-bottom: .25em;
+}
+.hero p.lede {
+  color: rgba(255,255,255,.92);
+  font-size: 1.12rem;
+  max-width: 580px;
+  margin-bottom: 0;
+}
+.hero--compact { padding: 52px 0 40px; }
+.hero--compact h1 { font-size: clamp(1.8rem, 3.4vw, 2.5rem); }
+
+/* Content */
+.section { padding: 60px 0; }
+.lede { font-size: 1.18rem; color: var(--c-muted); max-width: 760px; margin-bottom: 1.6em; }
+code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: .92em; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 0;
+  font-size: .98rem;
+  cursor: pointer;
+  transition: .18s;
+}
+.btn--primary { background: var(--c-accent); color: #1d1503; }
+.btn--primary:hover { background: var(--c-accent-2); transform: translateY(-1px); }
+
+/* Footer */
+.site-footer {
+  background: var(--c-ink);
+  color: rgba(255,255,255,.78);
+  padding: 50px 0 30px;
+  margin-top: 80px;
+  font-size: .94rem;
+}
+.site-footer a { color: rgba(255,255,255,.92); }
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 32px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.footer-grid h4 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #fff;
+  margin: 0 0 12px;
+}
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 24px;
+  font-size: .86rem;
+  color: rgba(255,255,255,.55);
+}
