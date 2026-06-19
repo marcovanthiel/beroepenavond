@@ -119,32 +119,114 @@ export async function renderBeroepenCatalog(db: D1Database): Promise<string> {
 // Voorlichters / sprekers
 // ----------------------------------------------------------------------
 
+interface SpeakerRow {
+  full_name: string;
+  job_title: string | null;
+  organization: string | null;
+  portrait_url: string | null;
+  linkedin: string | null;
+  category_id: string | null;
+}
+
+function speakerCard(s: SpeakerRow): string {
+  const avatar = s.portrait_url
+    ? `<img class="speaker-card__avatar" src="${esc(s.portrait_url)}" alt="${esc(s.full_name)}" loading="lazy">`
+    : `<div class="speaker-card__ph" aria-hidden="true">${esc(initials(s.full_name))}</div>`;
+  const li = s.linkedin
+    ? `<a class="speaker-card__li" href="${esc(s.linkedin)}" target="_blank" rel="noopener" aria-label="LinkedIn van ${esc(s.full_name)}">in · LinkedIn</a>`
+    : '';
+  return `<article class="card-box speaker-card" data-name="${esc(s.full_name.toLowerCase())}">
+    ${avatar}
+    <h3>${esc(s.full_name)}</h3>
+    ${s.job_title ? `<p class="role">${esc(s.job_title)}</p>` : ''}
+    ${s.organization ? `<p class="org">${esc(s.organization)}</p>` : ''}
+    ${li}
+  </article>`;
+}
+
 export async function renderVoorlichters(db: D1Database): Promise<string> {
-  const rows = await db
-    .prepare(
-      'SELECT full_name, job_title, organization, bio_md, portrait_url FROM speakers WHERE is_public = 1 ORDER BY full_name'
-    )
-    .all<{ full_name: string; job_title: string | null; organization: string | null; bio_md: string | null; portrait_url: string | null }>();
-  const list = rows.results ?? [];
+  const [cats, spk] = await Promise.all([
+    db.prepare('SELECT id, name, color FROM categories ORDER BY sort_order').all<{ id: string; name: string; color: string | null }>(),
+    db
+      .prepare(
+        'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 ORDER BY full_name'
+      )
+      .all<SpeakerRow>(),
+  ]);
+  const list = spk.results ?? [];
   if (!list.length) {
     return `<div class="callout"><p>De voorlichters voor deze editie worden
       binnenkort bekendgemaakt. Wil je zelf een beroep presenteren?
       <a href="/aanmelden">Meld je aan als voorlichter</a>.</p></div>`;
   }
-  const cards = list
-    .map((s) => {
-      const avatar = s.portrait_url
-        ? `<img class="speaker-card__avatar" src="${esc(s.portrait_url)}" alt="${esc(s.full_name)}" loading="lazy">`
-        : `<div class="speaker-card__ph" aria-hidden="true">${esc(initials(s.full_name))}</div>`;
-      return `<article class="card-box speaker-card">
-        ${avatar}
-        <h3>${esc(s.full_name)}</h3>
-        ${s.job_title ? `<p class="role">${esc(s.job_title)}</p>` : ''}
-        ${s.organization ? `<p class="org">${esc(s.organization)}</p>` : ''}
-      </article>`;
+
+  const byCat = new Map<string, SpeakerRow[]>();
+  for (const s of list) {
+    const k = s.category_id ?? '_none';
+    (byCat.get(k) ?? byCat.set(k, []).get(k)!).push(s);
+  }
+  const categories = cats.results ?? [];
+
+  const filterButtons = [
+    `<button class="active" data-cat="all" type="button">Alle (${list.length})</button>`,
+    ...categories
+      .filter((c) => (byCat.get(c.id) ?? []).length)
+      .map(
+        (c) =>
+          `<button data-cat="${esc(c.id)}" type="button"><span class="chip__dot" style="background:${esc(c.color ?? '#88bc1d')};display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>${esc(c.name)}</button>`
+      ),
+  ].join('');
+
+  const sections = categories
+    .map((c) => {
+      const items = byCat.get(c.id) ?? [];
+      if (!items.length) return '';
+      return `<section class="cat-section" data-cat="${esc(c.id)}">
+        <div class="cat-section__head">
+          <span class="chip__dot" style="background:${esc(c.color ?? '#88bc1d')};width:14px;height:14px;border-radius:50%;display:inline-block"></span>
+          <h3>${esc(c.name)}</h3>
+          <span class="cat-section__count">${items.length} voorlichters</span>
+        </div>
+        <div class="grid grid--auto">${items.map(speakerCard).join('')}</div>
+      </section>`;
     })
     .join('');
-  return `<div class="grid grid--auto">${cards}</div>`;
+  const uncategorized = byCat.get('_none') ?? [];
+  const restSection = uncategorized.length
+    ? `<section class="cat-section" data-cat="_none">
+        <div class="cat-section__head"><h3>Overig</h3><span class="cat-section__count">${uncategorized.length}</span></div>
+        <div class="grid grid--auto">${uncategorized.map(speakerCard).join('')}</div>
+      </section>`
+    : '';
+
+  return `
+    <div class="catalog-tools">
+      <input type="search" class="catalog-search" id="voorSearch" placeholder="Zoek een voorlichter…" aria-label="Zoek een voorlichter">
+    </div>
+    <div class="cat-filter" id="voorFilter">${filterButtons}</div>
+    <div id="voorlichters">${sections}${restSection}</div>
+    <p class="catalog-empty" id="voorEmpty">Geen voorlichters gevonden.</p>
+    <script>
+    (function(){
+      var search=document.getElementById('voorSearch'),filter=document.getElementById('voorFilter'),empty=document.getElementById('voorEmpty');
+      var secs=[].slice.call(document.querySelectorAll('#voorlichters .cat-section')),active='all';
+      function apply(){
+        var q=(search.value||'').trim().toLowerCase(),any=false;
+        secs.forEach(function(sec){
+          var catOk=active==='all'||sec.getAttribute('data-cat')===active,vis=0;
+          [].slice.call(sec.querySelectorAll('.speaker-card')).forEach(function(card){
+            var m=catOk&&(!q||card.getAttribute('data-name').indexOf(q)>-1);
+            card.style.display=m?'':'none'; if(m)vis++;
+          });
+          sec.style.display=vis>0?'':'none'; if(vis>0)any=true;
+        });
+        empty.style.display=any?'none':'block';
+      }
+      search.addEventListener('input',apply);
+      filter.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;active=b.getAttribute('data-cat');
+        [].slice.call(filter.querySelectorAll('button')).forEach(function(x){x.classList.toggle('active',x===b);});apply();});
+    })();
+    </script>`;
 }
 
 // ----------------------------------------------------------------------

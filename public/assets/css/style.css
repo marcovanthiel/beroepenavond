@@ -651,3 +651,7 @@ hr { border:0; border-top:1px solid var(--c-line); margin:2em 0; }
 
 /* Homepage-header: lichter dan op interne pagina's (mannetje toont) */
 .site-header--home { border-bottom-width: 0; box-shadow: 0 1px 0 rgba(0,0,0,.07); }
+
+/* LinkedIn-link op spreker-kaart */
+.speaker-card__li { display:inline-block; margin-top:10px; font-size:.82rem; font-weight:600; color:#0a66c2; }
+.speaker-card__li:hover { text-decoration:underline; color:#0a66c2; }

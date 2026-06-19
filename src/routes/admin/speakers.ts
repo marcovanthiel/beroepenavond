@@ -8,6 +8,7 @@ import {
   pageHeader,
   field,
   textarea,
+  select,
   checkbox,
   formActions,
   deleteButton,
@@ -28,6 +29,8 @@ interface Speaker {
   bio_md: string | null;
   portrait_url: string | null;
   website: string | null;
+  linkedin: string | null;
+  category_id: string | null;
   is_public: number;
   notes: string | null;
 }
@@ -55,8 +58,10 @@ speakersApp.get('/', async (c) => {
   return renderAdminLayout(c, { title: 'Sprekers', activeKey: 'speakers', body, flash: flashFromQuery(c) });
 });
 
-function form(c: any, s: Partial<Speaker>, isNew: boolean): string {
+async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string> {
   const r2 = r2Available(c.env);
+  const cats = await c.env.DB.prepare('SELECT id, name FROM categories ORDER BY sort_order').all();
+  const catOptions = (cats.results ?? []).map((x: any) => ({ value: x.id, label: x.name }));
   const portrait = s.portrait_url
     ? `<div style="margin-bottom:8px"><img src="${esc(s.portrait_url)}" alt="" style="width:90px;height:90px;border-radius:10px;object-fit:cover"></div>`
     : '';
@@ -71,11 +76,13 @@ function form(c: any, s: Partial<Speaker>, isNew: boolean): string {
     <form method="post" action="/admin/speakers/${isNew ? 'new' : esc(s.id!)}" enctype="multipart/form-data" class="card">
       <div class="form-grid cols-2">
         <div class="span-2">${field({ label: 'Volledige naam', name: 'full_name', value: s.full_name ?? '', required: true })}</div>
-        ${field({ label: 'Functie / titel', name: 'job_title', value: s.job_title ?? '' })}
+        ${field({ label: 'Beroep / functie', name: 'job_title', value: s.job_title ?? '' })}
+        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: catOptions, empty: '— geen —' })}
         ${field({ label: 'Organisatie / werkgever', name: 'organization', value: s.organization ?? '' })}
         ${field({ label: 'E-mail', name: 'email', value: s.email ?? '', type: 'email' })}
         ${field({ label: 'Telefoon', name: 'phone', value: s.phone ?? '' })}
-        <div class="span-2">${field({ label: 'Website', name: 'website', value: s.website ?? '', type: 'url' })}</div>
+        ${field({ label: 'Website', name: 'website', value: s.website ?? '', type: 'url' })}
+        ${field({ label: 'LinkedIn-profiel (URL)', name: 'linkedin', value: s.linkedin ?? '', type: 'url', placeholder: 'https://www.linkedin.com/in/…' })}
         <div class="span-2">${uploadField}</div>
         <div class="span-2">${field({ label: 'Portret-URL (extern of /media/…)', name: 'portrait_url', value: s.portrait_url ?? '' })}</div>
         <div class="span-2">${textarea({ label: 'Biografie (markdown)', name: 'bio_md', value: s.bio_md ?? '', rows: 5 })}</div>
@@ -87,14 +94,14 @@ function form(c: any, s: Partial<Speaker>, isNew: boolean): string {
     ${isNew ? '' : `<div class="card">${deleteButton(`/admin/speakers/${esc(s.id!)}/delete`, 'Spreker verwijderen?')}</div>`}`;
 }
 
-speakersApp.get('/new', (c) =>
-  renderAdminLayout(c, { title: 'Nieuwe spreker', activeKey: 'speakers', body: form(c, { is_public: 1 }, true) })
+speakersApp.get('/new', async (c) =>
+  renderAdminLayout(c, { title: 'Nieuwe spreker', activeKey: 'speakers', body: await form(c, { is_public: 1 }, true) })
 );
 
 speakersApp.get('/:id', async (c) => {
   const s = await c.env.DB.prepare('SELECT * FROM speakers WHERE id = ?').bind(c.req.param('id')).first<Speaker>();
   if (!s) return redirectErr(c, '/admin/speakers', 'Spreker niet gevonden.');
-  return renderAdminLayout(c, { title: 'Spreker bewerken', activeKey: 'speakers', body: form(c, s, false) });
+  return renderAdminLayout(c, { title: 'Spreker bewerken', activeKey: 'speakers', body: await form(c, s, false) });
 });
 
 /** Bepaalt de nieuwe portret-URL: upload heeft voorrang, anders het URL-veld. */
@@ -123,10 +130,10 @@ speakersApp.post('/new', async (c) => {
     throw e;
   }
   await c.env.DB.prepare(
-    `INSERT INTO speakers (id, full_name, email, phone, organization, job_title, bio_md, portrait_url, website, is_public, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO speakers (id, full_name, email, phone, organization, job_title, bio_md, portrait_url, website, linkedin, category_id, is_public, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(id, str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), bool(b.is_public), strOrNull(b.notes))
+    .bind(id, str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), strOrNull(b.category_id), bool(b.is_public), strOrNull(b.notes))
     .run();
   await logAudit(c, 'create', 'speaker', id);
   return redirectOk(c, '/admin/speakers', 'Spreker aangemaakt.');
@@ -144,9 +151,9 @@ speakersApp.post('/:id', async (c) => {
     throw e;
   }
   await c.env.DB.prepare(
-    `UPDATE speakers SET full_name = ?, email = ?, phone = ?, organization = ?, job_title = ?, bio_md = ?, portrait_url = ?, website = ?, is_public = ?, notes = ?, updated_at = unixepoch() WHERE id = ?`
+    `UPDATE speakers SET full_name = ?, email = ?, phone = ?, organization = ?, job_title = ?, bio_md = ?, portrait_url = ?, website = ?, linkedin = ?, category_id = ?, is_public = ?, notes = ?, updated_at = unixepoch() WHERE id = ?`
   )
-    .bind(str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), bool(b.is_public), strOrNull(b.notes), id)
+    .bind(str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), strOrNull(b.category_id), bool(b.is_public), strOrNull(b.notes), id)
     .run();
   await logAudit(c, 'update', 'speaker', id);
   return redirectOk(c, '/admin/speakers', 'Spreker opgeslagen.');
