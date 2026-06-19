@@ -10,3 +10,5 @@ UPDATE speakers SET linkedin='https://www.linkedin.com/in/sabinevanwissen/' WHER
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/myrthe-schuurman-870529110/' WHERE id='spk_imp_myrthe-schuurmans';
 UPDATE speakers SET linkedin=NULL WHERE id='spk_imp_sabine-van-wissen';
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/sgahroelofs/' WHERE id='spk_imp_sjoerd-roelofs';
+UPDATE speakers SET linkedin='https://www.linkedin.com/in/susanne-versteeg-a8bb1b13/' WHERE id='spk_imp_susanne-versteeg';
+UPDATE speakers SET linkedin='https://www.linkedin.com/in/wim-voet-19274b45/' WHERE id='spk_imp_wim-voet';
