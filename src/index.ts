@@ -36,10 +36,15 @@ app.use('*', async (c, next) => {
 });
 
 // 3. Statische assets via de ASSETS-binding.
-app.get('/assets/*', (c) => c.env.ASSETS.fetch(c.req.raw));
-app.get('/robots.txt', (c) => c.env.ASSETS.fetch(c.req.raw));
-app.get('/favicon.ico', (c) => c.env.ASSETS.fetch(c.req.raw));
-app.get('/favicon.svg', (c) => c.env.ASSETS.fetch(c.req.raw));
+//    Note: ASSETS.fetch wil een URL of Request — c.req.raw kan op de
+//    runtime een al-gelezen Request zijn, dus we sturen een verse URL.
+const serveAsset = (c: { env: Env; req: { url: string } }) =>
+  c.env.ASSETS.fetch(new Request(c.req.url));
+app.get('/assets/*', serveAsset);
+app.get('/robots.txt', serveAsset);
+app.get('/favicon.ico', serveAsset);
+app.get('/favicon.svg', serveAsset);
+app.get('/sitemap.xml', serveAsset);
 
 // 4. Publieke site.
 app.route('/', publicApp);
