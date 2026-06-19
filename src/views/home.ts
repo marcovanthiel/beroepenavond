@@ -41,9 +41,9 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 
   const accordionHtml = cats
     .map(
-      (cat, i) => `
-        <article class="accordion-item${i === 0 ? ' open' : ''}">
-          <button class="accordion-handle" type="button" aria-expanded="${i === 0 ? 'true' : 'false'}">
+      (cat) => `
+        <article class="accordion-item">
+          <button class="accordion-handle" type="button" aria-expanded="false">
             <span class="accordion-handle__label">${escape(cat.name)}</span>
             <svg class="accordion-arrow" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>

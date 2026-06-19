@@ -47,9 +47,11 @@ body.home {
   }
 }
 
+/* Geen max-width op .home-wrap: de section-backgrounds (banner, zwarte
+   balk, sponsor-strook) lopen zo van viewport-rand tot rand zoals bron. */
 .home-wrap {
-  max-width: var(--container);
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 0;
 }
 .b-inner {
