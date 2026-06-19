@@ -41,3 +41,37 @@ export async function getPage(
 export function interpolate(text: string, settings: SettingsMap): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_m, key) => settings[key] ?? '');
 }
+
+export interface CategoryWithBeroepen {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  beroepen: { id: number; name: string; slug: string | null }[];
+}
+
+/** Haalt categorieën met hun beroepen in één pass (kleine dataset, dus 1 query). */
+export async function getCategoriesWithBeroepen(
+  db: D1Database
+): Promise<CategoryWithBeroepen[]> {
+  const cats = await db
+    .prepare(
+      'SELECT id, name, color, sort_order FROM categories ORDER BY sort_order ASC'
+    )
+    .all<{ id: string; name: string; color: string; sort_order: number }>();
+  const ber = await db
+    .prepare(
+      'SELECT id, category_id, name, slug FROM beroepen ORDER BY category_id, sort_order ASC'
+    )
+    .all<{ id: number; category_id: string; name: string; slug: string | null }>();
+  const byCat = new Map<string, CategoryWithBeroepen['beroepen']>();
+  for (const b of ber.results ?? []) {
+    const list = byCat.get(b.category_id) ?? [];
+    list.push({ id: b.id, name: b.name, slug: b.slug });
+    byCat.set(b.category_id, list);
+  }
+  return (cats.results ?? []).map((c) => ({
+    ...c,
+    beroepen: byCat.get(c.id) ?? [],
+  }));
+}

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../env';
 import { getPage } from '../lib/db';
+import { renderHome } from '../views/home';
 import { renderError, renderPage } from '../views/public';
 
 export const publicApp = new Hono<{ Bindings: Env }>();
@@ -22,6 +23,8 @@ publicApp.get('/*', async (c) => {
   ) {
     return renderError(c, 404, 'Pagina niet gevonden');
   }
+  // Homepage krijgt een eigen renderer met mannetje-bg en accordions.
+  if (slug === '/') return renderHome(c);
   const page = await getPage(c.env.DB, slug);
   if (!page) return renderError(c, 404, 'Pagina niet gevonden');
   return renderPage(c, page);

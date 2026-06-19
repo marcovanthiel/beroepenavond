@@ -40,11 +40,11 @@ ${opts.metaDescription ? raw(`<meta name="description" content="${opts.metaDescr
 ${opts.metaDescription ? raw(`<meta property="og:description" content="${opts.metaDescription.replace(/"/g, '&quot;')}">`) : ''}
 <meta property="og:type" content="website">
 <meta property="og:locale" content="nl_NL">
-<meta name="theme-color" content="#2b6cb0">
+<meta name="theme-color" content="#a3d935">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
