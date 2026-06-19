@@ -45,8 +45,8 @@ export function renderLayout(opts: LayoutOpts) {
   const navHtml = opts.navItems
     .map((p) => {
       const label = p.nav_label || p.title;
-      const active = p.slug === opts.activeSlug ? 'active' : '';
-      return `<li><a class="${active}" href="${p.slug}">${label}</a></li>`;
+      const isActive = p.slug === opts.activeSlug;
+      return `<li><a class="${isActive ? 'active' : ''}" href="${p.slug}"${isActive ? ' aria-current="page"' : ''}>${label}</a></li>`;
     })
     .join('\n      ');
 
@@ -82,9 +82,35 @@ export function renderLayout(opts: LayoutOpts) {
         .join('')}</div>`
     : '';
 
-  const jsonLdHtml = opts.jsonLd
-    ? `<script type="application/ld+json">${JSON.stringify(opts.jsonLd)}</script>`
-    : '';
+  // JSON-LD: altijd Organization, + BreadcrumbList op subpagina's, +
+  // eventuele pagina-specifieke data (bv. Event op de home, FAQPage).
+  const orgLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Beroepenavond Nijmegen',
+    url: host + '/',
+    logo: host + '/assets/img/favicon.png',
+    sameAs: socialLinks.map(([, url]) => url),
+  };
+  const breadcrumbLd = opts.breadcrumbs?.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: host + '/' },
+          ...opts.breadcrumbs.map((c, i) => ({
+            '@type': 'ListItem',
+            position: i + 2,
+            name: c.label,
+            ...(c.href ? { item: host + c.href } : {}),
+          })),
+        ],
+      }
+    : null;
+  const jsonLdHtml = [orgLd, breadcrumbLd, opts.jsonLd]
+    .filter(Boolean)
+    .map((d) => `<script type="application/ld+json">${JSON.stringify(d)}</script>`)
+    .join('\n');
 
   return html`<!DOCTYPE html>
 <html lang="nl">
@@ -104,6 +130,8 @@ ${canonical ? raw(`<meta property="og:url" content="${attr(canonical)}">`) : ''}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#88bc1d">
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/img/favicon.png">
+<link rel="manifest" href="/assets/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">

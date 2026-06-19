@@ -26,7 +26,23 @@ app.use('*', async (c, next) => {
   return next();
 });
 
-// 2. Security-headers op alle Worker-responses.
+// Content-Security-Policy: 'unsafe-inline' is nodig voor onze inline
+// scripts/styles; Google Fonts + https/data-afbeeldingen (externe
+// portretten) zijn toegestaan. Verkleint XSS-impact.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  "connect-src 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ');
+
+// 2. Security-headers + caching op alle Worker-responses.
 //    ASSETS.fetch() en c.redirect() returnen responses met immutable
 //    headers. Daarom wrappen we de respons altijd in een nieuwe Response.
 app.use('*', async (c, next) => {
@@ -42,6 +58,22 @@ app.use('*', async (c, next) => {
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.headers.set('Content-Security-Policy', CSP);
+  res.headers.set('X-DNS-Prefetch-Control', 'on');
+
+  // Caching-strategie per pad.
+  const url = new URL(c.req.url);
+  const path = url.pathname;
+  if (path.startsWith('/admin')) {
+    res.headers.set('Cache-Control', 'no-store'); // beheer nooit cachen
+  } else if (path.startsWith('/assets/')) {
+    res.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=604800');
+  } else if (path.startsWith('/media/')) {
+    /* /media houdt zijn eigen Cache-Control uit serveMedia */
+  } else if (c.req.method === 'GET' && res.status === 200 && !url.search) {
+    // Publieke pagina's: kort edge-cachen, snel reviderend.
+    res.headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600');
+  }
   c.res = res;
 });
 

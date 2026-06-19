@@ -655,3 +655,24 @@ hr { border:0; border-top:1px solid var(--c-line); margin:2em 0; }
 /* LinkedIn-link op spreker-kaart */
 .speaker-card__li { display:inline-block; margin-top:10px; font-size:.82rem; font-weight:600; color:#0a66c2; }
 .speaker-card__li:hover { text-decoration:underline; color:#0a66c2; }
+
+/* Toegankelijkheid: respecteer "minder beweging" */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print: alleen de inhoud, geen nav/footer/forms/kaart-overlays */
+@media print {
+  .site-header, .site-footer, .nav__toggle, .skip-link,
+  .footer-news, .footer-social, .map-modal, .catalog-tools, .cat-filter,
+  .hero__cta, form { display: none !important; }
+  body { color: #000; background: #fff; }
+  a { color: #000; text-decoration: underline; }
+  .hero { padding: 10px 0; }
+  .card-box, .map-panel { break-inside: avoid; border-color: #ccc; }
+}

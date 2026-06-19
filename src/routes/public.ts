@@ -226,6 +226,7 @@ publicApp.get('/*', async (c) => {
   // Dynamische pagina's: genereer extra content + eventuele notice.
   let append = '';
   let notice: { type: 'ok' | 'err'; text: string } | null = null;
+  let jsonLd: unknown = undefined;
 
   switch (slug) {
     case '/rooster':
@@ -259,7 +260,37 @@ publicApp.get('/*', async (c) => {
       if (q.sent) notice = { type: 'ok', text: 'Bijna klaar! Check je mailbox en bevestig je aanmelding.' };
       else if (q.already) notice = { type: 'ok', text: 'Je bent al aangemeld voor de nieuwsbrief.' };
       break;
+    case '/faq': {
+      const faqs = parseFaq(page.body_md);
+      if (faqs.length) {
+        jsonLd = {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: faqs.map((f) => ({
+            '@type': 'Question',
+            name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+          })),
+        };
+      }
+      break;
+    }
   }
 
-  return renderPage(c, page, append, { notice });
+  return renderPage(c, page, append, { notice, jsonLd });
 });
+
+/** Splitst FAQ-markdown (## vraag → antwoord) in Q&A voor FAQPage-schema. */
+function parseFaq(md: string): { q: string; a: string }[] {
+  const out: { q: string; a: string }[] = [];
+  const blocks = md.split(/\n(?=##\s)/);
+  for (const b of blocks) {
+    const m = /^##\s+(.+?)\n([\s\S]*)$/.exec(b.trim());
+    if (m) {
+      const q = m[1].trim();
+      const a = m[2].replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
+      if (q && a) out.push({ q, a });
+    }
+  }
+  return out;
+}

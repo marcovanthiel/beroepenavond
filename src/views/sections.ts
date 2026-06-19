@@ -130,7 +130,7 @@ interface SpeakerRow {
 
 function speakerCard(s: SpeakerRow): string {
   const avatar = s.portrait_url
-    ? `<img class="speaker-card__avatar" src="${esc(s.portrait_url)}" alt="${esc(s.full_name)}" loading="lazy">`
+    ? `<img class="speaker-card__avatar" src="${esc(s.portrait_url)}" alt="${esc(s.full_name)}" loading="lazy" decoding="async">`
     : `<div class="speaker-card__ph" aria-hidden="true">${esc(initials(s.full_name))}</div>`;
   const li = s.linkedin
     ? `<a class="speaker-card__li" href="${esc(s.linkedin)}" target="_blank" rel="noopener" aria-label="LinkedIn van ${esc(s.full_name)}">in · LinkedIn</a>`
@@ -252,7 +252,7 @@ export async function renderNieuwsList(db: D1Database): Promise<string> {
   const cards = list
     .map(
       (n) => `<a class="card-box news-card" href="/nieuws/${esc(n.slug)}">
-        ${n.cover_url ? `<img class="news-card__img" src="${esc(n.cover_url)}" alt="" loading="lazy">` : ''}
+        ${n.cover_url ? `<img class="news-card__img" src="${esc(n.cover_url)}" alt="" loading="lazy" decoding="async">` : ''}
         <div class="news-card__body">
           <time>${dateNL(n.published_at)}</time>
           <h3>${esc(n.title)}</h3>

@@ -14,7 +14,7 @@ import {
   deleteButton,
   flashFromQuery,
 } from '../../views/admin/layout';
-import { str, strOrNull, bool, redirectOk, redirectErr } from '../../lib/forms';
+import { str, strOrNull, bool, intOrNull, redirectOk, redirectErr } from '../../lib/forms';
 import { uploadImage, deleteMedia, r2Available, UploadError } from '../../lib/media';
 
 export const speakersApp = new Hono<AdminEnv>();
@@ -31,6 +31,7 @@ interface Speaker {
   website: string | null;
   linkedin: string | null;
   category_id: string | null;
+  beroep_id: number | null;
   is_public: number;
   notes: string | null;
 }
@@ -62,6 +63,36 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
   const r2 = r2Available(c.env);
   const cats = await c.env.DB.prepare('SELECT id, name FROM categories ORDER BY sort_order').all();
   const catOptions = (cats.results ?? []).map((x: any) => ({ value: x.id, label: x.name }));
+  // Beroep-treklijst, gegroepeerd per categorie (optgroups).
+  const ber = await c.env.DB.prepare(
+    `SELECT b.id, b.name, c.name AS cat_name, c.sort_order AS cat_order
+       FROM beroepen b LEFT JOIN categories c ON c.id = b.category_id
+      ORDER BY c.sort_order, b.name`
+  ).all();
+  const groups = new Map<string, any[]>();
+  for (const r of (ber.results ?? []) as any[]) {
+    const g = r.cat_name ?? 'Overig';
+    (groups.get(g) ?? groups.set(g, []).get(g)!).push(r);
+  }
+  const curBer = String(s.beroep_id ?? '');
+  const beroepSelect = `<label class="fld">
+    <span class="fld__label">Beroep</span>
+    <select class="fld__input" name="beroep_id">
+      <option value="">— nog geen beroep —</option>
+      ${[...groups]
+        .map(
+          ([g, items]) =>
+            `<optgroup label="${esc(g)}">${items
+              .map(
+                (it) =>
+                  `<option value="${it.id}" ${String(it.id) === curBer ? 'selected' : ''}>${esc(it.name)}</option>`
+              )
+              .join('')}</optgroup>`
+        )
+        .join('')}
+    </select>
+    <span class="fld__help">Categorie volgt automatisch uit het beroep. <a href="/admin/beroepen/new" target="_blank">Nieuw beroep ↗</a></span>
+  </label>`;
   const portrait = s.portrait_url
     ? `<div style="margin-bottom:8px"><img src="${esc(s.portrait_url)}" alt="" style="width:90px;height:90px;border-radius:10px;object-fit:cover"></div>`
     : '';
@@ -76,8 +107,9 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
     <form method="post" action="/admin/speakers/${isNew ? 'new' : esc(s.id!)}" enctype="multipart/form-data" class="card">
       <div class="form-grid cols-2">
         <div class="span-2">${field({ label: 'Volledige naam', name: 'full_name', value: s.full_name ?? '', required: true })}</div>
-        ${field({ label: 'Beroep / functie', name: 'job_title', value: s.job_title ?? '' })}
-        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: catOptions, empty: '— geen —' })}
+        <div class="span-2">${beroepSelect}</div>
+        ${field({ label: 'Functietitel (optioneel)', name: 'job_title', value: s.job_title ?? '', help: 'Specifieke titel op de kaart; leeg = de beroepsnaam' })}
+        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: catOptions, empty: '— geen —', help: 'Wordt overschreven door het gekozen beroep' })}
         ${field({ label: 'Organisatie / werkgever', name: 'organization', value: s.organization ?? '' })}
         ${field({ label: 'E-mail', name: 'email', value: s.email ?? '', type: 'email' })}
         ${field({ label: 'Telefoon', name: 'phone', value: s.phone ?? '' })}
@@ -119,6 +151,22 @@ async function resolvePortrait(
   return strOrNull(body.portrait_url);
 }
 
+/** Beroep-keuze + afgeleide categorie (categorie volgt het gekozen beroep). */
+async function resolveBeroepCat(
+  c: any,
+  b: Record<string, unknown>
+): Promise<{ beroepId: number | null; categoryId: string | null }> {
+  const beroepId = intOrNull(b.beroep_id);
+  let categoryId = strOrNull(b.category_id);
+  if (beroepId !== null) {
+    const row = await c.env.DB.prepare('SELECT category_id FROM beroepen WHERE id = ?')
+      .bind(beroepId)
+      .first();
+    if (row?.category_id) categoryId = row.category_id as string;
+  }
+  return { beroepId, categoryId };
+}
+
 speakersApp.post('/new', async (c) => {
   const b = await c.req.parseBody();
   const id = `spk_${crypto.randomUUID().slice(0, 12)}`;
@@ -129,11 +177,12 @@ speakersApp.post('/new', async (c) => {
     if (e instanceof UploadError) return redirectErr(c, '/admin/speakers/new', e.message);
     throw e;
   }
+  const { beroepId, categoryId } = await resolveBeroepCat(c, b);
   await c.env.DB.prepare(
-    `INSERT INTO speakers (id, full_name, email, phone, organization, job_title, bio_md, portrait_url, website, linkedin, category_id, is_public, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO speakers (id, full_name, email, phone, organization, job_title, bio_md, portrait_url, website, linkedin, category_id, beroep_id, is_public, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(id, str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), strOrNull(b.category_id), bool(b.is_public), strOrNull(b.notes))
+    .bind(id, str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), categoryId, beroepId, bool(b.is_public), strOrNull(b.notes))
     .run();
   await logAudit(c, 'create', 'speaker', id);
   return redirectOk(c, '/admin/speakers', 'Spreker aangemaakt.');
@@ -150,10 +199,11 @@ speakersApp.post('/:id', async (c) => {
     if (e instanceof UploadError) return redirectErr(c, `/admin/speakers/${id}`, e.message);
     throw e;
   }
+  const { beroepId, categoryId } = await resolveBeroepCat(c, b);
   await c.env.DB.prepare(
-    `UPDATE speakers SET full_name = ?, email = ?, phone = ?, organization = ?, job_title = ?, bio_md = ?, portrait_url = ?, website = ?, linkedin = ?, category_id = ?, is_public = ?, notes = ?, updated_at = unixepoch() WHERE id = ?`
+    `UPDATE speakers SET full_name = ?, email = ?, phone = ?, organization = ?, job_title = ?, bio_md = ?, portrait_url = ?, website = ?, linkedin = ?, category_id = ?, beroep_id = ?, is_public = ?, notes = ?, updated_at = unixepoch() WHERE id = ?`
   )
-    .bind(str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), strOrNull(b.category_id), bool(b.is_public), strOrNull(b.notes), id)
+    .bind(str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), categoryId, beroepId, bool(b.is_public), strOrNull(b.notes), id)
     .run();
   await logAudit(c, 'update', 'speaker', id);
   return redirectOk(c, '/admin/speakers', 'Spreker opgeslagen.');
