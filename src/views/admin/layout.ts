@@ -26,10 +26,15 @@ interface NavGroup {
   items: NavItem[];
 }
 
+/** Rol-weergave in het Nederlands (opgeslagen waarde blijft admin/editor). */
+export function roleLabel(role: string): string {
+  return role === 'admin' ? 'Beheerder' : 'Redacteur';
+}
+
 const NAV: NavGroup[] = [
   {
     title: 'Algemeen',
-    items: [{ href: '/admin', label: 'Dashboard', key: 'dashboard' }],
+    items: [{ href: '/admin', label: 'Overzicht', key: 'dashboard' }],
   },
   {
     title: 'Inhoud',
@@ -60,7 +65,7 @@ const NAV: NavGroup[] = [
   {
     title: 'Communicatie',
     items: [
-      { href: '/admin/inbox', label: 'Inbox', key: 'inbox' },
+      { href: '/admin/inbox', label: 'Postvak', key: 'inbox' },
       { href: '/admin/subscribers', label: 'Nieuwsbrief', key: 'subscribers' },
       { href: '/admin/nieuws', label: 'Nieuws', key: 'announcements' },
     ],
@@ -68,9 +73,9 @@ const NAV: NavGroup[] = [
   {
     title: 'Systeem',
     items: [
-      { href: '/admin/media', label: 'Media', key: 'media' },
+      { href: '/admin/media', label: 'Mediatheek', key: 'media' },
       { href: '/admin/users', label: 'Gebruikers', key: 'users' },
-      { href: '/admin/audit', label: 'Audit-log', key: 'audit' },
+      { href: '/admin/audit', label: 'Logboek', key: 'audit' },
       { href: '/admin/account', label: 'Mijn account', key: 'account' },
     ],
   },
@@ -128,7 +133,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
     </nav>
     <div class="sidebar__foot">
       <span class="sidebar__user">${esc(user?.name ?? '')}<small>${esc(
-    user?.role ?? ''
+    user ? roleLabel(user.role) : ''
   )}</small></span>
       <form method="post" action="/admin/logout">
         <button type="submit" class="btn btn--ghost btn--sm">Uitloggen</button>

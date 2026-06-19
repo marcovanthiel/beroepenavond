@@ -26,11 +26,11 @@ auditApp.get('/', async (c) => {
     )
     .join('');
   const body = `
-    ${pageHeader('Audit-log')}
+    ${pageHeader('Logboek')}
     <p class="muted">De laatste 250 acties in het beheer.</p>
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Wanneer</th><th>Wie</th><th>Actie</th><th>Object</th><th>IP</th></tr></thead>
       <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen activiteit.</td></tr>'}</tbody>
     </table></div>`;
-  return renderAdminLayout(c, { title: 'Audit-log', activeKey: 'audit', body });
+  return renderAdminLayout(c, { title: 'Logboek', activeKey: 'audit', body });
 });

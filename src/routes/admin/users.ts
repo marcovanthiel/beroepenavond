@@ -11,6 +11,7 @@ import {
   select,
   formActions,
   flashFromQuery,
+  roleLabel,
 } from '../../views/admin/layout';
 import { str, redirectOk, redirectErr } from '../../lib/forms';
 
@@ -38,7 +39,7 @@ usersApp.get('/', async (c) => {
       (u) => `<tr>
         <td><strong>${esc(u.name)}</strong>${u.id === me.id ? ' <span class="badge badge--off">jij</span>' : ''}</td>
         <td>${esc(u.email)}</td>
-        <td><span class="badge ${u.role === 'admin' ? 'badge--on' : 'badge--off'}">${esc(u.role)}</span></td>
+        <td><span class="badge ${u.role === 'admin' ? 'badge--on' : 'badge--off'}">${esc(roleLabel(u.role))}</span></td>
         <td class="muted">${dateNL(u.created_at)}</td>
         <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/users/${esc(u.id)}">Bewerken</a></td>
       </tr>`
@@ -54,8 +55,8 @@ usersApp.get('/', async (c) => {
 });
 
 const ROLES = [
-  { value: 'editor', label: 'Editor (inhoud + programma)' },
-  { value: 'admin', label: 'Admin (alles incl. gebruikers)' },
+  { value: 'editor', label: 'Redacteur (inhoud + programma)' },
+  { value: 'admin', label: 'Beheerder (alles incl. gebruikers)' },
 ];
 
 usersApp.get('/new', (c) => {

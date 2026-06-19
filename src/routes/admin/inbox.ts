@@ -58,12 +58,12 @@ inboxApp.get('/', async (c) => {
   const tab = (t: string, label: string) =>
     `<a class="btn ${type === t ? 'btn--primary' : 'btn--ghost'} btn--sm" href="/admin/inbox${t ? `?type=${t}` : ''}">${label}</a>`;
   const body = `
-    ${pageHeader('Inbox', `${tab('', 'Alles')} ${tab('contact', 'Contact')} ${tab('volunteer', 'Voorlichters')}`)}
+    ${pageHeader('Postvak', `${tab('', 'Alles')} ${tab('contact', 'Contact')} ${tab('volunteer', 'Voorlichters')}`)}
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Type</th><th>Van</th><th>Onderwerp</th><th>Status</th><th>Datum</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="6" class="empty">Geen berichten.</td></tr>'}</tbody>
     </table></div>`;
-  return renderAdminLayout(c, { title: 'Inbox', activeKey: 'inbox', body, flash: flashFromQuery(c) });
+  return renderAdminLayout(c, { title: 'Postvak', activeKey: 'inbox', body, flash: flashFromQuery(c) });
 });
 
 inboxApp.get('/:id', async (c) => {

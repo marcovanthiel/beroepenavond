@@ -143,7 +143,7 @@ adminApp.get('/', async (c) => {
     .join('');
 
   const body = `
-    <header class="page-head"><h1>Dashboard</h1><div class="page-head__actions"><a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a></div></header>
+    <header class="page-head"><h1>Overzicht</h1><div class="page-head__actions"><a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a></div></header>
     <div class="card">
       <h2>Actieve editie</h2>
       <p>${ev ? `<strong>${esc(ev.title)}</strong> — ${esc(ev.date)}` : 'Geen actieve editie ingesteld.'}</p>
@@ -162,7 +162,7 @@ adminApp.get('/', async (c) => {
       ${recentRows ? `<table class="data" style="width:100%">${recentRows}</table>` : '<p class="muted">Nog geen inzendingen.</p>'}
     </div>`;
 
-  return renderAdminLayout(c, { title: 'Dashboard', activeKey: 'dashboard', body });
+  return renderAdminLayout(c, { title: 'Overzicht', activeKey: 'dashboard', body });
 });
 
 // ----------------------------------------------------------------------

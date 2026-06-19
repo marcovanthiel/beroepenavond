@@ -44,7 +44,7 @@ subscribersApp.get('/', async (c) => {
     )
     .join('');
   const body = `
-    ${pageHeader('Nieuwsbrief', '<a class="btn btn--primary" href="/admin/subscribers/export.csv">Export actieve (CSV)</a>')}
+    ${pageHeader('Nieuwsbrief', '<a class="btn btn--primary" href="/admin/subscribers/export.csv">Exporteer actieve (CSV)</a>')}
     <div class="stat-grid">
       <div class="stat"><div class="stat__n">${counts.active}</div><div class="stat__l">Actief</div></div>
       <div class="stat"><div class="stat__n">${counts.pending}</div><div class="stat__l">Niet bevestigd</div></div>

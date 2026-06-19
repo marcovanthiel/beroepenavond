@@ -17,9 +17,9 @@ function fmtSize(n: number): string {
 mediaApp.get('/', async (c) => {
   if (!r2Available(c.env)) {
     return renderAdminLayout(c, {
-      title: 'Media',
+      title: 'Mediatheek',
       activeKey: 'media',
-      body: `${pageHeader('Media')}<div class="card"><p>De R2-bucket is niet gekoppeld in deze omgeving.</p></div>`,
+      body: `${pageHeader('Mediatheek')}<div class="card"><p>De R2-bucket is niet gekoppeld in deze omgeving.</p></div>`,
     });
   }
   const listed = await c.env.ASSETS_R2!.list({ limit: 500 });
@@ -43,14 +43,14 @@ mediaApp.get('/', async (c) => {
     })
     .join('');
   const body = `
-    ${pageHeader('Media-bibliotheek')}
+    ${pageHeader('Mediatheek')}
     <form method="post" action="/admin/media/upload" enctype="multipart/form-data" class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="file" name="file" accept="image/*" required>
       <button class="btn btn--primary btn--sm" type="submit">Uploaden</button>
       <span class="muted">JPG/PNG/WEBP/SVG, max 8 MB. Komt in de map <code>media/</code>.</span>
     </form>
     <div class="grid grid--auto" style="margin-top:18px">${cards || '<p class="muted">Nog geen bestanden.</p>'}</div>`;
-  return renderAdminLayout(c, { title: 'Media', activeKey: 'media', body, flash: flashFromQuery(c) });
+  return renderAdminLayout(c, { title: 'Mediatheek', activeKey: 'media', body, flash: flashFromQuery(c) });
 });
 
 mediaApp.post('/upload', async (c) => {

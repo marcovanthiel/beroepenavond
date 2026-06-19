@@ -171,7 +171,7 @@ ${raw(opts.bodyHtml)}
           <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
           <button type="submit">Aanmelden</button>
         </form>
-        <p style="margin-top:10px"><a href="/aanmelden">Word voorlichter</a> · <a href="/contact">Contact</a> · <a href="/faq">FAQ</a></p>
+        <p style="margin-top:10px"><a href="/aanmelden">Word voorlichter</a> · <a href="/contact">Contact</a> · <a href="/faq">Vragen</a></p>
       </div>
     </div>
     <div class="footer-bottom">
