@@ -96,14 +96,28 @@ Patroon hetzelfde als bij `inijmegen.nl`.
   (200, image/png), end-to-end keten lokaal→sessie→`/rooster`-map.
 - Remote D1 bevat al alle tabellen uit `001_init` — geen migratie nodig.
 
+### ⚠️ Belangrijk: CI-deploy vs. R2-token
+Sinds de R2-binding (`ASSETS_R2`) in `wrangler.toml` staat, valideert
+`wrangler deploy` de bucket bij elke deploy. De **GitHub Actions-token
+(`CLOUDFLARE_API_TOKEN`) mist R2-rechten** → de auto-deploy faalt met
+`Authentication error [code: 10000]` op `/r2/buckets/beroepenavond-assets`.
+
+→ **Fix (1×, dashboard):** Cloudflare → My Profile → API Tokens → de token
+achter de GH-secret bewerken → permissie **Account · Workers R2 Storage ·
+Edit** toevoegen → opslaan. Daarna `gh run rerun <id>` of een nieuwe push;
+CI wordt groen. De lokale wrangler-OAuth hééft R2 wél, dus tot die fix
+deploy je met:
+`export PATH="/opt/homebrew/opt/node@22/bin:$PATH" && npx wrangler deploy`.
+
 ### ⏳ Te doen
-- **DNS / custom domain `www.inijmegen.com`** — apex werkt al, `www`
-  nog niet. NIET in `wrangler.toml` als `custom_domain` zetten (CI-token
-  kan DNS-provisioning laten falen en zo de deploy blokkeren). Voeg `www`
-  toe via het Cloudflare-dashboard → Worker `beroepenavond` → Settings →
-  Domains & Routes → Add → Custom Domain `www.inijmegen.com`. De Worker
-  redirect `www` daarna automatisch 301 naar de apex.
-- Optioneel: extra editors/admins aanmaken (nu alleen de eerste admin).
+- **CI-token R2-permissie** toevoegen (zie hierboven) — daarna werkt de
+  push→auto-deploy weer.
+- Optioneel: extra editors/admins aanmaken (nu alleen de eerste admin
+  via de setup-pagina op `/admin/login`).
+
+### ✅ Domein
+`inijmegen.com` (apex) én `www.inijmegen.com` werken; `www` 301-redirect
+naar apex via de Worker-middleware. Geen verdere DNS-actie nodig.
 
 ### ℹ️ Lokaal draaien — Node 22 vereist
 `wrangler` weigert op Node 20. Gebruik:
