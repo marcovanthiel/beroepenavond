@@ -6,3 +6,7 @@ UPDATE speakers SET linkedin='https://www.linkedin.com/in/janvanaggelen/' WHERE 
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/meijering/' WHERE id='spk_imp_john-meijering';
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/renske-gabrielle-snijders-334519175/' WHERE id='spk_imp_renske-snijders';
 UPDATE speakers SET linkedin='https://www.linkedin.com/in/sabinevanwissen/' WHERE id='spk_imp_sabine-van-wissen';
+-- correctie nummering: Sabine was abusievelijk gezet, hoort leeg; Myrthe + Sjoerd Roelofs toegevoegd
+UPDATE speakers SET linkedin='https://www.linkedin.com/in/myrthe-schuurman-870529110/' WHERE id='spk_imp_myrthe-schuurmans';
+UPDATE speakers SET linkedin=NULL WHERE id='spk_imp_sabine-van-wissen';
+UPDATE speakers SET linkedin='https://www.linkedin.com/in/sgahroelofs/' WHERE id='spk_imp_sjoerd-roelofs';
