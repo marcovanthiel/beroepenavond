@@ -6,13 +6,15 @@ import { renderLayout } from './layout';
 
 export async function renderPage(
   c: Context<{ Bindings: Env }>,
-  page: PageRow
+  page: PageRow,
+  appendHtml = ''
 ) {
   const [settings, navItems] = await Promise.all([
     getSettings(c.env.DB),
     getNavPages(c.env.DB),
   ]);
-  const bodyHtml = renderMarkdown(interpolate(page.body_md, settings));
+  const bodyHtml =
+    renderMarkdown(interpolate(page.body_md, settings)) + appendHtml;
   return c.html(
     renderLayout({
       title: page.title,

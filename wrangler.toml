@@ -21,12 +21,12 @@ binding = "DB"
 database_name = "beroepenavond"
 database_id = "8bb285c2-b8be-40bb-98c3-8e58635c47d9"
 
-# R2 voor plattegrond-PDFs en spreker-portretten. Bucket nog niet
-# aangemaakt — Marco doet dat via dashboard of we wachten op
-# token-permissie.
-# [[r2_buckets]]
-# binding = "ASSETS_R2"
-# bucket_name = "beroepenavond-assets"
+# R2 voor plattegrond-afbeeldingen en spreker-portretten.
+# Bucket aangemaakt 19 jun 2026. Objecten worden geserveerd via de
+# Worker-route /media/* (zie src/routes/admin/media.ts).
+[[r2_buckets]]
+binding = "ASSETS_R2"
+bucket_name = "beroepenavond-assets"
 
 [vars]
 SITE_NAME = "Beroepenavond Nijmegen"

@@ -3,6 +3,7 @@ import type { Env } from '../env';
 import { getPage } from '../lib/db';
 import { renderHome } from '../views/home';
 import { renderError, renderPage } from '../views/public';
+import { renderRoosterMap } from '../views/rooster';
 
 export const publicApp = new Hono<{ Bindings: Env }>();
 
@@ -27,5 +28,10 @@ publicApp.get('/*', async (c) => {
   if (slug === '/') return renderHome(c);
   const page = await getPage(c.env.DB, slug);
   if (!page) return renderError(c, 404, 'Pagina niet gevonden');
+  // De roosterpagina krijgt de interactieve plattegrond onder de tekst.
+  if (slug === '/rooster') {
+    const map = await renderRoosterMap(c.env.DB).catch(() => '');
+    return renderPage(c, page, map);
+  }
   return renderPage(c, page);
 });

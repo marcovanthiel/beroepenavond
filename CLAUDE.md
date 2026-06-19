@@ -68,20 +68,46 @@ Patroon hetzelfde als bij `inijmegen.nl`.
 - Copyright: **© Rotary Club Nijmegen-Stad en Land** (Weijsters & Kooij-
   credit verwijderd op verzoek Marco)
 
+### ✅ Klaar (19 juni 2026, sessie 2 — admin + plattegrond)
+- **R2-bucket `beroepenavond-assets`** aangemaakt (lokale wrangler-OAuth
+  hééft wél R2-rechten; de eerdere "token mist R2-Edit" gold voor de
+  CI-token). Binding `ASSETS_R2` actief in `wrangler.toml`.
+- **`SESSION_SECRET`** gezet: prod via `wrangler secret put`, lokaal in
+  `.dev.vars` (gitignored). Nodig voor HMAC-signed cookies.
+- **Login + sessies** — `src/lib/auth.ts`: PBKDF2-SHA256 (WebCrypto),
+  sessie in D1, HMAC-signed cookie `ba_session`, `requireAuth`.
+- **Eerste admin** zonder script: bij 0 users toont `/admin/login`
+  automatisch een setup-formulier (maak eerste beheerder → meteen
+  ingelogd). Dus géén `create-first-user.sh` meer nodig.
+- **Volledige admin-UI `/admin/*`** — dashboard + CRUD voor pages,
+  settings, events (met activeren), rounds, categories, beroepen,
+  speakers (R2-fotoupload), classrooms, floorplans (R2-upload),
+  sessions_program (M2M sprekers). Audit-log bij elke mutatie.
+- **Media** — upload naar R2 + publieke serve-route `GET /media/*`
+  (`src/lib/media.ts`).
+- **Plattegrond-editor** `/admin/floorplan-editor` — teken polygons per
+  lokaal op de achtergrond-afbeelding (klik = punt, sleep = bijstellen,
+  autosave). Client: `public/assets/js/floorplan-editor.js`.
+- **Interactieve publieke plattegrond** op `/rooster` — SVG met
+  klikbare lokaal-polygons (kleur per categorie) → modal met
+  sessie/ronde/spreker. View: `src/views/rooster.ts`, client:
+  `public/assets/js/floorplan-view.js`.
+- Lokaal getest: auth-flow, alle CRUD-lijsten (200), R2-upload→`/media`
+  (200, image/png), end-to-end keten lokaal→sessie→`/rooster`-map.
+- Remote D1 bevat al alle tabellen uit `001_init` — geen migratie nodig.
+
 ### ⏳ Te doen
-- **Admin-UI** onder `/admin/*` — login + CRUD voor pages, settings,
-  events, rounds, categories, beroepen, speakers, classrooms, floorplans
-- **Login-systeem** met PBKDF2 password-hashing (via WebCrypto) +
-  signed sessie-cookies
-- **Speakers CRUD** met foto-upload (vereist R2)
-- **Classrooms CRUD** met `map_shape` polygon-editor
-- **Interactieve plattegrond** — SVG-overlay met klikbare polygons per
-  lokaal; tap → modal met sessie/categorie/spreker-info
-- **R2-bucket aanmaken**: `beroepenavond-assets`. Huidige API-token
-  mist R2-Edit; via dashboard maken of token upgraden
-- **Eerste admin user** via `scripts/create-first-user.sh` (nog niet
-  gebouwd)
-- **DNS-record `www.inijmegen.com`** aanmaken; nu resolved alleen apex
+- **DNS / custom domain `www.inijmegen.com`** — apex werkt al, `www`
+  nog niet. NIET in `wrangler.toml` als `custom_domain` zetten (CI-token
+  kan DNS-provisioning laten falen en zo de deploy blokkeren). Voeg `www`
+  toe via het Cloudflare-dashboard → Worker `beroepenavond` → Settings →
+  Domains & Routes → Add → Custom Domain `www.inijmegen.com`. De Worker
+  redirect `www` daarna automatisch 301 naar de apex.
+- Optioneel: extra editors/admins aanmaken (nu alleen de eerste admin).
+
+### ℹ️ Lokaal draaien — Node 22 vereist
+`wrangler` weigert op Node 20. Gebruik:
+`export PATH="/opt/homebrew/opt/node@22/bin:$PATH"` vóór `wrangler …`.
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 

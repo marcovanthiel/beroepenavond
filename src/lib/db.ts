@@ -4,6 +4,29 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { PageRow, SettingsMap } from '../env';
 
+export interface EventRow {
+  id: string;
+  year: number;
+  title: string;
+  date: string;
+  venue_name: string;
+  venue_address: string | null;
+  intro_md: string | null;
+  is_active: number;
+}
+
+/** De actieve editie (is_active=1), of de meest recente, of null. */
+export async function getActiveEvent(
+  db: D1Database
+): Promise<EventRow | null> {
+  const row = await db
+    .prepare(
+      'SELECT * FROM events ORDER BY is_active DESC, year DESC LIMIT 1'
+    )
+    .first<EventRow>();
+  return row ?? null;
+}
+
 export async function getSettings(db: D1Database): Promise<SettingsMap> {
   const res = await db.prepare('SELECT key, value FROM settings').all<{
     key: string;

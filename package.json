@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:apply:local": "wrangler d1 execute beroepenavond --local --file=schema/001_init.sql && wrangler d1 execute beroepenavond --local --file=schema/002_seed.sql",
-    "db:apply:remote": "wrangler d1 execute beroepenavond --remote --file=schema/001_init.sql && wrangler d1 execute beroepenavond --remote --file=schema/002_seed.sql"
+    "typecheck": "tsc --noEmit",
+    "db:apply:local": "wrangler d1 execute beroepenavond --local --file=schema/001_init.sql && wrangler d1 execute beroepenavond --local --file=schema/002_seed.sql && wrangler d1 execute beroepenavond --local --file=schema/003_beroepen.sql",
+    "db:apply:remote": "wrangler d1 execute beroepenavond --remote --file=schema/001_init.sql && wrangler d1 execute beroepenavond --remote --file=schema/002_seed.sql && wrangler d1 execute beroepenavond --remote --file=schema/003_beroepen.sql"
   },
   "dependencies": {
     "hono": "^4.6.0"

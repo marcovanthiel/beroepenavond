@@ -10,7 +10,9 @@
 import { Hono } from 'hono';
 import type { Env } from './env';
 import { publicApp } from './routes/public';
+import { adminApp } from './routes/admin';
 import { renderError } from './views/public';
+import { serveMedia } from './lib/media';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -54,13 +56,23 @@ app.get('/favicon.ico', serveAsset);
 app.get('/favicon.svg', serveAsset);
 app.get('/sitemap.xml', serveAsset);
 
-// 4. Publieke site.
+// 4. Media uit R2 (publiek leesbaar): /media/<key>.
+app.get('/media/*', async (c) => {
+  const key = new URL(c.req.url).pathname.replace(/^\/media\//, '');
+  if (!key) return renderError(c, 404, 'Niet gevonden');
+  return serveMedia(c.env, key);
+});
+
+// 5. Beheer-paneel.
+app.route('/admin', adminApp);
+
+// 6. Publieke site (catch-all, laatste).
 app.route('/', publicApp);
 
-// 5. Fallback 404.
+// 7. Fallback 404.
 app.notFound(async (c) => renderError(c, 404, 'Pagina niet gevonden'));
 
-// 6. Error handler.
+// 8. Error handler.
 app.onError((err, c) => {
   console.error('Worker error:', err);
   return renderError(c, 500, 'Er ging iets mis op de server.');
