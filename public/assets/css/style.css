@@ -1,18 +1,15 @@
 /* Beroepenavond Nijmegen — public stylesheet
-   Look & feel naar bronsite: DM Sans, lime-groen accent, man-silhouet,
-   accordion-categorieën op homepage. */
+   1-op-1 nagebootst van beroepenavondnijmegen.nl (Weijsters & Kooij).
+   Kleuren, kantlijnen en groottes komen direct uit hun page CSS. */
 
 :root {
-  --c-ink:      #111111;
-  --c-muted:    #555;
-  --c-bg:       #ffffff;
-  --c-accent:   #a3d935;     /* lime — "BEROEPENAVOND" + accenten */
-  --c-accent-dk:#88b82a;
-  --c-banner:   #e6f4c4;     /* zacht-groen banner */
-  --c-bar:      #111;
-  --c-line:     #e5e7eb;
-  --maxw-home:  900px;
-  --maxw:       980px;
+  --c-ink:        #000000;
+  --c-bg:         #ffffff;
+  --c-accent:     #88bc1d;                       /* lime — "BEROEPENAVOND" en accenten */
+  --c-banner:     rgba(136,188,29,0.25);         /* lichtgroen banner-vlak */
+  --c-bar:        #000000;
+  --c-line:       #e5e7eb;
+  --container:    1056px;
 }
 
 * { box-sizing: border-box; }
@@ -23,200 +20,294 @@ body {
   color: var(--c-ink);
   background: var(--c-bg);
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  font-weight: 400;
 }
 a { color: var(--c-ink); text-decoration: none; }
-a:hover { color: var(--c-accent-dk); }
+a:hover { color: var(--c-accent); }
 
 /* =================================================================
-   HOMEPAGE
+   HOMEPAGE — mannetje als body-background (bron: #page-1369748)
    ================================================================= */
 
 body.home {
-  position: relative;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* Mannetje rechts */
-.home-bg {
-  position: fixed;
-  right: -40px;
-  top: 0;
-  bottom: 0;
-  width: 540px;
-  max-width: 45vw;
-  background: url('/assets/img/mannetje.jpg') no-repeat right top;
-  background-size: contain;
+  background-color: #ffffff;
+  background-image: url('/assets/img/mannetje.jpg');
+  background-repeat: no-repeat;
   background-position: right top;
-  pointer-events: none;
-  z-index: 0;
+  background-size: contain;
+  background-attachment: scroll;
+  min-height: 100vh;
 }
-@media (max-width: 720px) {
-  .home-bg {
-    width: 60vw;
-    right: -20px;
-    opacity: .45;
+@media (max-width: 479px) {
+  body.home {
+    background-position: center top;
+    background-size: 70vw auto;
   }
 }
 
-.home-main {
-  position: relative;
-  z-index: 1;
-  max-width: var(--maxw-home);
+.home-wrap {
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 48px 32px 80px;
+  padding: 0;
+}
+.b-inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 30px;
 }
 
-/* Header rechts uitgelijnd */
-.home-title {
-  text-align: right;
-  margin: 0 0 24px;
-  padding-right: clamp(40px, 12vw, 140px); /* maakt ruimte voor mannetje */
+/* block-8a — "DONDERDAG 20 NOVEMBER", links uitgelijnd, 48px */
+.b-8a {
+  padding-top: 40px;
 }
-.home-date {
+.b-8a .heading-2 {
+  font-family: 'DM Sans', sans-serif;
   font-weight: 700;
-  font-size: clamp(1.6rem, 3.6vw, 2.6rem);
-  line-height: 1.05;
-  letter-spacing: .01em;
-  margin: 0;
-  text-transform: uppercase;
-}
-.home-date__accent {
-  color: var(--c-accent);
-}
-.home-year {
-  font-weight: 700;
-  font-size: clamp(4.5rem, 13vw, 9rem);
+  font-size: 48px;
   line-height: 1;
-  letter-spacing: -.03em;
-  margin: 8px 0 0;
-  color: var(--c-ink);
+  margin: 0 0 10px;
+  text-align: left;
+  color: #000;
+  letter-spacing: 0;
 }
 
-/* Lichtgroene banner + zwarte balk */
-.home-banner {
-  background: var(--c-banner);
-  padding: 16px 28px;
+/* block-8b — "BEROEPENAVOND" in lime */
+.b-8b .heading-2.accent {
+  font-family: 'DM Sans', sans-serif;
   font-weight: 700;
-  font-size: clamp(1rem, 2vw, 1.3rem);
-  letter-spacing: .02em;
-  text-transform: uppercase;
-  color: var(--c-ink);
-  margin-top: 18px;
-}
-.home-banner__accent { color: var(--c-accent-dk); margin-right: 6px; }
-.home-divider {
-  height: 18px;
-  background: var(--c-bar);
-  margin-bottom: 40px;
+  font-size: 48px;
+  line-height: 1;
+  margin: 0 0 20px;
+  text-align: left;
+  color: var(--c-accent);
+  letter-spacing: 0;
 }
 
-/* Accordion */
-.accordion {
-  margin: 32px auto;
-  max-width: 720px;
+/* block-9a — "2026" gigantisch, rechts uitgelijnd, 185px */
+.b-9a {
+  padding: 0;
   position: relative;
-  z-index: 1;
+  top: 10px;
+}
+.b-9a .heading-year {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: clamp(60px, 14vw, 185px);
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  text-align: right;
+  letter-spacing: 2px;
+  color: #000;
+}
+
+/* block-9b — lichtgroene banner */
+.b-9b {
+  background-color: var(--c-banner);
+  padding: 15px 0;
+  margin-top: 20px;
+}
+.b-9b .heading-banner {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: clamp(20px, 3vw, 32px);
+  line-height: 1;
+  margin: 0;
+  text-align: left;
+  color: #000;
+}
+.b-9b .heading-banner .accent { color: var(--c-accent); }
+
+/* block-4 — zwarte sticky balk (bron: 50px hoog) */
+.b-4 {
+  background-color: var(--c-bar);
+  height: 50px;
+  width: 100%;
+}
+
+/* =================================================================
+   block-92 — Accordion
+   ================================================================= */
+
+.b-92 {
+  padding: 30px 0 20px;
+  background: rgba(255,255,255,0.6);
+}
+.accordion {
+  max-width: 720px;
+  margin: 0 auto;
 }
 .accordion-item {
-  margin-bottom: 4px;
+  margin: 3px 0;
 }
+
+/* Bron: handler-1: bg #000, color #fff, font 20px DM Sans 500 uppercase */
 .accordion-handle {
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  background: var(--c-bar);
+  background-color: var(--c-bar);
   color: #fff;
   border: 0;
-  padding: 12px 22px;
-  font: inherit;
-  font-weight: 700;
-  font-size: .96rem;
+  padding: 10px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
   text-transform: uppercase;
-  letter-spacing: .03em;
+  letter-spacing: 0;
+  line-height: 1.5;
   cursor: pointer;
   text-align: left;
 }
-.accordion-handle:hover { background: #222; }
+.accordion-handle:hover { color: var(--c-accent); }
+.accordion-handle__label { flex: 1; }
+
 .accordion-arrow {
-  width: 18px;
-  height: 18px;
-  color: var(--c-accent);
+  width: 16px;
+  height: 16px;
+  color: #fff;
   transition: transform .25s ease;
   flex-shrink: 0;
 }
-.accordion-item.open .accordion-arrow { transform: rotate(180deg); }
-.accordion-item.open .accordion-handle span { color: var(--c-accent); }
+.accordion-handle:hover .accordion-arrow { color: var(--c-accent); }
+.accordion-item.open .accordion-handle { color: var(--c-accent); }
+.accordion-item.open .accordion-arrow {
+  transform: rotate(180deg);
+  color: var(--c-accent);
+}
+
 .accordion-panel {
   max-height: 0;
   overflow: hidden;
   transition: max-height .35s ease;
-  background: #fff;
+  background: rgba(255,255,255,0.8);
 }
-.accordion-item.open .accordion-panel { max-height: 1500px; }
+.accordion-item.open .accordion-panel { max-height: 1600px; }
 .accordion-panel ul {
   list-style: none;
   margin: 0;
-  padding: 16px 22px 18px;
-}
-.accordion-panel li {
-  padding: 3px 0;
-  font-size: 1rem;
-  color: var(--c-ink);
-}
-.accordion-panel a {
-  color: var(--c-ink);
-  text-decoration: none;
-}
-.accordion-panel a:hover {
-  color: var(--c-accent-dk);
-  text-decoration: underline;
+  padding: 12px 24px 16px;
 }
 
-/* Contact + footer */
-.home-contact {
-  text-align: center;
-  margin: 50px auto 20px;
+/* Bron: text-4: DM Sans 400, 16px, line-height 1.25 */
+.accordion-panel li {
+  padding: 2px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.25;
+  color: #000;
+}
+@media (max-width: 479px) {
+  .accordion-handle { font-size: 16px; padding-top: 3px; line-height: 1; }
+}
+
+/* =================================================================
+   block-56 — Groene email-button
+   ================================================================= */
+
+.b-56 {
+  padding: 30px 0 20px;
+}
+.b-56 .b-inner { text-align: center; }
+
+/* Bron: button-1: bg #88BC1D, color #fff, padding 7px, font-size 20px */
+.email-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--c-accent);
+  color: #fff;
+  padding: 7px 14px;
+  font-family: 'DM Sans', sans-serif;
   font-weight: 500;
+  font-size: 20px;
+  text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.email-btn:hover { background: #000; color: #fff; }
+.email-btn svg { color: #fff; }
+@media (max-width: 479px) {
+  .email-btn { font-size: 16px; }
+}
+
+/* =================================================================
+   block-95 — Footer (organisatie + sponsor + © )
+   ================================================================= */
+
+.b-95a, .b-95b, .b-95c {
+  padding: 0;
+}
+.b-95a {
+  margin-top: 20px;
+}
+.b-95a .text-6 {
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.25;
+  color: #000;
+  max-width: 580px;
+  margin: 0 auto;
+}
+.b-95a .text-6 p { margin: 0; }
+
+.b-95b {
+  padding: 20px 0;
+}
+.b-95b .sponsor {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
-.home-contact__icon { color: var(--c-accent); }
-.home-contact a { color: var(--c-ink); }
-.home-contact a:hover { color: var(--c-accent-dk); }
-
-.home-org {
-  text-align: center;
-  margin: 30px auto 18px;
-  font-size: .95rem;
-  color: var(--c-ink);
-  max-width: 580px;
+.b-95b .sponsor__label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  margin: 0;
+  color: #000;
 }
-.home-org p { margin: 0; line-height: 1.5; }
+.b-95b .sponsor__logo img {
+  display: block;
+  height: 50px;
+  width: auto;
+  max-width: 180px;
+}
 
-.home-credits {
+.b-95c {
+  padding: 0 0 30px;
+}
+.b-95c .text-6 {
   text-align: center;
-  margin-top: 30px;
-  font-size: .78rem;
-  color: var(--c-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #000;
+}
+.b-95c .text-6 p { margin: 0; }
+
+@media (max-width: 767px) {
+  .b-95b .sponsor { flex-direction: column; gap: 10px; }
+  .b-inner { padding: 0 18px; }
 }
 
 /* =================================================================
    INTERNE PAGINA'S (introductie / tijdschema / rooster / beroepen)
+   Behouden de algemene layout — wel met DM Sans + lime accent.
    ================================================================= */
 
-.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+.wrap { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
 
 .site-header {
   background: #fff;
   color: var(--c-ink);
-  border-bottom: 1px solid var(--c-line);
+  border-bottom: 18px solid var(--c-bar);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -225,14 +316,14 @@ body.home {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  max-width: var(--maxw);
+  padding: 18px 24px;
+  max-width: var(--container);
   margin: 0 auto;
   gap: 16px;
 }
 .nav__logo {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   color: var(--c-ink);
   text-decoration: none;
   display: flex;
@@ -245,7 +336,7 @@ body.home {
   font-size: .7rem;
   letter-spacing: .15em;
   text-transform: uppercase;
-  color: var(--c-muted);
+  color: var(--c-accent);
   margin-top: 2px;
 }
 .nav__links {
@@ -260,8 +351,7 @@ body.home {
   color: var(--c-ink);
   text-decoration: none;
   padding: 8px 14px;
-  border-radius: 4px;
-  font-size: .92rem;
+  font-size: .95rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: .03em;
@@ -270,7 +360,7 @@ body.home {
 .nav__links a:hover,
 .nav__links a.active {
   background: var(--c-accent);
-  color: var(--c-ink);
+  color: #fff;
 }
 .nav__toggle {
   display: none;
@@ -298,19 +388,16 @@ body.home {
     padding: 12px 18px 18px;
     box-shadow: 0 8px 24px -10px rgba(0,0,0,.18);
     display: none;
-    border-bottom: 1px solid var(--c-line);
   }
   .nav__links.open { display: flex; }
   .nav__links a { padding: 12px 14px; }
 }
 
-/* Hero op subpagina's */
 .hero {
   position: relative;
   background: #fff;
   color: var(--c-ink);
   padding: 60px 0 30px;
-  border-bottom: 18px solid var(--c-bar);
 }
 .hero__bg {
   position: absolute;
@@ -326,7 +413,7 @@ body.home {
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--c-accent-dk);
+  color: var(--c-accent);
   margin-bottom: 14px;
 }
 .hero h1 {
@@ -335,7 +422,8 @@ body.home {
   margin: 0 0 .25em;
   letter-spacing: -.01em;
   max-width: 760px;
-  line-height: 1.1;
+  line-height: 1.05;
+  text-transform: uppercase;
 }
 .hero p.lede {
   color: var(--c-ink);
@@ -345,17 +433,16 @@ body.home {
 }
 .hero--compact { padding: 40px 0 22px; }
 
-/* Content */
-.section { padding: 48px 0; }
+.section { padding: 40px 0; }
 h2 {
-  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
-  margin: 2em 0 .55em;
+  font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+  margin: 1.8em 0 .55em;
   font-weight: 700;
-  letter-spacing: -.005em;
+  text-transform: uppercase;
 }
-h3 { font-size: 1.1rem; margin: 1.5em 0 .4em; font-weight: 700; }
+h3 { font-size: 1.1rem; margin: 1.4em 0 .4em; font-weight: 700; }
 p  { margin: 0 0 1em; }
-.section a, .lede a { color: var(--c-accent-dk); text-decoration: underline; text-underline-offset: 3px; }
+.section a, .lede a { color: var(--c-accent); text-decoration: underline; text-underline-offset: 3px; }
 .section a:hover { color: var(--c-ink); }
 ul, ol { padding-left: 1.4em; }
 li { margin-bottom: .3em; }
@@ -363,28 +450,28 @@ table { border-collapse: collapse; width: 100%; margin: 1em 0; }
 th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--c-line); }
 th { background: var(--c-banner); font-weight: 700; }
 
-.lede { font-size: 1.1rem; color: var(--c-muted); max-width: 720px; margin-bottom: 1.5em; }
+.lede { font-size: 1.1rem; max-width: 720px; margin-bottom: 1.5em; }
 code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: .9em; }
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 22px;
-  font-weight: 700;
+  padding: 7px 14px;
+  font-weight: 500;
   text-decoration: none;
   border: 0;
-  font-size: .95rem;
+  font-size: 1rem;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: .03em;
+  letter-spacing: 0;
 }
-.btn--primary { background: var(--c-accent); color: var(--c-ink); }
-.btn--primary:hover { background: var(--c-accent-dk); }
+.btn--primary { background: var(--c-accent); color: #fff; }
+.btn--primary:hover { background: #000; color: #fff; }
 
 .site-footer {
   background: var(--c-ink);
-  color: rgba(255,255,255,.8);
+  color: rgba(255,255,255,.85);
   padding: 40px 0 24px;
   margin-top: 60px;
   font-size: .92rem;

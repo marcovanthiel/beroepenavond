@@ -1,7 +1,19 @@
 /**
- * Homepage-renderer — strikt naar het ontwerp van de bronsite.
- * Geen nav-bar of hero zoals de interne pagina's; in plaats daarvan
- * een man-silhouet rechts, grote typografie + accordion-categorieën.
+ * Homepage — 1-op-1 nagebootst van beroepenavondnijmegen.nl
+ * Sectie-volgorde komt direct uit de bron-HTML:
+ *  - block-8a    "DONDERDAG 20 NOVEMBER"          (heading, 48px, links)
+ *  - block-8b    "BEROEPENAVOND"                  (heading, 48px, links, #88bc1d)
+ *  - block-9a    "2026"                           (heading, 185px, rechts)
+ *  - block-9b    banner "Binnenkort alle informatie" (rgba(136,188,29,.25))
+ *  - block-4     zwarte balk (sticky nav-placeholder, 50px)
+ *  - block-92    accordion-categorieën
+ *  - block-56    groene email-button (#88BC1D)
+ *  - block-95a   organisatietekst, gecentreerd
+ *  - block-95b   "Mede mogelijk gemaakt door" + Schrofenblick-logo
+ *  - block-95c   © + Weijsters & Kooij credit
+ *
+ * Het mannetje (`/assets/img/mannetje.jpg`) staat als body-background:
+ * right top, contain — zoals bronsite (#page-1369748).
  */
 import type { Context } from 'hono';
 import { html, raw } from 'hono/html';
@@ -24,17 +36,15 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 
   const eventYear = settings['event_year'] || '2026';
   const eventDate = settings['event_date_long'] || 'Donderdag 20 november 2026';
-  // "Donderdag 20 november" — zonder jaar (jaar komt apart groot eronder)
   const eventDateNoYear = eventDate.replace(/\s+\d{4}\s*$/, '').toUpperCase();
   const email = settings['contact_email'] || 'info@beroepenavondnijmegen.nl';
-  const credits = settings['credits'] || '';
 
   const accordionHtml = cats
     .map(
       (cat, i) => `
         <article class="accordion-item${i === 0 ? ' open' : ''}">
           <button class="accordion-handle" type="button" aria-expanded="${i === 0 ? 'true' : 'false'}">
-            <span>${escape(cat.name).toUpperCase()}</span>
+            <span class="accordion-handle__label">${escape(cat.name)}</span>
             <svg class="accordion-arrow" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -42,14 +52,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
           <div class="accordion-panel">
             <ul>
               ${cat.beroepen
-                .map(
-                  (b) =>
-                    `<li>${
-                      b.slug
-                        ? `<a href="/uitleg-beroepen/#${escape(b.slug)}">${escape(b.name)}</a>`
-                        : escape(b.name)
-                    }</li>`
-                )
+                .map((b) => `<li>${escape(b.name)}</li>`)
                 .join('\n              ')}
             </ul>
           </div>
@@ -57,7 +60,6 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     )
     .join('\n');
 
-  // Email obfuscation: HTML-entities zoals bron-site doet
   const emailEntities = email
     .split('')
     .map((ch) => `&#${ch.charCodeAt(0)};`)
@@ -68,9 +70,9 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${settings['organization'] ? `Beroepenavond ${eventYear} — Nijmegen` : 'Beroepenavond Nijmegen'}</title>
+<title>Beroepenavond ${eventYear} — Nijmegen</title>
 <meta name="description" content="Donderdag 20 november 2026 — Beroepenavond Nijmegen. Voorlichtingsavond voor middelbare scholieren in Canisius College Nijmegen.">
-<meta name="theme-color" content="#a3d935">
+<meta name="theme-color" content="#88bc1d">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -78,38 +80,88 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body class="home">
-<div class="home-bg" aria-hidden="true"></div>
 
-<main class="home-main">
-  <header class="home-title">
-    <p class="home-date">${eventDateNoYear}<br><span class="home-date__accent">BEROEPENAVOND</span></p>
-    <p class="home-year">${eventYear}</p>
-  </header>
+<div class="home-wrap">
 
-  <div class="home-banner">
-    <span class="home-banner__accent">BINNENKORT</span> ALLE INFORMATIE
-  </div>
-  <div class="home-divider"></div>
-
-  <section class="accordion" aria-label="Beroepen per categorie">
-    ${raw(accordionHtml)}
+  <!-- block-8a: "DONDERDAG 20 NOVEMBER" -->
+  <section class="b-8a">
+    <div class="b-inner">
+      <h1 class="heading-2">${eventDateNoYear}</h1>
+    </div>
   </section>
 
-  <div class="home-contact">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" class="home-contact__icon">
-      <path fill="currentColor" d="M12 12.713L.015 3h23.97L12 12.713zm0 2.574L0 5.562V21h24V5.562l-12 9.725z"/>
-    </svg>
-    <a href="mailto:${raw(emailEntities)}">${raw(emailEntities)}</a>
-  </div>
+  <!-- block-8b: "BEROEPENAVOND" in lime -->
+  <section class="b-8b">
+    <div class="b-inner">
+      <h2 class="heading-2 accent">BEROEPENAVOND</h2>
+    </div>
+  </section>
 
-  <div class="home-org">
-    <p><strong>Rotary Club Nijmegen-Stad en Land</strong> &nbsp;|&nbsp; Canisius College Nijmegen<br>
-    in samenwerking met de decanen<br>
-    van de middelbare scholen in Nijmegen e.o.</p>
-  </div>
+  <!-- block-9a: "2026" gigantisch rechts -->
+  <section class="b-9a">
+    <div class="b-inner">
+      <h2 class="heading-year">${eventYear}</h2>
+    </div>
+  </section>
 
-  <p class="home-credits">© ${eventYear} ${raw(escape(credits))}</p>
-</main>
+  <!-- block-9b: lichtgroene banner -->
+  <section class="b-9b">
+    <div class="b-inner">
+      <h2 class="heading-banner"><span class="accent">Binnenkort</span> alle informatie</h2>
+    </div>
+  </section>
+
+  <!-- block-4: zwarte sticky balk -->
+  <header class="b-4" data-sticky></header>
+
+  <!-- block-92: accordion -->
+  <section class="b-92">
+    <div class="b-inner">
+      <div class="accordion" aria-label="Beroepen per categorie">
+        ${raw(accordionHtml)}
+      </div>
+    </div>
+  </section>
+
+  <!-- block-56: groene email-button -->
+  <section class="b-56">
+    <div class="b-inner">
+      <a class="email-btn" href="mailto:${raw(emailEntities)}">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M12 12.713L.015 3h23.97L12 12.713zm0 2.574L0 5.562V21h24V5.562l-12 9.725z"/>
+        </svg>
+        <span>${raw(emailEntities)}</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- block-95a: organisatie-tekst -->
+  <footer class="b-95a">
+    <div class="b-inner text-6">
+      <p><strong>Rotary Club Nijmegen-Stad en Land | Canisius College Nijmegen</strong><br>
+      in samenwerking met de decanen<br>
+      van de middelbare scholen in Nijmegen e.o.</p>
+    </div>
+  </footer>
+
+  <!-- block-95b: sponsor -->
+  <footer class="b-95b">
+    <div class="b-inner sponsor">
+      <p class="sponsor__label">Mede mogelijk gemaakt door</p>
+      <a class="sponsor__logo" href="https://www.resort-schrofenblick.at/" target="_blank" rel="noopener noreferrer">
+        <img src="/assets/img/schrofenblick.png" alt="Schrofenblick Alpen Resort" width="180">
+      </a>
+    </div>
+  </footer>
+
+  <!-- block-95c: copyright -->
+  <footer class="b-95c">
+    <div class="b-inner text-6">
+      <p>© ${eventYear} ${escape(settings['organization'] || 'Rotary Club Nijmegen-Stad en Land')}</p>
+    </div>
+  </footer>
+
+</div>
 
 <script>
   document.querySelectorAll('.accordion-handle').forEach((btn) => {

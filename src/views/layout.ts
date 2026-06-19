@@ -105,7 +105,6 @@ ${raw(opts.bodyHtml)}
     </div>
     <div class="footer-bottom">
       <span>© <span id="year">2026</span> ${opts.settings['organization'] || 'Rotary Club Nijmegen-Stad en Land'}</span>
-      <span>${raw(opts.settings['credits'] || '')}</span>
     </div>
   </div>
 </footer>

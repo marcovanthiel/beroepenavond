@@ -18,8 +18,7 @@ INSERT OR REPLACE INTO settings (key, value) VALUES
   ('venue_address', 'Berg en Dalseweg 207, 6522 BR Nijmegen'),
   ('organization', 'Rotary Club Nijmegen-Stad en Land'),
   ('partners', 'In samenwerking met de decanen van de middelbare scholen in Nijmegen e.o.'),
-  ('contact_email', 'info@beroepenavondnijmegen.nl'),
-  ('credits', 'Vormgeving huisstijl en website: Weijsters &amp; Kooij vormgevers, Grave');
+  ('contact_email', 'info@beroepenavondnijmegen.nl');
 
 -- ============================================================
 -- Categorieën
