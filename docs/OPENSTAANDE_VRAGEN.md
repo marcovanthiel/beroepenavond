@@ -12,41 +12,7 @@ Stand: **89 van 169** voorlichters zijn al aan een beroep gekoppeld
 (categorie volgt automatisch uit het beroep). Hieronder de rest, in drie
 groepen. Voor elke voorgestelde koppeling: laat staan, of corrigeer.
 
-### Groep A — voorstel: koppel ik, TENZIJ je hier "fout" zet
-| # | Functietitel voorlichter | → Voorgesteld beroep | Akkoord? (laat leeg = ja) |
-|---|---|---|---|
-| A1 | Jeugdzorgwerker (ambulant gezinsbegeleider…) | Gezinscoach | |
-| A2 | Maatschappelijk werk | Gezinscoach | |
-| A3 | gezinswerker Oidos | Gezinscoach | |
-| A4 | Orthopedagoog/GZ psycholoog kind en jeugd | Klinisch Psycholoog en Psychotherapeut | |
-| A5 | Gedragspsycholoog | Klinisch Psycholoog en Psychotherapeut | |
-| A6 | Sportinstructeur | Sportondernemer en coach | |
-| A7 | loopbaanadviseur en arbeidsmarktbemiddelaar | HR-adviseur | |
-| A8 | onderwijsassistent | Leerkracht basisonderwijs | |
-| A9 | ICT en elektrotechniek (monteur…) | ICT expert / Informatie management | |
-| A10 | Exportmanager/handelsreiziger | Sales manager (B-to-B) | |
-| A11 | paraveterinaire-dierenartsassistente | Dierenarts | |
-| A12 | Productontwikkelaar Microchips | R&D manager | |
-| A13 | Process ontwikkelaar Microchips | R&D manager | |
-| A14 | Process Engineer | R&D manager | |
-| A15 | projectleider wegenbouw en infra | Civiel ingenieur | |
-
-» Welke A-nummers zijn fout (en evt. naar welk beroep)?
-» Antwoord:
-
-### Groep B — twijfel: koppel ik ALLEEN als je hier "ja" zet
-| # | Functietitel | → Voorgesteld beroep | Ja koppelen? |
-|---|---|---|---|
-| B1 | Chef Kok | Hotel- & Restaurant manager | |
-| B2 | retail / detailhandel | Sales manager (B-to-B) | |
-| B3 | supermarktmanager | Sales manager (B-to-B) | |
-| B4 | Brandweer | Adviseur Brandveiligheid | |
-| B5 | Duurzaam bouwen | Klimaat- en energietransitieadviseur | |
-| B6 | Projectmanager Vastgoed | Makelaar | |
-| B7 | Technisch Engineer | Civiel ingenieur | |
-| B8 | Technisch Ingenieur | Civiel ingenieur | |
-| B9 | werktuigbouwkundige | Civiel ingenieur | |
-| B10 | Officier van Justitie | Advocaat | |
+Voor elk voorgestelde koppeling gebruik je de functienaam als beroepsnaam, daar waar de beroepsnaam niet bestaat maak je die aan.
 
 » Welke B-nummers wel koppelen?
 » Antwoord:
@@ -82,7 +48,7 @@ vakken die je wilt toevoegen (of "alle" hieronder):
 - [ ] Medewerker fruitteelt
 
 » Alles aanmaken? (ja/nee, of som de gewenste op):
-» Antwoord:
+» Antwoord: Ja
 
 ---
 
@@ -95,7 +61,7 @@ Nu staan **alle 169** voorlichters (uit edities t/m 2022) publiek op
 - [ ] Alleen bevestigde 2026-voorlichters tonen (geef door wie, rest op verborgen)
 
 » Antwoord:
-
+We bouwen een nieuwe functie. Namelijk dat we met een knop de publicatie van de voorlichters aan en uit kunnen zetten. Zo kunnen we de database vullen en pas als we klaar zijn de publicatie aanzetten. Je laat dus wel de beroepen zien, maar de koppeling met voorlichters en hun gegevens dient met een knop aan en uitgezet te kunnen worden.
 ---
 
 ## 3. E-mail aanzetten (Resend)
@@ -107,33 +73,33 @@ klaar in `docs/EMAIL_DNS.md` (afzender noreply@inijmegen.com).
 - [ ] Nog niet — ik (Marco) zet ze nog
 - [ ] Liever een ander afzendadres, namelijk: __________
 
-» Antwoord:
+» Antwoord: vertel me welke dns instellingen er moeten gebeuren. Liever nog, volgens mij kun je dns records geheel zelf beheren, doe dat.
 
 ---
 
 ## 4. Programma & content 2026
 
 - Datum/tijd: **donderdag 20 november 2026, 18:30 – 21:30** — klopt?
-  » Antwoord:
+  » Antwoord: ja
 - Editie-nummer (nu "25e") en cijfers (≈4.000 bezoekers, ≈70 beroepen,
   ≈90 voorlichters) — kloppen die?
-  » Antwoord:
+  » Antwoord: ja
 - Tijdschema/rondes: nu indicatief. Definitieve rondetijden bekend?
-  » Antwoord:
+  » Antwoord: houden we nog indicaitief.
 - Plattegrond: heb je een plattegrond-afbeelding van het Canisius College
   die ik kan gebruiken? (lokalen teken ik dan in de editor)
-  » Antwoord:
+  » Antwoord: nee nog niet
 - Sessies/programma: zijn er al beroep–lokaal–ronde–spreker-indelingen?
-  » Antwoord:
+  » Antwoord: nee nog niet. Kunnen we in de backend een functie maken om die koppelingen te kunnen realiseren?
 - Sponsors: het oude Schrofenblick-logo staat er nog. Behouden? Andere
   sponsors toevoegen?
-  » Antwoord:
+  » Antwoord: maak een fuctie waarbij we meerdere sponsoren kunnen toevoegen. Controleer in de badeendjes site naar de accountmanagerfunctie. Daar hebben we gebouwd dat bij een bevestigd ingevoerde prijs een bevestigingsmail aan de aanbrenger kan worden gestuurd. Maak een soortgelijke functie waarbij we de spreker kunnen bevestigen en dan op 'bevestigd' kunnen zetten. Een bevestigde spreker wordt gepubliceerd als de publicatiefunctie aan stat.
 - Social media: Facebook / Instagram / LinkedIn-links om in de footer te
   zetten?
-  » Antwoord:
+  » Antwoord: nog even niet. Die maken we later aan.
 - Contact-e-mail op de site (nu info@beroepenavondnijmegen.nl) — blijven,
   of wijzigen naar __________ ?
-  » Antwoord:
+  » Antwoord: blijft staan
 
 ---
 
@@ -141,13 +107,14 @@ klaar in `docs/EMAIL_DNS.md` (afzender noreply@inijmegen.com).
 
 - Eerste beheerder (marco@marcovanthiel.nl) — wachtwoord al gewijzigd via
   Mijn account? (het tijdelijke is hopelijk vervangen)
-  » Antwoord:
+  » Antwoord: ja volgens mij wel
 - Extra beheerders/redacteuren aanmaken? Zo ja: naam + e-mail + rol.
-  » Antwoord:
+  » Antwoord: maak een functie waar we beheerders en redacteuren kunnen aanmaken. Redacteuren kunnen ook spelers invoeren, wijzigen en bevestigen.
 
 ---
 
 ## 6. Overig / opmerkingen
 
 » Vrije ruimte voor wensen, correcties of nieuwe ideeën:
-» Antwoord:
+» Antwoord: maak alls als bovenstaand
+

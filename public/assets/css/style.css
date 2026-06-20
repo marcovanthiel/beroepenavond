@@ -275,6 +275,13 @@ body.home {
   margin: 0;
   color: #000;
 }
+.b-95b .sponsor__logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
 .b-95b .sponsor__logo img {
   display: block;
   height: 50px;

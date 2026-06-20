@@ -144,20 +144,47 @@ function speakerCard(s: SpeakerRow): string {
   </article>`;
 }
 
+/** Voorbeeld van de beroepen per categorie (getoond zolang de voorlichters
+ *  nog niet gepubliceerd zijn — dan zie je wél de vakgebieden, nog geen namen). */
+async function beroepenPreview(db: D1Database): Promise<string> {
+  const cats = await db.prepare('SELECT id, name, color FROM categories ORDER BY sort_order').all<{ id: string; name: string; color: string | null }>();
+  const ber = await db.prepare('SELECT category_id, name FROM beroepen ORDER BY category_id, name').all<{ category_id: string; name: string }>();
+  const byCat = new Map<string, string[]>();
+  for (const b of ber.results ?? []) (byCat.get(b.category_id) ?? byCat.set(b.category_id, []).get(b.category_id)!).push(b.name);
+  const sections = (cats.results ?? [])
+    .map((c) => {
+      const items = byCat.get(c.id) ?? [];
+      if (!items.length) return '';
+      return `<section class="cat-section">
+        <div class="cat-section__head"><span class="chip__dot" style="background:${esc(c.color ?? '#88bc1d')};width:14px;height:14px;border-radius:50%;display:inline-block"></span><h3>${esc(c.name)}</h3><span class="cat-section__count">${items.length} beroepen</span></div>
+        <div class="beroep-grid">${items.map((n) => `<div class="beroep"><b>${esc(n)}</b></div>`).join('')}</div>
+      </section>`;
+    })
+    .join('');
+  return `<div class="callout"><p>De voorlichters voor deze editie worden binnenkort
+    bekendgemaakt. Hieronder alvast de vakgebieden waarmee je kennis kunt maken.
+    Wil je zelf een beroep presenteren? <a href="/aanmelden">Meld je aan als voorlichter</a>.</p></div>
+    ${sections}`;
+}
+
 export async function renderVoorlichters(db: D1Database): Promise<string> {
+  // Globale publicatie-schakelaar: uit = alleen beroepen tonen, geen namen.
+  const pub = await db.prepare("SELECT value FROM settings WHERE key='voorlichters_published'").first<{ value: string }>();
+  if ((pub?.value ?? '0') !== '1') {
+    return beroepenPreview(db);
+  }
+
   const [cats, spk] = await Promise.all([
     db.prepare('SELECT id, name, color FROM categories ORDER BY sort_order').all<{ id: string; name: string; color: string | null }>(),
     db
       .prepare(
-        'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 ORDER BY full_name'
+        'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 AND confirmed = 1 ORDER BY full_name'
       )
       .all<SpeakerRow>(),
   ]);
   const list = spk.results ?? [];
   if (!list.length) {
-    return `<div class="callout"><p>De voorlichters voor deze editie worden
-      binnenkort bekendgemaakt. Wil je zelf een beroep presenteren?
-      <a href="/aanmelden">Meld je aan als voorlichter</a>.</p></div>`;
+    return beroepenPreview(db);
   }
 
   const byCat = new Map<string, SpeakerRow[]>();

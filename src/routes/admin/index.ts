@@ -39,6 +39,7 @@ import { usersApp } from './users';
 import { accountApp } from './account';
 import { mediaApp } from './media';
 import { auditApp } from './audit';
+import { sponsorsApp } from './sponsors';
 
 export const adminApp = new Hono<AdminEnv>();
 
@@ -183,6 +184,7 @@ adminApp.route('/floorplan-editor', editorApp);
 adminApp.route('/inbox', inboxApp);
 adminApp.route('/subscribers', subscribersApp);
 adminApp.route('/nieuws', announcementsApp);
+adminApp.route('/sponsors', sponsorsApp);
 adminApp.route('/users', usersApp);
 adminApp.route('/account', accountApp);
 adminApp.route('/media', mediaApp);

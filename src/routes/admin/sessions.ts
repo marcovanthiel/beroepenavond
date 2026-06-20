@@ -15,7 +15,7 @@ import {
   deleteButton,
   flashFromQuery,
 } from '../../views/admin/layout';
-import { str, strOrNull, bool, genId, redirectOk, redirectErr } from '../../lib/forms';
+import { str, strOrNull, bool, intOrNull, genId, redirectOk, redirectErr } from '../../lib/forms';
 
 export const sessionsApp = new Hono<AdminEnv>();
 
@@ -25,6 +25,7 @@ interface Session {
   category_id: string | null;
   classroom_id: string | null;
   round_id: string | null;
+  beroep_id: number | null;
   profession: string;
   title: string | null;
   description_md: string | null;
@@ -32,18 +33,43 @@ interface Session {
 }
 
 async function refData(c: any, eventId: string) {
-  const [cats, rooms, rounds, speakers] = await Promise.all([
+  const [cats, rooms, rounds, speakers, beroepen] = await Promise.all([
     c.env.DB.prepare('SELECT id, name FROM categories ORDER BY sort_order').all(),
     c.env.DB.prepare('SELECT id, code, name FROM classrooms WHERE event_id = ? ORDER BY code').bind(eventId).all(),
     c.env.DB.prepare('SELECT id, round_no, start_time, end_time FROM rounds WHERE event_id = ? ORDER BY round_no').bind(eventId).all(),
     c.env.DB.prepare('SELECT id, full_name FROM speakers ORDER BY full_name').all(),
+    c.env.DB.prepare(`SELECT b.id, b.name, c.name AS cat_name, c.sort_order AS cat_order
+                        FROM beroepen b LEFT JOIN categories c ON c.id = b.category_id
+                       ORDER BY c.sort_order, b.name`).all(),
   ]);
   return {
     cats: (cats.results ?? []).map((x: any) => ({ value: x.id, label: x.name })),
     rooms: (rooms.results ?? []).map((x: any) => ({ value: x.id, label: x.name ? `${x.code} — ${x.name}` : x.code })),
     rounds: (rounds.results ?? []).map((x: any) => ({ value: x.id, label: `Ronde ${x.round_no} (${x.start_time}–${x.end_time})` })),
     speakers: speakers.results ?? [],
+    beroepen: beroepen.results ?? [],
   };
+}
+
+/** Grouped <select> van beroepen per categorie (optgroups). */
+function beroepSelectHtml(beroepen: any[], current: number | null | undefined): string {
+  const groups = new Map<string, any[]>();
+  for (const r of beroepen) {
+    const g = r.cat_name ?? 'Overig';
+    (groups.get(g) ?? groups.set(g, []).get(g)!).push(r);
+  }
+  const cur = String(current ?? '');
+  const opts = [...groups]
+    .map(
+      ([g, items]) =>
+        `<optgroup label="${esc(g)}">${items
+          .map((it) => `<option value="${it.id}" ${String(it.id) === cur ? 'selected' : ''}>${esc(it.name)}</option>`)
+          .join('')}</optgroup>`
+    )
+    .join('');
+  return `<label class="fld"><span class="fld__label">Beroep (uit de lijst)</span>
+    <select class="fld__input" name="beroep_id"><option value="">— geen —</option>${opts}</select>
+    <span class="fld__help">Koppelt de sessie aan een beroep uit de beroepenlijst.</span></label>`;
 }
 
 sessionsApp.get('/', async (c) => {
@@ -100,7 +126,8 @@ async function form(c: any, eventId: string, s: Partial<Session>, selectedSpeake
     ${pageHeader(isNew ? 'Nieuwe sessie' : esc(s.profession ?? 'Sessie'))}
     <form method="post" action="/admin/sessions/${isNew ? 'new' : esc(s.id!)}" class="card">
       <div class="form-grid cols-2">
-        <div class="span-2">${field({ label: 'Beroep', name: 'profession', value: s.profession ?? '', required: true })}</div>
+        <div class="span-2">${beroepSelectHtml(ref.beroepen, s.beroep_id)}</div>
+        <div class="span-2">${field({ label: 'Beroep / kop (vrije tekst)', name: 'profession', value: s.profession ?? '', required: true })}</div>
         <div class="span-2">${field({ label: 'Presentatietitel (optioneel)', name: 'title', value: s.title ?? '' })}</div>
         ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: ref.cats, empty: '— geen —' })}
         ${select({ label: 'Lokaal', name: 'classroom_id', value: s.classroom_id ?? '', options: ref.rooms, empty: '— geen —' })}
@@ -155,9 +182,9 @@ sessionsApp.post('/new', async (c) => {
   const b = await c.req.parseBody({ all: true });
   const id = genId('ses');
   await c.env.DB.prepare(
-    'INSERT INTO sessions_program (id, event_id, category_id, classroom_id, round_id, profession, title, description_md, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO sessions_program (id, event_id, category_id, classroom_id, round_id, beroep_id, profession, title, description_md, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   )
-    .bind(id, ev.id, strOrNull(b.category_id), strOrNull(b.classroom_id), strOrNull(b.round_id), str(b.profession), strOrNull(b.title), strOrNull(b.description_md), bool(b.is_public))
+    .bind(id, ev.id, strOrNull(b.category_id), strOrNull(b.classroom_id), strOrNull(b.round_id), intOrNull(b.beroep_id), str(b.profession), strOrNull(b.title), strOrNull(b.description_md), bool(b.is_public))
     .run();
   await saveSpeakers(c, id, speakerIds(b));
   await logAudit(c, 'create', 'session', id);
@@ -168,9 +195,9 @@ sessionsApp.post('/:id', async (c) => {
   const id = c.req.param('id');
   const b = await c.req.parseBody({ all: true });
   await c.env.DB.prepare(
-    'UPDATE sessions_program SET category_id = ?, classroom_id = ?, round_id = ?, profession = ?, title = ?, description_md = ?, is_public = ?, updated_at = unixepoch() WHERE id = ?'
+    'UPDATE sessions_program SET category_id = ?, classroom_id = ?, round_id = ?, beroep_id = ?, profession = ?, title = ?, description_md = ?, is_public = ?, updated_at = unixepoch() WHERE id = ?'
   )
-    .bind(strOrNull(b.category_id), strOrNull(b.classroom_id), strOrNull(b.round_id), str(b.profession), strOrNull(b.title), strOrNull(b.description_md), bool(b.is_public), id)
+    .bind(strOrNull(b.category_id), strOrNull(b.classroom_id), strOrNull(b.round_id), intOrNull(b.beroep_id), str(b.profession), strOrNull(b.title), strOrNull(b.description_md), bool(b.is_public), id)
     .run();
   await saveSpeakers(c, id, speakerIds(b));
   await logAudit(c, 'update', 'session', id);

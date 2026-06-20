@@ -68,6 +68,7 @@ const NAV: NavGroup[] = [
       { href: '/admin/inbox', label: 'Postvak', key: 'inbox' },
       { href: '/admin/subscribers', label: 'Nieuwsbrief', key: 'subscribers' },
       { href: '/admin/nieuws', label: 'Nieuws', key: 'announcements' },
+      { href: '/admin/sponsors', label: 'Sponsoren', key: 'sponsors' },
     ],
   },
   {

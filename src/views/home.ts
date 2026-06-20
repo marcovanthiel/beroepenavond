@@ -29,11 +29,25 @@ function escape(s: string): string {
 }
 
 export async function renderHome(c: Context<{ Bindings: Env }>) {
-  const [settings, cats, navItems] = await Promise.all([
+  const [settings, cats, navItems, sponsorRows] = await Promise.all([
     getSettings(c.env.DB),
     getCategoriesWithBeroepen(c.env.DB),
     getNavPages(c.env.DB),
+    c.env.DB.prepare('SELECT name, logo_url, website FROM sponsors WHERE is_active = 1 ORDER BY sort_order, name')
+      .all<{ name: string; logo_url: string | null; website: string | null }>(),
   ]);
+
+  const sponsors = sponsorRows.results ?? [];
+  const sponsorsHtml = sponsors
+    .map((sp) => {
+      const img = sp.logo_url
+        ? `<img src="${escape(sp.logo_url)}" alt="${escape(sp.name)}" height="50">`
+        : `<span>${escape(sp.name)}</span>`;
+      return sp.website
+        ? `<a class="sponsor__logo" href="${escape(sp.website)}" target="_blank" rel="noopener noreferrer">${img}</a>`
+        : `<span class="sponsor__logo">${img}</span>`;
+    })
+    .join('\n        ');
 
   const navHtml = navItems
     .map((p) => `<li><a href="${p.slug}">${escape(p.nav_label || p.title)}</a></li>`)
@@ -194,15 +208,19 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     </div>
   </footer>
 
-  <!-- block-95b: sponsor -->
-  <footer class="b-95b">
+  <!-- block-95b: sponsoren (dynamisch uit de database) -->
+  ${raw(
+    sponsors.length
+      ? `<footer class="b-95b">
     <div class="b-inner sponsor">
       <p class="sponsor__label">Mede mogelijk gemaakt door</p>
-      <a class="sponsor__logo" href="https://www.resort-schrofenblick.at/" target="_blank" rel="noopener noreferrer">
-        <img src="/assets/img/schrofenblick.png" alt="Schrofenblick Alpen Resort" width="180">
-      </a>
+      <div class="sponsor__logos">
+        ${sponsorsHtml}
+      </div>
     </div>
-  </footer>
+  </footer>`
+      : ''
+  )}
 
   <!-- block-95c: copyright -->
   <footer class="b-95c">

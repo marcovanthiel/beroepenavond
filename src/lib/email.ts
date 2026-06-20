@@ -165,6 +165,31 @@ export async function confirmToSender(
   });
 }
 
+/** Bevestigingsmail naar een voorlichter zodra die is bevestigd. */
+export async function speakerConfirmedMail(
+  cfg: MailConfig,
+  speaker: { full_name: string; email?: string | null; job_title?: string | null },
+  settings: SettingsMap
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  if (!speaker.email) return { ok: false, skipped: true };
+  const datum = settings['event_date_long'] || '';
+  const inner = `
+    <p>Beste ${esc(speaker.full_name)},</p>
+    <p>Wat leuk dat je meedoet aan de <strong>Beroepenavond Nijmegen</strong>${
+      datum ? ` op <strong>${esc(datum)}</strong>` : ''
+    }! Je deelname${
+      speaker.job_title ? ` als <strong>${esc(speaker.job_title)}</strong>` : ''
+    } is bevestigd en je komt op de website te staan zodra we het voorlichters-overzicht publiceren.</p>
+    <p>We nemen tijdig contact op met de praktische details voor de avond.
+    Heb je tussentijds vragen? Mail gerust naar ${esc(cfg.to)}.</p>
+    <p>Hartelijke groet,<br>Organisatie Beroepenavond Nijmegen</p>`;
+  return sendEmail(cfg, {
+    to: speaker.email,
+    subject: 'Je deelname aan de Beroepenavond is bevestigd',
+    html: emailShell('Bevestiging deelname', inner),
+  });
+}
+
 /** Dubbel-opt-in bevestigingsmail voor de nieuwsbrief. */
 export async function newsletterConfirm(
   cfg: MailConfig,

@@ -16,6 +16,8 @@ import {
 } from '../../views/admin/layout';
 import { str, strOrNull, bool, intOrNull, redirectOk, redirectErr } from '../../lib/forms';
 import { uploadImage, deleteMedia, r2Available, UploadError } from '../../lib/media';
+import { getSettings } from '../../lib/db';
+import { mailConfig, speakerConfirmedMail } from '../../lib/email';
 
 export const speakersApp = new Hono<AdminEnv>();
 
@@ -33,30 +35,90 @@ interface Speaker {
   category_id: string | null;
   beroep_id: number | null;
   is_public: number;
+  confirmed: number;
   notes: string | null;
 }
 
 speakersApp.get('/', async (c) => {
-  const rows = await c.env.DB.prepare(
-    'SELECT * FROM speakers ORDER BY full_name'
-  ).all<Speaker>();
-  const list = (rows.results ?? [])
+  const [rows, settings] = await Promise.all([
+    c.env.DB.prepare('SELECT * FROM speakers ORDER BY confirmed DESC, full_name').all<Speaker>(),
+    getSettings(c.env.DB),
+  ]);
+  const all = rows.results ?? [];
+  const nConfirmed = all.filter((s) => s.confirmed).length;
+  const published = (settings['voorlichters_published'] ?? '0') === '1';
+
+  const list = all
     .map(
       (r) => `<tr>
         <td>${r.portrait_url ? `<img src="${esc(r.portrait_url)}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px">` : ''}<strong>${esc(r.full_name)}</strong></td>
         <td>${esc(r.job_title ?? '')}${r.organization ? ` · ${esc(r.organization)}` : ''}</td>
-        <td>${r.is_public ? '<span class="badge badge--on">Publiek</span>' : '<span class="badge badge--off">Verborgen</span>'}</td>
-        <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/speakers/${esc(r.id)}">Bewerken</a></td>
+        <td>${r.confirmed ? '<span class="badge badge--on">Bevestigd</span>' : '<span class="badge badge--off">Niet bevestigd</span>'}${r.is_public ? '' : ' <span class="badge badge--off">verborgen</span>'}</td>
+        <td class="actions">
+          <form method="post" action="/admin/speakers/${esc(r.id)}/${r.confirmed ? 'unconfirm' : 'confirm'}" class="inline-form">
+            <button class="btn ${r.confirmed ? 'btn--ghost' : 'btn--primary'} btn--sm" type="submit">${r.confirmed ? 'Intrekken' : 'Bevestigen'}</button>
+          </form>
+          <a class="btn btn--ghost btn--sm" href="/admin/speakers/${esc(r.id)}">Bewerken</a>
+        </td>
       </tr>`
     )
     .join('');
+
+  const pubBanner = `
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <strong>Publicatie voorlichters: ${published ? '<span class="badge badge--on">AAN</span>' : '<span class="badge badge--off">UIT</span>'}</strong>
+        <div class="muted">${published
+          ? 'Bevestigde voorlichters zijn zichtbaar op de site.'
+          : 'De site toont alleen de beroepen; voorlichters zijn nog verborgen. Vul de database, bevestig en zet daarna publicatie aan.'} · ${nConfirmed}/${all.length} bevestigd</div>
+      </div>
+      <form method="post" action="/admin/speakers/toggle-publication" class="inline-form">
+        <button class="btn ${published ? 'btn--danger' : 'btn--primary'}" type="submit">${published ? 'Publicatie uitzetten' : 'Publicatie aanzetten'}</button>
+      </form>
+    </div>`;
+
   const body = `
     ${pageHeader('Sprekers', '<a class="btn btn--primary" href="/admin/speakers/new">Nieuwe spreker</a>')}
+    ${pubBanner}
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Naam</th><th>Functie</th><th>Zichtbaar</th><th></th></tr></thead>
+      <thead><tr><th>Naam</th><th>Functie</th><th>Status</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="4" class="empty">Nog geen sprekers.</td></tr>'}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Sprekers', activeKey: 'speakers', body, flash: flashFromQuery(c) });
+});
+
+// Publicatie-schakelaar (globaal).
+speakersApp.post('/toggle-publication', async (c) => {
+  const cur = await c.env.DB.prepare("SELECT value FROM settings WHERE key='voorlichters_published'").first<{ value: string }>();
+  const next = (cur?.value ?? '0') === '1' ? '0' : '1';
+  await c.env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('voorlichters_published', ?)").bind(next).run();
+  await logAudit(c, 'publication', 'speakers', undefined, { published: next });
+  return redirectOk(c, '/admin/speakers', next === '1' ? 'Voorlichters staan nu LIVE op de site.' : 'Publicatie van voorlichters uitgezet.');
+});
+
+// Bevestigen (+ bevestigingsmail naar de voorlichter indien mogelijk).
+speakersApp.post('/:id/confirm', async (c) => {
+  const id = c.req.param('id');
+  const s = await c.env.DB.prepare('SELECT * FROM speakers WHERE id = ?').bind(id).first<Speaker>();
+  if (!s) return redirectErr(c, '/admin/speakers', 'Spreker niet gevonden.');
+  await c.env.DB.prepare('UPDATE speakers SET confirmed = 1, confirmed_at = unixepoch() WHERE id = ?').bind(id).run();
+  await logAudit(c, 'confirm', 'speaker', id);
+  let mailed = false;
+  try {
+    const settings = await getSettings(c.env.DB);
+    const res = await speakerConfirmedMail(mailConfig(c.env, settings), s, settings);
+    mailed = !!res.ok;
+  } catch (e) {
+    console.error('bevestigingsmail faalde:', e);
+  }
+  return redirectOk(c, '/admin/speakers', `${s.full_name} bevestigd${mailed ? ' + bevestigingsmail verstuurd' : ''}.`);
+});
+
+speakersApp.post('/:id/unconfirm', async (c) => {
+  const id = c.req.param('id');
+  await c.env.DB.prepare('UPDATE speakers SET confirmed = 0, confirmed_at = NULL WHERE id = ?').bind(id).run();
+  await logAudit(c, 'unconfirm', 'speaker', id);
+  return redirectOk(c, '/admin/speakers', 'Bevestiging ingetrokken.');
 });
 
 async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string> {
