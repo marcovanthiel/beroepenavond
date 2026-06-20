@@ -1,0 +1,26 @@
+-- Sessie 6 — zekere semantische koppelingen spreker→beroep (alleen ongekoppelde import-sprekers).
+UPDATE speakers SET beroep_id=19, category_id=(SELECT category_id FROM beroepen WHERE id=19) WHERE job_title='Medisch Beeldvormende- en Radiotherapeutische technieken (MRI, CT, Röntgen)' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=20, category_id=(SELECT category_id FROM beroepen WHERE id=20) WHERE job_title='Medisch specialist/orthopaedie' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=22, category_id=(SELECT category_id FROM beroepen WHERE id=22) WHERE job_title='Werken op de OK van een ziekenhuis' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=64, category_id=(SELECT category_id FROM beroepen WHERE id=64) WHERE job_title='Verkeersvlieger (opleiding tot)' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=42, category_id=(SELECT category_id FROM beroepen WHERE id=42) WHERE job_title='Adviseur Personeel & Organisatie' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=34, category_id=(SELECT category_id FROM beroepen WHERE id=34) WHERE job_title='Bedrijfskundige/econoom' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=39, category_id=(SELECT category_id FROM beroepen WHERE id=39) WHERE job_title='Belastingadviseur' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=40, category_id=(SELECT category_id FROM beroepen WHERE id=40) WHERE job_title='Deurwaarder' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=38, category_id=(SELECT category_id FROM beroepen WHERE id=38) WHERE job_title='Fiscaal econoom/fiscaal jurist' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=41, category_id=(SELECT category_id FROM beroepen WHERE id=41) WHERE job_title='Hotelmanagement' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=41, category_id=(SELECT category_id FROM beroepen WHERE id=41) WHERE job_title='restaurantmanager' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=64, category_id=(SELECT category_id FROM beroepen WHERE id=64) WHERE job_title='Piloot/gezagvoerder Boeing 747' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=64, category_id=(SELECT category_id FROM beroepen WHERE id=64) WHERE job_title='Piloot/gezagvoerder Boeing 748' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=64, category_id=(SELECT category_id FROM beroepen WHERE id=64) WHERE job_title='Piloot/gezagvoerder Boeing 749' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=36, category_id=(SELECT category_id FROM beroepen WHERE id=36) WHERE job_title='medewerker facilitaire dienst' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=31, category_id=(SELECT category_id FROM beroepen WHERE id=31) WHERE job_title='registeraccountant' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=50, category_id=(SELECT category_id FROM beroepen WHERE id=50) WHERE job_title='Politie - opsporing' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=60, category_id=(SELECT category_id FROM beroepen WHERE id=60) WHERE job_title='Cyber Security Specialist' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=4, category_id=(SELECT category_id FROM beroepen WHERE id=4) WHERE job_title='Grafisch ontwerp/drukwerk/verspreiding' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=61, category_id=(SELECT category_id FROM beroepen WHERE id=61) WHERE job_title='ICT-medewerker' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=62, category_id=(SELECT category_id FROM beroepen WHERE id=62) WHERE job_title='Internationaal adviseur water-infrastructuur-milieu' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=5, category_id=(SELECT category_id FROM beroepen WHERE id=5) WHERE job_title='Tuinontwerp en -aanleg' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=7, category_id=(SELECT category_id FROM beroepen WHERE id=7) WHERE job_title='Webdesigner/ Online Marketing' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=45, category_id=(SELECT category_id FROM beroepen WHERE id=45) WHERE job_title='Communicatie adviseur' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
+UPDATE speakers SET beroep_id=42, category_id=(SELECT category_id FROM beroepen WHERE id=42) WHERE job_title='HR manager' AND id LIKE 'spk_imp_%' AND beroep_id IS NULL;
