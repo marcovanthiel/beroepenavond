@@ -169,6 +169,61 @@ Schema-migraties: `001`→`005`. Lokaal/remote toepassen met
 `npm run db:apply:remote` of per bestand
 `npx wrangler d1 execute beroepenavond --remote --file=schema/00X_*.sql`.
 
+## Sessie 4 — leerling-accounts (LIVE, 21 juni 2026)
+
+Eigen, van het beheer losstaand **leerling-portaal** op `/leerling`.
+Leerlingen loggen passwordless in (magic link per e-mail) en stellen hun
+eigen avond samen. Bewust dataminimalisatie (minderjarigen): alleen
+naam, e-mail, school, profiel.
+
+### Schema `019_students.sql` (lokaal + remote toegepast)
+`students` (id, email UNIQUE, name, school, profiel, newsletter,
+created_at, last_login) · `student_tokens` (magic-link, 30 min) ·
+`student_logins` (sessies, 30 dagen) · `student_picks` (gekozen
+beroepen, M2M) · `student_interests` (interessecategorieën, M2M) ·
+`student_questions` (vragen vooraf, status new/handled).
+
+### Auth — `src/lib/studentauth.ts`
+- **Apart van admin**: eigen cookie **`ba_student`** (HMAC-signed via
+  `SESSION_SECRET`), eigen tabellen. Leerlingen komen nooit in `/admin`.
+- `requestLogin()` upsert leerling + maakt token + mailt magic link
+  (Resend, via `mailConfig`/`sendEmail`/`emailShell`).
+- `verifyToken()` valideert (unused + niet verlopen), markeert `used`,
+  maakt login-sessie, zet cookie. **Gotcha:** geeft de leerling direct
+  op `student_id` terug — `getCurrentStudent()` zou hier null geven want
+  de zojuist gezette cookie zit nog niet in het binnenkomende request.
+- `requireStudent` middleware → redirect naar `/leerling` als niet
+  ingelogd.
+
+### Portaal — `src/routes/student.ts` (gemount op `/leerling`)
+`GET /` login-form óf dashboard · `POST /login` (honeypot) · `GET
+/verify` · `POST /logout` · `GET /kiezen` + `POST /kies` (beroepen
+per categorie toggelen) · `GET|POST /profiel` (naam/school/profiel +
+interessecategorieën) · `POST /vraag` (vraag vooraf) · `POST
+/nieuwsbrief` (toggle + upsert in `subscribers`) · `GET /rooster.ics`
+(agenda-export). Dashboard toont keuzes, aanbevelingen (beroepen in
+interessecategorieën die nog niet gekozen zijn), vragen, nieuwsbrief.
+
+### Koppelingen
+- `/voorlichters?beroep=N` toont een **leerling-box**: "Voeg toe aan
+  mijn avond" (→ `POST /leerling/kies`) + "Vraag vooraf" (→ `POST
+  /leerling/vraag`). In `src/views/sections.ts` (`renderVoorlichters`).
+- Nav-item **"Mijn avond"** → `/leerling` (layout.ts + home.ts).
+- Admin: **`/admin/leerlingen`** (accounts + #keuzes) en tab **Vragen
+  vooraf** (afhandelen/verwijderen). In Communicatie-groep.
+
+### Cache
+`/leerling` staat (net als `/admin`) op `no-store` in `src/index.ts`.
+
+### ⚠️ Afhankelijkheid: Resend-domeinverificatie
+Magic-link e-mails worden **pas bezorgd zodra het Resend-domein
+`inijmegen.com` geverifieerd is**. De 3 DNS-records (DKIM
+`resend._domainkey`, MX `send`, TXT `send` SPF) staan live in Cloudflare
+en resolven publiek; Resend stond bij oplevering nog op PENDING
+(hercheck-vertraging aan hun kant). Tot verificatie wordt de login-link
+wél aangemaakt maar niet gemaild. Controleer status in het Resend-
+dashboard; daarna werkt de magic-link-flow volledig.
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt
