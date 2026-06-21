@@ -204,17 +204,21 @@ body.home {
   line-height: 1.25;
   color: #000;
 }
-/* Klikbaar beroep → voorlichter(s) */
-.accordion-panel li a.beroep-link { color: #000; text-decoration: none; cursor: pointer; }
-.accordion-panel li a.beroep-link:hover { color: var(--c-accent); text-decoration: underline; text-underline-offset: 3px; }
-.beroep-link__arrow {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--c-accent);
-  opacity: 0;
-  transition: opacity .15s;
+/* Klikbaar beroep → voorlichter(s): duidelijk herkenbaar als link */
+.accordion-panel li a.beroep-link {
+  color: #000;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--c-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
-.accordion-panel li a.beroep-link:hover .beroep-link__arrow { opacity: 1; }
+.accordion-panel li a.beroep-link::after {
+  content: " ›";
+  color: var(--c-accent);
+  font-weight: 700;
+}
+.accordion-panel li a.beroep-link:hover { color: var(--c-accent); }
 @media (max-width: 479px) {
   .accordion-handle { font-size: 16px; padding-top: 3px; line-height: 1; }
 }

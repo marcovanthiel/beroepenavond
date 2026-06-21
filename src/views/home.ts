@@ -29,22 +29,17 @@ function escape(s: string): string {
 }
 
 export async function renderHome(c: Context<{ Bindings: Env }>) {
-  const [settings, cats, navItems, sponsorRows, speakerCounts] = await Promise.all([
+  const [settings, cats, navItems, sponsorRows] = await Promise.all([
     getSettings(c.env.DB),
     getCategoriesWithBeroepen(c.env.DB),
     getNavPages(c.env.DB),
     c.env.DB.prepare('SELECT name, logo_url, website FROM sponsors WHERE is_active = 1 ORDER BY sort_order, name')
       .all<{ name: string; logo_url: string | null; website: string | null }>(),
-    c.env.DB.prepare('SELECT beroep_id, COUNT(*) AS n FROM speakers WHERE is_public = 1 AND confirmed = 1 AND beroep_id IS NOT NULL GROUP BY beroep_id')
-      .all<{ beroep_id: number; n: number }>(),
   ]);
 
-  // Beroepen met bevestigde voorlichters worden klikbaar — maar alleen als
-  // de publicatie-schakelaar aan staat.
+  // Zodra de voorlichters gepubliceerd zijn, wordt elk beroep een klikbare
+  // link naar de voorlichter(s) van dat beroep.
   const published = (settings['voorlichters_published'] ?? '0') === '1';
-  const beroepenMetSprekers = new Set<number>(
-    published ? (speakerCounts.results ?? []).map((r) => r.beroep_id) : []
-  );
 
   const sponsors = sponsorRows.results ?? [];
   const sponsorsHtml = sponsors
@@ -81,8 +76,8 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
             <ul>
               ${cat.beroepen
                 .map((b) =>
-                  beroepenMetSprekers.has(b.id)
-                    ? `<li><a class="beroep-link" href="/voorlichters?beroep=${b.id}">${escape(b.name)} <span class="beroep-link__arrow">→ voorlichter</span></a></li>`
+                  published
+                    ? `<li><a class="beroep-link" href="/voorlichters?beroep=${b.id}">${escape(b.name)}</a></li>`
                     : `<li>${escape(b.name)}</li>`
                 )
                 .join('\n              ')}
