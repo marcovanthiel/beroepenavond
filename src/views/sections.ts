@@ -176,7 +176,10 @@ export async function renderVoorlichters(db: D1Database, beroepId?: number): Pro
 
   // Eén beroep gefilterd (vanaf de homepage-link): toon de voorlichter(s) van dat beroep.
   if (beroepId) {
-    const ber = await db.prepare('SELECT name FROM beroepen WHERE id = ?').bind(beroepId).first<{ name: string }>();
+    const ber = await db
+      .prepare('SELECT b.name, c.name AS cat_name, c.color AS cat_color FROM beroepen b LEFT JOIN categories c ON c.id = b.category_id WHERE b.id = ?')
+      .bind(beroepId)
+      .first<{ name: string; cat_name: string | null; cat_color: string | null }>();
     const sp = await db
       .prepare(
         'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 AND confirmed = 1 AND beroep_id = ? ORDER BY full_name'
@@ -184,7 +187,15 @@ export async function renderVoorlichters(db: D1Database, beroepId?: number): Pro
       .bind(beroepId)
       .all<SpeakerRow>();
     const items = sp.results ?? [];
-    const heading = `<div class="section-head"><span class="eyebrow">Voorlichter${items.length === 1 ? '' : 's'}</span><h2>${esc(ber?.name ?? 'Beroep')}</h2><p><a href="/voorlichters">← Alle voorlichters</a></p></div>`;
+    const catChip = ber?.cat_name
+      ? `<p><span class="chip"><span class="chip__dot" style="background:${esc(ber.cat_color ?? '#88bc1d')}"></span>${esc(ber.cat_name)}</span></p>`
+      : '';
+    const heading = `<div class="section-head">
+      <span class="eyebrow">Voorlichter${items.length === 1 ? '' : 's'}</span>
+      <h2>${esc(ber?.name ?? 'Beroep')}</h2>
+      ${catChip}
+      <p><a href="/voorlichters">← Alle voorlichters</a></p>
+    </div>`;
     if (!items.length) {
       return `${heading}<div class="callout"><p>Voor dit beroep is nog geen voorlichter bekendgemaakt.</p></div>`;
     }
