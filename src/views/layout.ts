@@ -151,6 +151,7 @@ ${raw(jsonLdHtml)}
     </button>
     <ul class="nav__links" id="navLinks">
       ${raw(navHtml)}
+      <li><a href="/leerling">Mijn avond</a></li>
       <li><a class="nav__cta" href="/aanmelden">Word voorlichter</a></li>
     </ul>
   </nav>

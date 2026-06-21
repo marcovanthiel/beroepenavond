@@ -11,6 +11,7 @@ import { Hono } from 'hono';
 import type { Env } from './env';
 import { publicApp } from './routes/public';
 import { adminApp } from './routes/admin';
+import { studentApp } from './routes/student';
 import { renderError } from './views/public';
 import { serveMedia } from './lib/media';
 
@@ -64,8 +65,8 @@ app.use('*', async (c, next) => {
   // Caching-strategie per pad.
   const url = new URL(c.req.url);
   const path = url.pathname;
-  if (path.startsWith('/admin')) {
-    res.headers.set('Cache-Control', 'no-store'); // beheer nooit cachen
+  if (path.startsWith('/admin') || path.startsWith('/leerling')) {
+    res.headers.set('Cache-Control', 'no-store'); // beheer + persoonlijke leerlingpagina's nooit cachen
   } else if (path.startsWith('/assets/')) {
     res.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=604800');
   } else if (path.startsWith('/media/')) {
@@ -120,6 +121,9 @@ app.get('/sitemap.xml', async (c) => {
 
 // 5. Beheer-paneel.
 app.route('/admin', adminApp);
+
+// 5b. Leerling-portaal.
+app.route('/leerling', studentApp);
 
 // 6. Publieke site (catch-all, laatste).
 app.route('/', publicApp);

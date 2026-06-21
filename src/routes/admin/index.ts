@@ -40,6 +40,7 @@ import { accountApp } from './account';
 import { mediaApp } from './media';
 import { auditApp } from './audit';
 import { sponsorsApp } from './sponsors';
+import { leerlingenApp } from './leerlingen';
 
 export const adminApp = new Hono<AdminEnv>();
 
@@ -185,6 +186,7 @@ adminApp.route('/inbox', inboxApp);
 adminApp.route('/subscribers', subscribersApp);
 adminApp.route('/nieuws', announcementsApp);
 adminApp.route('/sponsors', sponsorsApp);
+adminApp.route('/leerlingen', leerlingenApp);
 adminApp.route('/users', usersApp);
 adminApp.route('/account', accountApp);
 adminApp.route('/media', mediaApp);

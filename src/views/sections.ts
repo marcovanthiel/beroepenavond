@@ -196,10 +196,24 @@ export async function renderVoorlichters(db: D1Database, beroepId?: number): Pro
       ${catChip}
       <p><a href="/voorlichters">← Alle voorlichters</a></p>
     </div>`;
+    // Leerling-box: toevoegen aan eigen avond + vraag vooraf (vraagt zo nodig om inloggen).
+    const studentBox = `<div class="card-box" style="margin-top:26px;border-left:4px solid var(--c-accent)">
+      <h3>Ben je leerling?</h3>
+      <p>Voeg <strong>${esc(ber?.name ?? 'dit beroep')}</strong> toe aan jouw avond, of stel vooraf een vraag aan de voorlichter.</p>
+      <div class="reserve-actions" style="justify-content:flex-start">
+        <form method="post" action="/leerling/kies" class="inline-form"><input type="hidden" name="beroep_id" value="${beroepId}"><button class="btn btn--primary" type="submit">+ Voeg toe aan mijn avond</button></form>
+      </div>
+      <form method="post" action="/leerling/vraag" style="margin-top:14px">
+        <input type="hidden" name="beroep_id" value="${beroepId}">
+        <div class="field"><label>Vraag vooraf (optioneel)</label><textarea name="question" rows="2" placeholder="Bijv. welke opleiding heb je gevolgd?"></textarea></div>
+        <button class="btn btn--ghost btn--sm" type="submit">Vraag versturen</button>
+      </form>
+      <p class="muted" style="font-size:.85rem;margin-top:8px">Nog geen account? Je wordt gevraagd in te loggen — gratis, met je e-mail. <a href="/leerling">Mijn avond ↗</a></p>
+    </div>`;
     if (!items.length) {
-      return `${heading}<div class="callout"><p>Voor dit beroep is nog geen voorlichter bekendgemaakt.</p></div>`;
+      return `${heading}<div class="callout"><p>Voor dit beroep is nog geen voorlichter bekendgemaakt.</p></div>${studentBox}`;
     }
-    return `${heading}<div class="grid grid--auto">${items.map(speakerCard).join('')}</div>`;
+    return `${heading}<div class="grid grid--auto">${items.map(speakerCard).join('')}</div>${studentBox}`;
   }
 
   const [cats, spk] = await Promise.all([
