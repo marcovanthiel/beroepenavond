@@ -62,14 +62,14 @@ body.home {
 
 /* block-8a — "DONDERDAG 20 NOVEMBER", links uitgelijnd, 48px */
 .b-8a {
-  padding-top: 40px;
+  padding-top: 18px;
 }
 .b-8a .heading-2 {
   font-family: 'DM Sans', sans-serif;
   font-weight: 700;
-  font-size: 48px;
+  font-size: 40px;
   line-height: 1;
-  margin: 0 0 10px;
+  margin: 0 0 4px;
   text-align: left;
   color: #000;
   letter-spacing: 0;
@@ -79,24 +79,25 @@ body.home {
 .b-8b .heading-2.accent {
   font-family: 'DM Sans', sans-serif;
   font-weight: 700;
-  font-size: 48px;
+  font-size: 40px;
   line-height: 1;
-  margin: 0 0 20px;
+  margin: 0 0 8px;
   text-align: left;
   color: var(--c-accent);
   letter-spacing: 0;
 }
 
-/* block-9a — "2026" gigantisch, rechts uitgelijnd, 185px */
+/* block-9a — "2026" gigantisch, rechts uitgelijnd */
 .b-9a {
   padding: 0;
   position: relative;
-  top: 10px;
+  top: 0;
+  margin-top: -10px;
 }
 .b-9a .heading-year {
   font-family: 'DM Sans', sans-serif;
   font-weight: 700;
-  font-size: clamp(60px, 14vw, 185px);
+  font-size: clamp(54px, 11vw, 140px);
   line-height: 1;
   margin: 0;
   padding: 0;
@@ -108,8 +109,8 @@ body.home {
 /* block-9b — lichtgroene banner */
 .b-9b {
   background-color: var(--c-banner);
-  padding: 15px 0;
-  margin-top: 20px;
+  padding: 10px 0;
+  margin-top: 10px;
 }
 .b-9b .heading-banner {
   font-family: 'DM Sans', sans-serif;
@@ -134,7 +135,7 @@ body.home {
    ================================================================= */
 
 .b-92 {
-  padding: 30px 0 20px;
+  padding: 16px 0 12px;
   background: rgba(255,255,255,0.6);
 }
 .accordion {
@@ -142,7 +143,7 @@ body.home {
   margin: 0 auto;
 }
 .accordion-item {
-  margin: 3px 0;
+  margin: 2px 0;
 }
 
 /* Bron: handler-1: bg #000, color #fff, font 20px DM Sans 500 uppercase */
@@ -155,13 +156,13 @@ body.home {
   background-color: var(--c-bar);
   color: #fff;
   border: 0;
-  padding: 10px 14px;
+  padding: 8px 14px;
   font-family: 'DM Sans', sans-serif;
   font-weight: 500;
-  font-size: 20px;
+  font-size: 18px;
   text-transform: uppercase;
   letter-spacing: 0;
-  line-height: 1.5;
+  line-height: 1.4;
   cursor: pointer;
   text-align: left;
 }
@@ -192,7 +193,7 @@ body.home {
 .accordion-panel ul {
   list-style: none;
   margin: 0;
-  padding: 12px 24px 16px;
+  padding: 10px 24px 12px;
 }
 
 /* Bron: text-4: DM Sans 400, 16px, line-height 1.25 */
@@ -228,7 +229,7 @@ body.home {
    ================================================================= */
 
 .b-56 {
-  padding: 30px 0 20px;
+  padding: 16px 0 10px;
 }
 .b-56 .b-inner { text-align: center; }
 
@@ -260,7 +261,7 @@ body.home {
   padding: 0;
 }
 .b-95a {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 .b-95a .text-6 {
   text-align: center;
@@ -275,7 +276,7 @@ body.home {
 .b-95a .text-6 p { margin: 0; }
 
 .b-95b {
-  padding: 20px 0;
+  padding: 12px 0;
 }
 .b-95b .sponsor {
   display: flex;
@@ -305,7 +306,7 @@ body.home {
 }
 
 .b-95c {
-  padding: 0 0 30px;
+  padding: 0 0 18px;
 }
 .b-95c .text-6 {
   text-align: center;
@@ -673,6 +674,7 @@ hr { border:0; border-top:1px solid var(--c-line); margin:2em 0; }
 
 /* Homepage-header: lichter dan op interne pagina's (mannetje toont) */
 .site-header--home { border-bottom-width: 0; box-shadow: 0 1px 0 rgba(0,0,0,.07); }
+.site-header--home .nav { padding: 9px 24px; }
 
 /* LinkedIn-link op spreker-kaart */
 .speaker-card__li { display:inline-block; margin-top:10px; font-size:.82rem; font-weight:600; color:#0a66c2; }
