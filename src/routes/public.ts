@@ -236,9 +236,11 @@ publicApp.get('/*', async (c) => {
     case '/uitleg-beroepen':
       append = await renderBeroepenCatalog(c.env.DB).catch(() => '');
       break;
-    case '/voorlichters':
-      append = await renderVoorlichters(c.env.DB).catch(() => '');
+    case '/voorlichters': {
+      const beroepId = q.beroep ? parseInt(q.beroep, 10) : undefined;
+      append = await renderVoorlichters(c.env.DB, Number.isFinite(beroepId as number) ? beroepId : undefined).catch(() => '');
       break;
+    }
     case '/nieuws':
       append = await renderNieuwsList(c.env.DB).catch(() => '');
       break;

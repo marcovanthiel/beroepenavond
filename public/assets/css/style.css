@@ -204,6 +204,17 @@ body.home {
   line-height: 1.25;
   color: #000;
 }
+/* Klikbaar beroep → voorlichter(s) */
+.accordion-panel li a.beroep-link { color: #000; text-decoration: none; cursor: pointer; }
+.accordion-panel li a.beroep-link:hover { color: var(--c-accent); text-decoration: underline; text-underline-offset: 3px; }
+.beroep-link__arrow {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-accent);
+  opacity: 0;
+  transition: opacity .15s;
+}
+.accordion-panel li a.beroep-link:hover .beroep-link__arrow { opacity: 1; }
 @media (max-width: 479px) {
   .accordion-handle { font-size: 16px; padding-top: 3px; line-height: 1; }
 }

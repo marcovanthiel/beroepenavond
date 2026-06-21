@@ -167,11 +167,28 @@ async function beroepenPreview(db: D1Database): Promise<string> {
     ${sections}`;
 }
 
-export async function renderVoorlichters(db: D1Database): Promise<string> {
+export async function renderVoorlichters(db: D1Database, beroepId?: number): Promise<string> {
   // Globale publicatie-schakelaar: uit = alleen beroepen tonen, geen namen.
   const pub = await db.prepare("SELECT value FROM settings WHERE key='voorlichters_published'").first<{ value: string }>();
   if ((pub?.value ?? '0') !== '1') {
     return beroepenPreview(db);
+  }
+
+  // Eén beroep gefilterd (vanaf de homepage-link): toon de voorlichter(s) van dat beroep.
+  if (beroepId) {
+    const ber = await db.prepare('SELECT name FROM beroepen WHERE id = ?').bind(beroepId).first<{ name: string }>();
+    const sp = await db
+      .prepare(
+        'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 AND confirmed = 1 AND beroep_id = ? ORDER BY full_name'
+      )
+      .bind(beroepId)
+      .all<SpeakerRow>();
+    const items = sp.results ?? [];
+    const heading = `<div class="section-head"><span class="eyebrow">Voorlichter${items.length === 1 ? '' : 's'}</span><h2>${esc(ber?.name ?? 'Beroep')}</h2><p><a href="/voorlichters">← Alle voorlichters</a></p></div>`;
+    if (!items.length) {
+      return `${heading}<div class="callout"><p>Voor dit beroep is nog geen voorlichter bekendgemaakt.</p></div>`;
+    }
+    return `${heading}<div class="grid grid--auto">${items.map(speakerCard).join('')}</div>`;
   }
 
   const [cats, spk] = await Promise.all([

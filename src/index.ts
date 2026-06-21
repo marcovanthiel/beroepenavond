@@ -71,8 +71,9 @@ app.use('*', async (c, next) => {
   } else if (path.startsWith('/media/')) {
     /* /media houdt zijn eigen Cache-Control uit serveMedia */
   } else if (c.req.method === 'GET' && res.status === 200 && !url.search) {
-    // Publieke pagina's: kort edge-cachen, snel reviderend.
-    res.headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600');
+    // Publieke pagina's komen live uit D1; altijd vers serveren zodat
+    // admin-wijzigingen (publicatie, sprekers, sponsoren) meteen zichtbaar zijn.
+    res.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
   }
   c.res = res;
 });
