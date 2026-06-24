@@ -263,4 +263,70 @@ export async function logAudit(
   }
 }
 
+// ----------------------------------------------------------------------
+// Passwordless login: 6-cijferige e-mailcodes (alleen voor bestaande users)
+// ----------------------------------------------------------------------
+
+const CODE_TTL_SECONDS = 60 * 10; // 10 minuten geldig
+const CODE_MAX_ATTEMPTS = 5;
+
+export function genCode(): string {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
+  return String(n).padStart(6, '0');
+}
+
+async function sha256hex(s: string): Promise<string> {
+  const h = await crypto.subtle.digest('SHA-256', enc.encode(s));
+  return Array.from(new Uint8Array(h), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Sla (gehasht) een nieuwe inlogcode op voor dit e-mailadres (één actieve per e-mail). */
+export async function setLoginCode(
+  db: D1Database,
+  email: string,
+  code: string
+): Promise<void> {
+  const e = email.trim().toLowerCase();
+  const now = Math.floor(Date.now() / 1000);
+  const hash = await sha256hex(`${code}:${e}`);
+  await db
+    .prepare(
+      `INSERT INTO admin_login_codes (email, code_hash, expires_at, attempts, created_at)
+       VALUES (?, ?, ?, 0, ?)
+       ON CONFLICT(email) DO UPDATE SET
+         code_hash = excluded.code_hash,
+         expires_at = excluded.expires_at,
+         attempts = 0,
+         created_at = excluded.created_at`
+    )
+    .bind(e, hash, now + CODE_TTL_SECONDS, now)
+    .run();
+}
+
+/** Controleer een ingevoerde code; verbruikt 'm bij succes, telt pogingen bij fout. */
+export async function verifyLoginCode(
+  db: D1Database,
+  email: string,
+  code: string
+): Promise<boolean> {
+  const e = email.trim().toLowerCase();
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db
+    .prepare('SELECT code_hash, expires_at, attempts FROM admin_login_codes WHERE email = ?')
+    .bind(e)
+    .first<{ code_hash: string; expires_at: number; attempts: number }>();
+  if (!row) return false;
+  if (row.expires_at < now || row.attempts >= CODE_MAX_ATTEMPTS) {
+    await db.prepare('DELETE FROM admin_login_codes WHERE email = ?').bind(e).run();
+    return false;
+  }
+  const hash = await sha256hex(`${code.trim()}:${e}`);
+  if (!safeEqual(hash, row.code_hash)) {
+    await db.prepare('UPDATE admin_login_codes SET attempts = attempts + 1 WHERE email = ?').bind(e).run();
+    return false;
+  }
+  await db.prepare('DELETE FROM admin_login_codes WHERE email = ?').bind(e).run();
+  return true;
+}
+
 export { randomHex };

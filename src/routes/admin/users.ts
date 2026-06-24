@@ -1,7 +1,7 @@
 /** Gebruikersbeheer — alleen voor de rol 'admin'. */
 import { Hono } from 'hono';
 import type { AdminEnv } from '../../lib/auth';
-import { logAudit, createUser, findUserByEmail, hashPassword } from '../../lib/auth';
+import { logAudit, createUser, findUserByEmail, hashPassword, randomHex } from '../../lib/auth';
 import type { UserRow } from '../../env';
 import {
   renderAdminLayout,
@@ -67,7 +67,7 @@ usersApp.get('/new', (c) => {
         ${field({ label: 'Naam', name: 'name', required: true })}
         ${field({ label: 'E-mail', name: 'email', type: 'email', required: true })}
         ${select({ label: 'Rol', name: 'role', value: 'editor', options: ROLES })}
-        ${field({ label: 'Wachtwoord (min. 10 tekens)', name: 'password', type: 'password', required: true })}
+        ${field({ label: 'Wachtwoord (optioneel — inloggen gaat via e-mailcode)', name: 'password', type: 'password' })}
       </div>
       ${formActions('Aanmaken', '/admin/users')}
     </form>`;
@@ -77,8 +77,9 @@ usersApp.get('/new', (c) => {
 usersApp.post('/new', async (c) => {
   const b = await c.req.parseBody();
   const email = str(b.email);
-  const password = str(b.password);
-  if (!str(b.name) || !email || password.length < 10) return redirectErr(c, '/admin/users/new', 'Vul alle velden in (wachtwoord min. 10).');
+  // Inloggen gaat via e-mailcode; een wachtwoord is optioneel (anders een willekeurig, ongebruikt wachtwoord).
+  const password = str(b.password).length >= 10 ? str(b.password) : randomHex(16);
+  if (!str(b.name) || !email) return redirectErr(c, '/admin/users/new', 'Vul naam en e-mailadres in.');
   if (await findUserByEmail(c.env.DB, email)) return redirectErr(c, '/admin/users/new', 'Er bestaat al een gebruiker met dit e-mailadres.');
   const role = str(b.role) === 'admin' ? 'admin' : 'editor';
   const id = await createUser(c.env.DB, { name: str(b.name), email, password, role });

@@ -33,21 +33,43 @@ export function renderLogin(
 ) {
   const inner = `
     <h1 class="auth-title">Beheer Beroepenavond</h1>
-    <p class="auth-sub">Log in om de website te beheren.</p>
+    <p class="auth-sub">Log in met een eenmalige code die we naar je e-mailadres sturen.
+      Alleen e-mailadressen met een beheerdersaccount kunnen inloggen.</p>
     ${opts.error ? `<div class="flash flash--err">${esc(opts.error)}</div>` : ''}
     <form method="post" action="/admin/login" class="auth-form">
       <input type="hidden" name="next" value="${esc(opts.next ?? '/admin')}">
       <label class="fld">
         <span class="fld__label">E-mailadres</span>
-        <input class="fld__input" type="email" name="email" required autofocus autocomplete="username">
+        <input class="fld__input" type="email" name="email" required autofocus autocomplete="email">
       </label>
-      <label class="fld">
-        <span class="fld__label">Wachtwoord</span>
-        <input class="fld__input" type="password" name="password" required autocomplete="current-password">
-      </label>
-      <button type="submit" class="btn btn--primary btn--block">Inloggen</button>
+      <button type="submit" class="btn btn--primary btn--block">Stuur inlogcode</button>
     </form>`;
   return c.html(shell('Inloggen', inner));
+}
+
+/** Stap 2: 6-cijferige code invoeren. */
+export function renderCodeForm(
+  c: Context<AdminEnv>,
+  opts: { email: string; next?: string; error?: string | null }
+) {
+  const inner = `
+    <h1 class="auth-title">Voer je inlogcode in</h1>
+    <p class="auth-sub">Als <strong>${esc(opts.email)}</strong> een beheerdersaccount is,
+      staat er een 6-cijferige code in je mailbox. De code is 10 minuten geldig.</p>
+    ${opts.error ? `<div class="flash flash--err">${esc(opts.error)}</div>` : ''}
+    <form method="post" action="/admin/code" class="auth-form">
+      <input type="hidden" name="next" value="${esc(opts.next ?? '/admin')}">
+      <input type="hidden" name="email" value="${esc(opts.email)}">
+      <label class="fld">
+        <span class="fld__label">Inlogcode</span>
+        <input class="fld__input" type="text" name="code" inputmode="numeric" pattern="[0-9]*"
+          maxlength="6" required autofocus autocomplete="one-time-code"
+          style="letter-spacing:.4em;font-size:1.4em;text-align:center">
+      </label>
+      <button type="submit" class="btn btn--primary btn--block">Inloggen</button>
+    </form>
+    <p style="text-align:center;margin-top:14px"><a href="/admin/login">&larr; Ander e-mailadres</a></p>`;
+  return c.html(shell('Code invoeren', inner));
 }
 
 export function renderSetup(

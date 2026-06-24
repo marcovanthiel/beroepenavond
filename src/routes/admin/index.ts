@@ -14,12 +14,16 @@ import {
   createUser,
   createSession,
   destroySession,
-  verifyPassword,
+  genCode,
+  setLoginCode,
+  verifyLoginCode,
   logAudit,
 } from '../../lib/auth';
-import { renderLogin, renderSetup } from '../../views/admin/login';
+import { renderLogin, renderSetup, renderCodeForm } from '../../views/admin/login';
 import { renderAdminLayout, esc } from '../../views/admin/layout';
 import { str, redirectErr } from '../../lib/forms';
+import { getSettings } from '../../lib/db';
+import { mailConfig, sendEmail, emailShell } from '../../lib/email';
 
 import { pagesApp } from './pages';
 import { settingsApp } from './settings';
@@ -54,14 +58,49 @@ adminApp.get('/login', async (c) => {
   return renderLogin(c, { next: c.req.query('next'), error: c.req.query('err') });
 });
 
+// Stap 1: e-mailadres → stuur een 6-cijferige code (alleen als er een account bestaat).
 adminApp.post('/login', async (c) => {
   const body = await c.req.parseBody();
-  const email = str(body.email);
-  const password = str(body.password);
+  const email = str(body.email).trim().toLowerCase();
   const next = str(body.next) || '/admin';
-  const user = await findUserByEmail(c.env.DB, email);
-  if (!user || !(await verifyPassword(password, user.pw_hash))) {
-    return renderLogin(c, { next, error: 'Onjuist e-mailadres of wachtwoord.' });
+  if (email) {
+    const user = await findUserByEmail(c.env.DB, email);
+    if (user) {
+      const code = genCode();
+      await setLoginCode(c.env.DB, email, code);
+      try {
+        const settings = await getSettings(c.env.DB);
+        const cfg = mailConfig(c.env, settings);
+        const inner = `
+          <p>Hoi${user.name ? ' ' + esc(user.name) : ''},</p>
+          <p>Gebruik deze code om in te loggen op het beheer van de Beroepenavond:</p>
+          <p style="text-align:center;margin:22px 0"><span style="display:inline-block;background:#f3f5f7;border:1px solid #e3e6ea;border-radius:10px;padding:14px 26px;font-size:30px;font-weight:bold;letter-spacing:8px;color:#15171a">${code}</span></p>
+          <p style="color:#8a9099;font-size:13px">De code is 10 minuten geldig. Niet aangevraagd? Negeer deze e-mail.</p>`;
+        await sendEmail(cfg, {
+          to: email,
+          subject: `Je inlogcode ${code} — Beheer Beroepenavond`,
+          html: emailShell('Inlogcode', inner),
+          text: `Je inlogcode voor het beheer van de Beroepenavond is: ${code}\n\nDe code is 10 minuten geldig.`,
+        });
+      } catch (e) {
+        console.error('inlogcode mailen faalde:', e);
+      }
+    }
+  }
+  // Altijd dezelfde vervolgstap — verraadt niet of het e-mailadres een account is.
+  return renderCodeForm(c, { email, next });
+});
+
+// Stap 2: code controleren → sessie aanmaken.
+adminApp.post('/code', async (c) => {
+  const body = await c.req.parseBody();
+  const email = str(body.email).trim().toLowerCase();
+  const code = str(body.code).trim();
+  const next = str(body.next) || '/admin';
+  const ok = email && code ? await verifyLoginCode(c.env.DB, email, code) : false;
+  const user = ok ? await findUserByEmail(c.env.DB, email) : null;
+  if (!ok || !user) {
+    return renderCodeForm(c, { email, next, error: 'Onjuiste of verlopen code. Vraag eventueel een nieuwe code aan.' });
   }
   c.set('user', user);
   await createSession(c, user.id);
