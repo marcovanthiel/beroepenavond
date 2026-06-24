@@ -15,12 +15,15 @@ import {
 import { mailConfig, notifySubmission, confirmToSender, newsletterConfirm } from '../lib/email';
 import { renderLayout } from '../views/layout';
 import { getNavPages } from '../lib/db';
+import { isSpam } from '../lib/spam';
 
 export const publicApp = new Hono<{ Bindings: Env }>();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
-const isBot = (b: Record<string, unknown>) => str(b.website) !== '';
+// Honeypot + scorend spamfilter (zie lib/spam.ts). Bij spam doet de route alsof
+// het gelukt is (geen opslag/mail), zodat bots niets leren.
+const isBot = (b: Record<string, unknown>) => isSpam(b);
 
 async function storeSubmission(
   c: any,

@@ -224,6 +224,38 @@ en resolven publiek; Resend stond bij oplevering nog op PENDING
 wél aangemaakt maar niet gemaild. Controleer status in het Resend-
 dashboard; daarna werkt de magic-link-flow volledig.
 
+## Sessie 5 — passwordless admin-login + spamfilter (LIVE, 24 juni 2026)
+
+### Admin-login via e-mailcode (vervangt wachtwoord)
+- `/admin/login` vraagt nu alléén een **e-mailadres** → er wordt een **6-cijferige
+  code** gemaild (Resend) → `/admin/code` controleert de code → sessie. Wachtwoord-
+  login is eruit. **Alleen e-mailadressen met een `users`-account (door admin
+  aangemaakt) kunnen inloggen** — anti-enumeratie: de code-stap toont altijd dezelfde
+  tekst, ook bij een onbekend adres.
+- Codes: gehasht (`sha256(code:email)`), 10 min geldig, max 5 pogingen, één actieve per
+  e-mail. Schema **`020_admin_login_codes.sql`** (lokaal + remote toegepast). Helpers in
+  `src/lib/auth.ts`: `genCode` / `setLoginCode` / `verifyLoginCode`. Sessies/cookie
+  (`ba_session`) ongewijzigd.
+- **Admins aangemaakt** (rol `admin`): `marco@marcovanthiel.nl`, `jcmhendriksra@gmail.com`
+  (Hans Hendriks), `marijke.van.veen@wxs.nl` (Marijke van Veen). Nieuwe accounts maak je
+  via `/admin/users` — **wachtwoord is daar nu optioneel** (login gaat via code; bij leeg
+  een willekeurig ongebruikt wachtwoord). De `/admin/setup`-eerste-admin-flow blijft als
+  fallback bij 0 users (maar wordt niet meer getoond zolang er admins zijn).
+- **Afhankelijkheid:** codes worden alleen bezorgd zolang Resend-domein `inijmegen.com`
+  geverifieerd is (zelfde voorwaarde als de leerling-magic-link).
+
+### Spamfilter op publieke formulieren
+- `src/lib/spam.ts`: scorend filter bovenop de honeypot, gebruikt in `/contact`,
+  `/aanmelden`, `/nieuwsbrief` (via `isBot()` in `routes/public.ts`). Sterke signalen
+  (100): honeypot gevuld · URL/BBCode/verdachte TLD · niet-Latijns schrift. Zwakke
+  signalen (2, ≥2 nodig): naam-CamelCase-zonder-spatie (bv. "RobertTic") · willekeurig
+  e-mail-lokaaldeel (bv. "zekisuquc419"). Drempel = 3. Bij spam doet de route alsof het
+  gelukt is (**geen opslag/mail**), zodat bots niets leren. Drempel/regels aanpasbaar in
+  `spam.ts`.
+- Sterkste vervolgstap indien nodig: **Cloudflare Turnstile** (gratis) — vereist 1×
+  een widget aanmaken in het dashboard (site key + secret), daarna in de forms + een
+  siteverify-check inbouwen.
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt
