@@ -12,6 +12,9 @@ export interface Env {
   // Resend API-key voor uitgaande e-mail (optioneel: zonder key worden
   // inzendingen wél opgeslagen, maar geen mail verstuurd).
   RESEND_API_KEY?: string;
+  // Cloudflare Turnstile secret (optioneel). Aanwezig => formulieren verifiëren
+  // de Turnstile-token; afwezig => alleen het heuristiek-spamfilter.
+  TURNSTILE_SECRET_KEY?: string;
   // Vars uit wrangler.toml
   SITE_NAME: string;
   SITE_HOST: string;

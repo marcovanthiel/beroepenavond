@@ -32,11 +32,12 @@ app.use('*', async (c, next) => {
 // portretten) zijn toegestaan. Verkleint XSS-impact.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https:",
-  "connect-src 'self'",
+  "connect-src 'self' https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com",
   "form-action 'self'",
   "frame-ancestors 'self'",
   "base-uri 'self'",

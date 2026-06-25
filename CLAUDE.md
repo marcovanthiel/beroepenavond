@@ -252,9 +252,27 @@ dashboard; daarna werkt de magic-link-flow volledig.
   e-mail-lokaaldeel (bv. "zekisuquc419"). Drempel = 3. Bij spam doet de route alsof het
   gelukt is (**geen opslag/mail**), zodat bots niets leren. Drempel/regels aanpasbaar in
   `spam.ts`.
-- Sterkste vervolgstap indien nodig: **Cloudflare Turnstile** (gratis) — vereist 1×
-  een widget aanmaken in het dashboard (site key + secret), daarna in de forms + een
-  siteverify-check inbouwen.
+### Cloudflare Turnstile (bedraad, gracieus aan/uit)
+Turnstile is **al ingebouwd** op `/contact` en `/aanmelden`, maar **gracieus**: het werkt
+alleen als beide sleutels gezet zijn, anders draait alleen het heuristiek-filter.
+- **Site key** (publiek): setting `turnstile_site_key` in de `settings`-tabel → de forms
+  tonen dan de Turnstile-widget (`src/views/sections.ts`).
+- **Secret** (geheim): Worker-secret `TURNSTILE_SECRET_KEY` → `routes/public.ts`
+  verifieert de token via siteverify (`verifyTurnstile()` in `lib/spam.ts`); faalt de
+  check → formulier opnieuw met "bevestig dat je geen robot bent" (fail-open bij
+  netwerkfout zodat een storing echte bezoekers niet blokkeert).
+- **CSP** staat `https://challenges.cloudflare.com` al toe (script/connect/frame-src).
+- **Aanzetten (na widget aanmaken in dashboard → Turnstile → Add, domein inijmegen.com,
+  mode Managed):**
+  ```bash
+  export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+  npx wrangler d1 execute beroepenavond --remote --command \
+    "INSERT INTO settings (key,value) VALUES ('turnstile_site_key','0x...SITEKEY') \
+     ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+  npx wrangler secret put TURNSTILE_SECRET_KEY   # plak de secret
+  ```
+  (Geen redeploy nodig: setting = D1, secret-put herdeployt zelf.) Uitzetten = de setting
+  legen.
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 

@@ -49,3 +49,28 @@ export function spamScore(b: Record<string, unknown>): SpamResult {
 export function isSpam(b: Record<string, unknown>): boolean {
   return spamScore(b).spam;
 }
+
+/**
+ * Verifieert een Cloudflare Turnstile-token serverside (siteverify).
+ * - Geen secret geconfigureerd => true (Turnstile staat uit, niet blokkeren).
+ * - Token ontbreekt => false (bv. bot die rechtstreeks POST).
+ * - Netwerkfout => true (fail-open, zodat een Turnstile-storing echte bezoekers
+ *   niet blokkeert; het heuristiek-filter blijft sowieso actief).
+ */
+export async function verifyTurnstile(secret: string | undefined, token: string, ip?: string): Promise<boolean> {
+  if (!secret) return true;
+  if (!token) return false;
+  try {
+    const body = new URLSearchParams({ secret, response: token });
+    if (ip) body.set('remoteip', ip);
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    const data = (await res.json()) as { success?: boolean };
+    return !!data.success;
+  } catch {
+    return true;
+  }
+}

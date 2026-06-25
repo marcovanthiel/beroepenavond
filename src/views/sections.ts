@@ -377,6 +377,7 @@ export function contactFormHtml(settings: SettingsMap, values?: Vals): string {
         <div class="field"><label>Bericht <span class="req">*</span></label>
           <textarea name="message" required>${val(values, 'message')}</textarea></div>
         <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : ''}
         <div class="form__actions">
           <button type="submit" class="btn btn--primary btn--lg">Versturen</button>
         </div>
@@ -412,6 +413,7 @@ export function volunteerFormHtml(settings: SettingsMap, values?: Vals): string 
       <div class="field"><label>Toelichting (optioneel)</label>
         <textarea name="message" placeholder="Vertel kort over jezelf en je vak.">${val(values, 'message')}</textarea></div>
       <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : ''}
       <div class="form__actions">
         <button type="submit" class="btn btn--primary btn--lg">Aanmelding versturen</button>
       </div>

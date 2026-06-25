@@ -15,7 +15,7 @@ import {
 import { mailConfig, notifySubmission, confirmToSender, newsletterConfirm } from '../lib/email';
 import { renderLayout } from '../views/layout';
 import { getNavPages } from '../lib/db';
-import { isSpam } from '../lib/spam';
+import { isSpam, verifyTurnstile } from '../lib/spam';
 
 export const publicApp = new Hono<{ Bindings: Env }>();
 
@@ -75,6 +75,14 @@ async function emailForSubmission(c: any, data: any) {
 publicApp.post('/contact', async (c) => {
   const b = await c.req.parseBody();
   if (isBot(b)) return c.redirect('/contact?sent=1', 302);
+  if (!(await verifyTurnstile(c.env.TURNSTILE_SECRET_KEY, str(b['cf-turnstile-response']), c.req.header('cf-connecting-ip')))) {
+    const page = await getPage(c.env.DB, '/contact');
+    const settings = await getSettings(c.env.DB);
+    if (!page) return renderError(c, 404, 'Pagina niet gevonden');
+    return renderPage(c, page, contactFormHtml(settings, b as any), {
+      notice: { type: 'err', text: 'Bevestig even dat je geen robot bent en verstuur opnieuw.' },
+    });
+  }
   const data = {
     type: 'contact',
     name: str(b.name),
@@ -99,6 +107,14 @@ publicApp.post('/contact', async (c) => {
 publicApp.post('/aanmelden', async (c) => {
   const b = await c.req.parseBody();
   if (isBot(b)) return c.redirect('/aanmelden?sent=1', 302);
+  if (!(await verifyTurnstile(c.env.TURNSTILE_SECRET_KEY, str(b['cf-turnstile-response']), c.req.header('cf-connecting-ip')))) {
+    const page = await getPage(c.env.DB, '/aanmelden');
+    const settings = await getSettings(c.env.DB);
+    if (!page) return renderError(c, 404, 'Pagina niet gevonden');
+    return renderPage(c, page, volunteerFormHtml(settings, b as any), {
+      notice: { type: 'err', text: 'Bevestig even dat je geen robot bent en verstuur opnieuw.' },
+    });
+  }
   const data = {
     type: 'volunteer',
     name: str(b.name),
