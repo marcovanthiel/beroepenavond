@@ -76,8 +76,13 @@ beroepenApp.get('/', async (c) => {
       ? emptyState({ colspan: 5, title: '🎉 Elk beroep heeft minstens één voorlichter — niets meer te werven.' })
       : emptyState({ colspan: 5, title: 'Nog geen beroepen.', cta: { href: '/admin/beroepen/new', label: 'Eerste beroep toevoegen' } });
 
+  const headerActions = `${
+    filter === 'zonder' && zonder.length
+      ? '<a class="btn btn--ghost" href="/admin/beroepen/zonder-spreker.csv">⬇ Werflijst (CSV)</a> '
+      : ''
+  }<a class="btn btn--primary" href="/admin/beroepen/new">Nieuw beroep</a>`;
   const body = `
-    ${pageHeader('Beroepen', '<a class="btn btn--primary" href="/admin/beroepen/new">Nieuw beroep</a>')}
+    ${pageHeader('Beroepen', headerActions)}
     <div class="list-toolbar" style="margin-bottom:8px">${tabs}</div>
     ${intro}
     ${filterBar({ targetId: 'tbl-beroepen', placeholder: 'Zoek op beroep of categorie…', total: showing.length, noun: 'beroepen' })}
@@ -86,6 +91,29 @@ beroepenApp.get('/', async (c) => {
       <tbody>${list ? list + filterEmptyRow(5) : empty}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Beroepen', activeKey: 'beroepen', body, flash: flashFromQuery(c) });
+});
+
+// Werflijst-export: beroepen zonder gekoppelde voorlichter (CSV, Excel-proof).
+beroepenApp.get('/zonder-spreker.csv', async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT b.name AS beroep, cat.name AS categorie
+       FROM beroepen b LEFT JOIN categories cat ON cat.id = b.category_id
+      WHERE NOT EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id)
+      ORDER BY cat.sort_order, b.sort_order, b.name`
+  ).all<{ beroep: string; categorie: string | null }>();
+  const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv =
+    '﻿' +
+    ['categorie,beroep,status']
+      .concat((rows.results ?? []).map((r) => [q(r.categorie ?? ''), q(r.beroep), q('zoekt voorlichter')].join(',')))
+      .join('\r\n');
+  await logAudit(c, 'export', 'beroepen_zonder_spreker', undefined, { count: (rows.results ?? []).length });
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="beroepen-zonder-voorlichter.csv"',
+    },
+  });
 });
 
 async function form(c: any, b: Partial<Beroep>, isNew: boolean): Promise<string> {
