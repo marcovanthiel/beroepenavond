@@ -65,7 +65,9 @@ a { color: var(--lime-dark); }
 }
 .nav-group ul { list-style: none; margin: 0; padding: 0; }
 .nav-group a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   padding: 8px 12px;
   margin: 1px 0;
   border-radius: 7px;
@@ -73,6 +75,7 @@ a { color: var(--lime-dark); }
   text-decoration: none;
   font-size: 14px;
 }
+.nav-ico { width: 18px; text-align: center; font-size: 14px; flex: none; line-height: 1; }
 .nav-group a:hover { background: #22252b; color: #fff; }
 .nav-group a.active { background: var(--lime); color: #15171a; font-weight: 500; }
 
@@ -176,3 +179,100 @@ svg .room { fill: rgba(136,188,29,.28); stroke: var(--lime-dark); stroke-width: 
 svg .room.sel { fill: rgba(136,188,29,.5); stroke: #15171a; }
 svg .room-label { font-size: 13px; fill: #15171a; font-weight: 600; pointer-events: none; }
 svg .vertex { fill: #fff; stroke: var(--lime-dark); stroke-width: 2; cursor: grab; }
+
+/* ==========================================================================
+   Gebruiksvriendelijkheid: mobiel menu, zoekfilters, dashboard-checklist,
+   laad-spinner, vriendelijke lege-staten, terug-links.
+   ========================================================================== */
+
+/* ---- Verplicht-markering in labels ---- */
+.req { color: var(--danger); font-weight: 700; }
+
+/* ---- Terug-link boven detailpagina's ---- */
+.back-link { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); text-decoration: none; font-size: 13px; margin-bottom: 12px; }
+.back-link:hover { color: var(--lime-dark); }
+
+/* ---- Lijst-toolbar met zoekveld + teller ---- */
+.list-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.list-search { position: relative; flex: 1 1 220px; min-width: 180px; max-width: 400px; }
+.list-search input { width: 100%; padding: 9px 12px 9px 34px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: var(--ink); }
+.list-search input:focus { outline: none; border-color: var(--lime); box-shadow: 0 0 0 3px rgba(136,188,29,.18); }
+.list-search::before { content: '⌕'; position: absolute; left: 11px; top: 50%; transform: translateY(-52%); font-size: 18px; color: var(--muted); pointer-events: none; }
+.list-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+/* ---- Vriendelijke lege-staten ---- */
+.empty-state { padding: 40px 20px; text-align: center; color: var(--muted); }
+.empty-state p { margin: 0 0 14px; font-size: 15px; }
+
+/* ---- Dashboard: snelacties + gereedheids-checklist ---- */
+a.stat { position: relative; transition: border-color .15s, box-shadow .15s, transform .15s; }
+a.stat:hover { border-color: var(--lime); box-shadow: 0 2px 6px rgba(0,0,0,.07), 0 10px 24px rgba(0,0,0,.06); transform: translateY(-1px); }
+a.stat::after { content: '→'; position: absolute; top: 14px; right: 15px; color: var(--muted); opacity: 0; transition: opacity .15s; }
+a.stat:hover::after { opacity: 1; color: var(--lime-dark); }
+
+.checklist { list-style: none; margin: 4px 0 0; padding: 0; }
+.checklist li { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.checklist li:last-child { border-bottom: none; }
+.check-ico { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex: none; }
+.check-ico--done { background: #e7f6ec; color: #1f6c3a; }
+.check-ico--todo { background: #eef0f2; color: #9aa0a8; }
+.checklist .lbl { flex: 1; font-size: 14px; }
+.checklist .lbl small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
+.checklist a.fix { font-size: 13px; white-space: nowrap; }
+.checklist li.done .lbl { color: var(--muted); }
+.progress { height: 8px; background: #eef0f2; border-radius: 999px; overflow: hidden; margin: 10px 0 2px; }
+.progress span { display: block; height: 100%; background: var(--lime); border-radius: 999px; transition: width .3s; }
+.card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.card__head h2 { margin: 0; }
+
+/* ---- Laad-spinner op verzendknoppen (voorkomt dubbel opslaan) ---- */
+.btn.is-busy { pointer-events: none; opacity: .78; }
+.btn.is-busy::before {
+  content: ''; width: 13px; height: 13px; flex: none;
+  border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;
+  display: inline-block; animation: admin-spin .6s linear infinite;
+}
+@keyframes admin-spin { to { transform: rotate(360deg); } }
+
+/* ---- Mobiel: inschuifbaar zijmenu met hamburger ---- */
+.nav-toggle { position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0; }
+.topbar { display: none; }
+.nav-overlay { display: none; }
+
+@media (max-width: 860px) {
+  .admin { grid-template-columns: 1fr; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 14px;
+    position: sticky; top: 0; z-index: 30;
+    background: #15171a; color: #fff;
+    padding: 11px 16px;
+  }
+  .topbar__btn {
+    font-size: 23px; line-height: 1; cursor: pointer; color: #fff;
+    padding: 2px 8px; margin: -2px 0; border-radius: 7px; user-select: none;
+  }
+  .topbar__btn:hover { background: #25282d; }
+  .topbar__title { font-weight: 600; font-size: 16px; }
+  .topbar__view { margin-left: auto; color: #9aa0a8; text-decoration: none; font-size: 18px; }
+
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 270px; max-width: 84vw; height: 100vh; z-index: 40;
+    transform: translateX(-100%); transition: transform .22s ease;
+    box-shadow: 0 0 44px rgba(0,0,0,.45);
+  }
+  .nav-toggle:checked ~ .admin .sidebar { transform: translateX(0); }
+  .nav-toggle:checked ~ .admin .nav-overlay {
+    display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.45);
+  }
+  .nav-group a { padding: 11px 12px; } /* ruimere tikdoelen */
+
+  .content { padding: 18px 16px 56px; }
+  .page-head h1 { font-size: 22px; }
+  .page-head { margin-bottom: 18px; }
+
+  /* Brede tabellen horizontaal scrollbaar i.p.v. ingedrukt */
+  .table-wrap { overflow-x: auto; }
+  table.data { min-width: 540px; }
+}

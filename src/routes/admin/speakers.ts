@@ -13,6 +13,10 @@ import {
   formActions,
   deleteButton,
   flashFromQuery,
+  filterBar,
+  filterEmptyRow,
+  emptyState,
+  backLink,
 } from '../../views/admin/layout';
 import { str, strOrNull, bool, intOrNull, redirectOk, redirectErr } from '../../lib/forms';
 import { uploadImage, deleteMedia, r2Available, UploadError } from '../../lib/media';
@@ -72,7 +76,7 @@ speakersApp.get('/', async (c) => {
           ? 'Bevestigde voorlichters zijn zichtbaar op de site.'
           : 'De site toont alleen de beroepen; voorlichters zijn nog verborgen. Vul de database, bevestig en zet daarna publicatie aan.'} · ${nConfirmed}/${all.length} bevestigd</div>
       </div>
-      <form method="post" action="/admin/speakers/toggle-publication" class="inline-form">
+      <form method="post" action="/admin/speakers/toggle-publication" class="inline-form" ${published ? `onsubmit="return confirm('Hiermee verdwijnen alle voorlichters van de publieke site. Doorgaan?')"` : ''}>
         <button class="btn ${published ? 'btn--danger' : 'btn--primary'}" type="submit">${published ? 'Publicatie uitzetten' : 'Publicatie aanzetten'}</button>
       </form>
     </div>`;
@@ -80,9 +84,10 @@ speakersApp.get('/', async (c) => {
   const body = `
     ${pageHeader('Sprekers', '<a class="btn btn--primary" href="/admin/speakers/new">Nieuwe spreker</a>')}
     ${pubBanner}
-    <div class="table-wrap"><table class="data">
+    ${filterBar({ targetId: 'tbl-speakers', placeholder: 'Zoek op naam, functie of organisatie…', total: all.length, noun: 'voorlichters' })}
+    <div class="table-wrap"><table class="data" id="tbl-speakers">
       <thead><tr><th>Naam</th><th>Functie</th><th>Status</th><th></th></tr></thead>
-      <tbody>${list || '<tr><td colspan="4" class="empty">Nog geen sprekers.</td></tr>'}</tbody>
+      <tbody>${list ? list + filterEmptyRow(4) : emptyState({ colspan: 4, title: 'Nog geen voorlichters.', cta: { href: '/admin/speakers/new', label: 'Eerste spreker toevoegen' } })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Sprekers', activeKey: 'speakers', body, flash: flashFromQuery(c) });
 });
@@ -165,6 +170,7 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
     : `<label class="fld"><span class="fld__label">Portretfoto</span>${portrait}
         <span class="fld__help">R2-bucket nog niet gekoppeld — gebruik het URL-veld hieronder.</span></label>`;
   return `
+    ${backLink('/admin/speakers', 'Terug naar sprekers')}
     ${pageHeader(isNew ? 'Nieuwe spreker' : esc(s.full_name ?? 'Spreker'))}
     <form method="post" action="/admin/speakers/${isNew ? 'new' : esc(s.id!)}" enctype="multipart/form-data" class="card">
       <div class="form-grid cols-2">

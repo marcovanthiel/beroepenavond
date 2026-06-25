@@ -12,6 +12,10 @@ import {
   formActions,
   deleteButton,
   flashFromQuery,
+  filterBar,
+  filterEmptyRow,
+  emptyState,
+  backLink,
 } from '../../views/admin/layout';
 import { str, strOrNull, intOr, redirectOk, redirectErr } from '../../lib/forms';
 
@@ -49,12 +53,14 @@ beroepenApp.get('/', async (c) => {
       </tr>`
     )
     .join('');
+  const total = (rows.results ?? []).length;
   const body = `
     ${pageHeader('Beroepen', '<a class="btn btn--primary" href="/admin/beroepen/new">Nieuw beroep</a>')}
     <p class="muted">De kolom <strong>Sprekers</strong> toont hoeveel voorlichters aan een beroep hangen. Een beroep mag 0 sprekers hebben (spreker nog te vinden).</p>
-    <div class="table-wrap"><table class="data">
+    ${filterBar({ targetId: 'tbl-beroepen', placeholder: 'Zoek op beroep of categorie…', total, noun: 'beroepen' })}
+    <div class="table-wrap"><table class="data" id="tbl-beroepen">
       <thead><tr><th>Categorie</th><th>Beroep</th><th>Sprekers</th><th>#</th><th></th></tr></thead>
-      <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen beroepen.</td></tr>'}</tbody>
+      <tbody>${list ? list + filterEmptyRow(5) : emptyState({ colspan: 5, title: 'Nog geen beroepen.', cta: { href: '/admin/beroepen/new', label: 'Eerste beroep toevoegen' } })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Beroepen', activeKey: 'beroepen', body, flash: flashFromQuery(c) });
 });
@@ -62,6 +68,7 @@ beroepenApp.get('/', async (c) => {
 async function form(c: any, b: Partial<Beroep>, isNew: boolean): Promise<string> {
   const options = await catOptions(c);
   return `
+    ${backLink('/admin/beroepen', 'Terug naar beroepen')}
     ${pageHeader(isNew ? 'Nieuw beroep' : `Beroep: ${esc(b.name ?? '')}`)}
     <form method="post" action="/admin/beroepen/${isNew ? 'new' : b.id}" class="card">
       <div class="form-grid cols-2">

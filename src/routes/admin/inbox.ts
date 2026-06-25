@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import type { AdminEnv } from '../../lib/auth';
 import { logAudit } from '../../lib/auth';
-import { renderAdminLayout, esc, pageHeader, flashFromQuery } from '../../views/admin/layout';
+import { renderAdminLayout, esc, pageHeader, flashFromQuery, filterBar, filterEmptyRow, emptyState } from '../../views/admin/layout';
 import { genId, redirectOk, redirectErr } from '../../lib/forms';
 
 export const inboxApp = new Hono<AdminEnv>();
@@ -57,11 +57,13 @@ inboxApp.get('/', async (c) => {
     .join('');
   const tab = (t: string, label: string) =>
     `<a class="btn ${type === t ? 'btn--primary' : 'btn--ghost'} btn--sm" href="/admin/inbox${t ? `?type=${t}` : ''}">${label}</a>`;
+  const total = (rows.results ?? []).length;
   const body = `
     ${pageHeader('Postvak', `${tab('', 'Alles')} ${tab('contact', 'Contact')} ${tab('volunteer', 'Voorlichters')}`)}
-    <div class="table-wrap"><table class="data">
+    ${filterBar({ targetId: 'tbl-inbox', placeholder: 'Zoek op naam, e-mail of onderwerp…', total, noun: 'berichten' })}
+    <div class="table-wrap"><table class="data" id="tbl-inbox">
       <thead><tr><th>Type</th><th>Van</th><th>Onderwerp</th><th>Status</th><th>Datum</th><th></th></tr></thead>
-      <tbody>${list || '<tr><td colspan="6" class="empty">Geen berichten.</td></tr>'}</tbody>
+      <tbody>${list ? list + filterEmptyRow(6) : emptyState({ colspan: 6, title: 'Geen berichten.' })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Postvak', activeKey: 'inbox', body, flash: flashFromQuery(c) });
 });

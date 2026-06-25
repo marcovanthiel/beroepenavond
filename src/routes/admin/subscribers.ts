@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import type { AdminEnv } from '../../lib/auth';
 import { logAudit } from '../../lib/auth';
-import { renderAdminLayout, esc, pageHeader, flashFromQuery } from '../../views/admin/layout';
+import { renderAdminLayout, esc, pageHeader, flashFromQuery, filterBar, filterEmptyRow, emptyState } from '../../views/admin/layout';
 import { redirectOk } from '../../lib/forms';
 
 export const subscribersApp = new Hono<AdminEnv>();
@@ -50,9 +50,10 @@ subscribersApp.get('/', async (c) => {
       <div class="stat"><div class="stat__n">${counts.pending}</div><div class="stat__l">Niet bevestigd</div></div>
       <div class="stat"><div class="stat__n">${counts.unsub}</div><div class="stat__l">Uitgeschreven</div></div>
     </div>
-    <div class="table-wrap"><table class="data">
+    ${filterBar({ targetId: 'tbl-subs', placeholder: 'Zoek op e-mail of naam…', total: all.length, noun: 'abonnees' })}
+    <div class="table-wrap"><table class="data" id="tbl-subs">
       <thead><tr><th>E-mail</th><th>Naam</th><th>Status</th><th>Aangemeld</th><th></th></tr></thead>
-      <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen aanmeldingen.</td></tr>'}</tbody>
+      <tbody>${list ? list + filterEmptyRow(5) : emptyState({ colspan: 5, title: 'Nog geen aanmeldingen.' })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Nieuwsbrief', activeKey: 'subscribers', body, flash: flashFromQuery(c) });
 });

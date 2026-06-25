@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import type { AdminEnv } from '../../lib/auth';
 import { logAudit } from '../../lib/auth';
-import { renderAdminLayout, esc, pageHeader, flashFromQuery } from '../../views/admin/layout';
+import { renderAdminLayout, esc, pageHeader, flashFromQuery, filterBar, filterEmptyRow, emptyState } from '../../views/admin/layout';
 import { redirectOk } from '../../lib/forms';
 
 export const leerlingenApp = new Hono<AdminEnv>();
@@ -34,10 +34,11 @@ leerlingenApp.get('/', async (c) => {
     .join('');
   const body = `
     ${pageHeader('Leerlingen', tabs('list'))}
-    <p class="muted">${all.length} leerling-account(s). "Keuzes" = aantal gekozen beroepen.</p>
-    <div class="table-wrap"><table class="data">
+    <p class="muted">"Keuzes" = aantal gekozen beroepen.</p>
+    ${filterBar({ targetId: 'tbl-leerlingen', placeholder: 'Zoek op naam, e-mail of school…', total: all.length, noun: 'leerlingen' })}
+    <div class="table-wrap"><table class="data" id="tbl-leerlingen">
       <thead><tr><th>Leerling</th><th>School / profiel</th><th>Keuzes</th><th>Nieuwsbrief</th><th>Laatst actief</th></tr></thead>
-      <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen leerling-accounts.</td></tr>'}</tbody>
+      <tbody>${list ? list + filterEmptyRow(5) : emptyState({ colspan: 5, title: 'Nog geen leerling-accounts. Zodra leerlingen inloggen op /leerling verschijnen ze hier.' })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Leerlingen', activeKey: 'leerlingen', body, flash: flashFromQuery(c) });
 });
@@ -64,11 +65,13 @@ leerlingenApp.get('/vragen', async (c) => {
       </tr>`
     )
     .join('');
+  const total = (rows.results ?? []).length;
   const body = `
     ${pageHeader('Vragen vooraf', tabs('q'))}
-    <div class="table-wrap"><table class="data">
+    ${filterBar({ targetId: 'tbl-vragen', placeholder: 'Zoek in vragen, beroep of leerling…', total, noun: 'vragen' })}
+    <div class="table-wrap"><table class="data" id="tbl-vragen">
       <thead><tr><th>Beroep</th><th>Vraag</th><th>Leerling</th><th>Status</th><th></th></tr></thead>
-      <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen vragen.</td></tr>'}</tbody>
+      <tbody>${list ? list + filterEmptyRow(5) : emptyState({ colspan: 5, title: 'Nog geen vragen vooraf.' })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Vragen vooraf', activeKey: 'leerlingen', body, flash: flashFromQuery(c) });
 });

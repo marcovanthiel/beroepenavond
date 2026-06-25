@@ -155,39 +155,78 @@ adminApp.get('/', async (c) => {
   const db = c.env.DB;
   const q = (sql: string) =>
     db.prepare(sql).first<{ n: number }>().then((r) => r?.n ?? 0);
-  const [beroepen, speakers, sessions, mapped, newMsgs, subs, news] =
+  const [beroepen, speakers, confirmedSpeakers, sessions, mapped, rounds, newMsgs, subs, news, settings, ev, recent] =
     await Promise.all([
       q('SELECT COUNT(*) n FROM beroepen'),
       q('SELECT COUNT(*) n FROM speakers'),
+      q('SELECT COUNT(*) n FROM speakers WHERE confirmed = 1'),
       q('SELECT COUNT(*) n FROM sessions_program'),
       q("SELECT COUNT(*) n FROM classrooms WHERE map_shape IS NOT NULL AND map_shape <> ''"),
+      q('SELECT COUNT(*) n FROM rounds'),
       q("SELECT COUNT(*) n FROM submissions WHERE status IN ('new','read')"),
       q("SELECT COUNT(*) n FROM subscribers WHERE status='active'"),
       q('SELECT COUNT(*) n FROM announcements'),
+      getSettings(db),
+      db.prepare('SELECT title, date FROM events WHERE is_active = 1 LIMIT 1').first<{ title: string; date: string }>(),
+      db
+        .prepare('SELECT id, type, name, email, created_at FROM submissions ORDER BY created_at DESC LIMIT 6')
+        .all<{ id: number; type: string; name: string | null; email: string | null; created_at: number }>(),
     ]);
-  const ev = await db
-    .prepare('SELECT title, date FROM events WHERE is_active = 1 LIMIT 1')
-    .first<{ title: string; date: string }>();
-  const recent = await db
-    .prepare('SELECT id, type, name, email, created_at FROM submissions ORDER BY created_at DESC LIMIT 6')
-    .all<{ id: number; type: string; name: string | null; email: string | null; created_at: number }>();
+
+  const published = (settings['voorlichters_published'] ?? '0') === '1';
+  const mailOn = (settings['mail_enabled'] ?? '0') === '1';
 
   const stat = (n: number, label: string, href: string, accent = false) =>
     `<a class="stat" href="${href}"><div class="stat__n" ${accent && n > 0 ? 'style="color:#d4493f"' : ''}>${n}</div><div class="stat__l">${esc(label)}</div></a>`;
 
+  // ---- Gereedheids-checklist "Klaar voor de avond" ----
+  const checks = [
+    { done: !!ev, label: 'Actieve editie ingesteld', hint: ev ? `${ev.title}` : 'Maak of activeer een editie', href: '/admin/events', fix: 'Edities' },
+    { done: rounds > 0, label: 'Voorlichtingsrondes aangemaakt', hint: `${rounds} ronde(s)`, href: '/admin/rounds', fix: 'Rondes' },
+    { done: confirmedSpeakers > 0, label: 'Voorlichters bevestigd', hint: `${confirmedSpeakers} van ${speakers} bevestigd`, href: '/admin/speakers', fix: 'Sprekers' },
+    { done: sessions > 0, label: 'Sessies in het rooster', hint: `${sessions} sessie(s)`, href: '/admin/sessions', fix: 'Sessies' },
+    { done: mapped > 0, label: 'Lokalen op de plattegrond', hint: `${mapped} lokaal/lokalen ingetekend`, href: '/admin/floorplan-editor', fix: 'Plattegrond' },
+    { done: mailOn, label: 'E-mail (bevestigingen) werkt', hint: mailOn ? 'Verzending staat aan' : 'Zet e-mail aan bij Instellingen', href: '/admin/settings', fix: 'Instellingen' },
+    { done: published, label: 'Voorlichters gepubliceerd op de site', hint: published ? 'Zichtbaar voor bezoekers' : 'Nog verborgen — zet publicatie aan', href: '/admin/speakers', fix: 'Publiceren' },
+  ];
+  const doneCount = checks.filter((x) => x.done).length;
+  const pct = Math.round((doneCount / checks.length) * 100);
+  const checklistHtml = checks
+    .map(
+      (x) => `<li class="${x.done ? 'done' : ''}">
+        <span class="check-ico ${x.done ? 'check-ico--done' : 'check-ico--todo'}" aria-hidden="true">${x.done ? '✓' : '○'}</span>
+        <span class="lbl">${esc(x.label)}<small>${esc(x.hint)}</small></span>
+        ${x.done ? '' : `<a class="btn btn--ghost btn--sm fix" href="${x.href}">${esc(x.fix)} →</a>`}
+      </li>`
+    )
+    .join('');
+
   const recentRows = (recent.results ?? [])
     .map(
-      (r) => `<tr><td>${r.type === 'volunteer' ? '🙋' : '✉️'}</td>
+      (r) => `<tr><td style="width:30px">${r.type === 'volunteer' ? '🙋' : '✉️'}</td>
         <td><a href="/admin/inbox/${r.id}">${esc(r.name ?? r.email ?? 'Onbekend')}</a></td>
         <td class="muted">${new Date(r.created_at * 1000).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td></tr>`
     )
     .join('');
 
+  const quickActions = `
+    <a class="btn btn--primary btn--sm" href="/admin/speakers/new">+ Spreker</a>
+    <a class="btn btn--ghost btn--sm" href="/admin/nieuws/new">+ Nieuwsbericht</a>
+    <a class="btn btn--ghost btn--sm" href="/admin/inbox">Postvak</a>
+    <a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a>`;
+
   const body = `
-    <header class="page-head"><h1>Overzicht</h1><div class="page-head__actions"><a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a></div></header>
+    <header class="page-head"><h1>Overzicht</h1><div class="page-head__actions">${quickActions}</div></header>
     <div class="card">
-      <h2>Actieve editie</h2>
-      <p>${ev ? `<strong>${esc(ev.title)}</strong> — ${esc(ev.date)}` : 'Geen actieve editie ingesteld.'}</p>
+      <p style="margin:0">${ev ? `Actieve editie: <strong>${esc(ev.title)}</strong> — ${esc(ev.date)}` : '⚠️ Geen actieve editie ingesteld. <a href="/admin/events">Stel er een in →</a>'}</p>
+    </div>
+    <div class="card">
+      <div class="card__head">
+        <h2>Klaar voor de avond?</h2>
+        <span class="muted">${doneCount} van ${checks.length} geregeld</span>
+      </div>
+      <div class="progress" aria-hidden="true"><span style="width:${pct}%"></span></div>
+      <ul class="checklist">${checklistHtml}</ul>
     </div>
     <div class="stat-grid">
       ${stat(newMsgs, 'Openstaande berichten', '/admin/inbox', true)}
@@ -195,7 +234,6 @@ adminApp.get('/', async (c) => {
       ${stat(beroepen, 'Beroepen', '/admin/beroepen')}
       ${stat(speakers, 'Sprekers', '/admin/speakers')}
       ${stat(sessions, 'Sessies', '/admin/sessions')}
-      ${stat(mapped, 'Lokalen op kaart', '/admin/floorplan-editor')}
       ${stat(news, 'Nieuwsberichten', '/admin/nieuws')}
     </div>
     <div class="card">
