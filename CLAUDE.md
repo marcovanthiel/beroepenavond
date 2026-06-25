@@ -328,6 +328,17 @@ progressive enhancement (werkt zonder JS).
 - **Alle 169 voorlichters op `confirmed = 0` gezet** (op verzoek), zodat
   ze via de nieuwe bulk-knop opnieuw bevestigd kunnen worden. Publicatie
   staat (nog) uit.
+- **Doorzoekbaar beroep-keuzeveld**: de beroep-`<select>` (spreker- én
+  sessie-formulier) heeft `data-combo` en wordt door `enhanceCombo()` in
+  admin.js een typ-om-te-zoeken combobox. De native `<select>` blijft
+  (verborgen, `.combo__native`) de bron → zonder JS gewoon een dropdown.
+- **Overzicht "beroepen zonder spreker"** (gerichte werving): tab
+  *Zonder spreker (N)* op `/admin/beroepen?filter=zonder` (telt beroepen
+  waar géén `speakers.beroep_id` naar verwijst — los van bevestiging).
+  Per rij een **"+ Voorlichter"**-knop →
+  `/admin/speakers/new?beroep=ID` met dat beroep voorgeselecteerd
+  (`speakers` GET `/new` leest `?beroep`). Ook een dashboard-tegel
+  "Beroepen zonder spreker". Stand bij oplevering: **20 van 120**.
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
