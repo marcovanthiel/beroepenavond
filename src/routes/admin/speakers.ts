@@ -191,7 +191,7 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
   const curBer = String(s.beroep_id ?? '');
   const beroepSelect = `<label class="fld">
     <span class="fld__label">Beroep</span>
-    <select class="fld__input" name="beroep_id">
+    <select class="fld__input" name="beroep_id" data-combo data-combo-placeholder="Zoek een beroep…">
       <option value="">— nog geen beroep —</option>
       ${[...groups]
         .map(
@@ -241,9 +241,10 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
     ${isNew ? '' : `<div class="card">${deleteButton(`/admin/speakers/${esc(s.id!)}/delete`, 'Spreker verwijderen?')}</div>`}`;
 }
 
-speakersApp.get('/new', async (c) =>
-  renderAdminLayout(c, { title: 'Nieuwe spreker', activeKey: 'speakers', body: await form(c, { is_public: 1 }, true) })
-);
+speakersApp.get('/new', async (c) => {
+  const beroep = intOrNull(c.req.query('beroep')); // voorselecteren vanuit "Zonder spreker"-werving
+  return renderAdminLayout(c, { title: 'Nieuwe spreker', activeKey: 'speakers', body: await form(c, { is_public: 1, beroep_id: beroep }, true) });
+});
 
 speakersApp.get('/:id', async (c) => {
   const s = await c.env.DB.prepare('SELECT * FROM speakers WHERE id = ?').bind(c.req.param('id')).first<Speaker>();

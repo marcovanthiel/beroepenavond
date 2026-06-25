@@ -36,31 +36,54 @@ async function catOptions(c: any): Promise<{ value: string; label: string }[]> {
 }
 
 beroepenApp.get('/', async (c) => {
+  const filter = c.req.query('filter') === 'zonder' ? 'zonder' : 'alle';
   const rows = await c.env.DB.prepare(
     `SELECT b.*, cat.name AS cat_name, cat.color AS cat_color, cat.sort_order AS cat_order,
             (SELECT COUNT(*) FROM speakers s WHERE s.beroep_id = b.id) AS n_speakers
        FROM beroepen b LEFT JOIN categories cat ON cat.id = b.category_id
       ORDER BY cat.sort_order, b.sort_order`
   ).all<Beroep & { cat_name: string; cat_color: string; cat_order: number; n_speakers: number }>();
-  const list = (rows.results ?? [])
+  const all = rows.results ?? [];
+  const zonder = all.filter((r) => r.n_speakers === 0);
+  const showing = filter === 'zonder' ? zonder : all;
+
+  const list = showing
     .map(
       (r) => `<tr>
         <td><span class="swatch" style="background:${esc(r.cat_color ?? '#ccc')}"></span>${esc(r.cat_name ?? '—')}</td>
         <td><strong>${esc(r.name)}</strong></td>
         <td>${r.n_speakers > 0 ? `<span class="badge badge--on">${r.n_speakers}</span>` : '<span class="badge badge--off">0</span>'}</td>
         <td>${r.sort_order}</td>
-        <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/beroepen/${r.id}">Bewerken</a></td>
+        <td class="actions">
+          ${r.n_speakers === 0 ? `<a class="btn btn--primary btn--sm" href="/admin/speakers/new?beroep=${r.id}">+ Voorlichter</a>` : ''}
+          <a class="btn btn--ghost btn--sm" href="/admin/beroepen/${r.id}">Bewerken</a>
+        </td>
       </tr>`
     )
     .join('');
-  const total = (rows.results ?? []).length;
+
+  const tab = (key: string, label: string, n: number) =>
+    `<a class="btn ${filter === key ? 'btn--primary' : 'btn--ghost'} btn--sm" href="/admin/beroepen${key === 'zonder' ? '?filter=zonder' : ''}">${label} (${n})</a>`;
+  const tabs = `${tab('alle', 'Alle beroepen', all.length)} ${tab('zonder', 'Zonder spreker', zonder.length)}`;
+
+  const intro =
+    filter === 'zonder'
+      ? '<p class="muted">Deze beroepen hebben nog <strong>géén voorlichter</strong> — werf hier gericht. Klik <strong>+ Voorlichter</strong> om meteen een spreker aan dit beroep te koppelen.</p>'
+      : '<p class="muted">De kolom <strong>Sprekers</strong> toont hoeveel voorlichters aan een beroep hangen. Filter op <strong>Zonder spreker</strong> om te zien waar nog geworven moet worden.</p>';
+
+  const empty =
+    filter === 'zonder'
+      ? emptyState({ colspan: 5, title: '🎉 Elk beroep heeft minstens één voorlichter — niets meer te werven.' })
+      : emptyState({ colspan: 5, title: 'Nog geen beroepen.', cta: { href: '/admin/beroepen/new', label: 'Eerste beroep toevoegen' } });
+
   const body = `
     ${pageHeader('Beroepen', '<a class="btn btn--primary" href="/admin/beroepen/new">Nieuw beroep</a>')}
-    <p class="muted">De kolom <strong>Sprekers</strong> toont hoeveel voorlichters aan een beroep hangen. Een beroep mag 0 sprekers hebben (spreker nog te vinden).</p>
-    ${filterBar({ targetId: 'tbl-beroepen', placeholder: 'Zoek op beroep of categorie…', total, noun: 'beroepen' })}
+    <div class="list-toolbar" style="margin-bottom:8px">${tabs}</div>
+    ${intro}
+    ${filterBar({ targetId: 'tbl-beroepen', placeholder: 'Zoek op beroep of categorie…', total: showing.length, noun: 'beroepen' })}
     <div class="table-wrap"><table class="data" id="tbl-beroepen">
       <thead><tr><th>Categorie</th><th>Beroep</th><th>Sprekers</th><th>#</th><th></th></tr></thead>
-      <tbody>${list ? list + filterEmptyRow(5) : emptyState({ colspan: 5, title: 'Nog geen beroepen.', cta: { href: '/admin/beroepen/new', label: 'Eerste beroep toevoegen' } })}</tbody>
+      <tbody>${list ? list + filterEmptyRow(5) : empty}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Beroepen', activeKey: 'beroepen', body, flash: flashFromQuery(c) });
 });

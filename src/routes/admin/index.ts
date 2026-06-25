@@ -155,9 +155,10 @@ adminApp.get('/', async (c) => {
   const db = c.env.DB;
   const q = (sql: string) =>
     db.prepare(sql).first<{ n: number }>().then((r) => r?.n ?? 0);
-  const [beroepen, speakers, confirmedSpeakers, sessions, mapped, rounds, newMsgs, subs, news, settings, ev, recent] =
+  const [beroepen, beroepenZonder, speakers, confirmedSpeakers, sessions, mapped, rounds, newMsgs, subs, news, settings, ev, recent] =
     await Promise.all([
       q('SELECT COUNT(*) n FROM beroepen'),
+      q('SELECT COUNT(*) n FROM beroepen b WHERE NOT EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id)'),
       q('SELECT COUNT(*) n FROM speakers'),
       q('SELECT COUNT(*) n FROM speakers WHERE confirmed = 1'),
       q('SELECT COUNT(*) n FROM sessions_program'),
@@ -230,6 +231,7 @@ adminApp.get('/', async (c) => {
     </div>
     <div class="stat-grid">
       ${stat(newMsgs, 'Openstaande berichten', '/admin/inbox', true)}
+      ${stat(beroepenZonder, 'Beroepen zonder spreker', '/admin/beroepen?filter=zonder', true)}
       ${stat(subs, 'Nieuwsbrief-abonnees', '/admin/subscribers')}
       ${stat(beroepen, 'Beroepen', '/admin/beroepen')}
       ${stat(speakers, 'Sprekers', '/admin/speakers')}

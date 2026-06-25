@@ -68,7 +68,7 @@ function beroepSelectHtml(beroepen: any[], current: number | null | undefined): 
     )
     .join('');
   return `<label class="fld"><span class="fld__label">Beroep (uit de lijst)</span>
-    <select class="fld__input" name="beroep_id"><option value="">— geen —</option>${opts}</select>
+    <select class="fld__input" name="beroep_id" data-combo data-combo-placeholder="Zoek een beroep…"><option value="">— geen —</option>${opts}</select>
     <span class="fld__help">Koppelt de sessie aan een beroep uit de beroepenlijst.</span></label>`;
 }
 

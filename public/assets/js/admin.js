@@ -100,6 +100,114 @@
     if (e.target && e.target.matches && e.target.matches('input[data-bulk-item]')) updateBulkCount();
   });
 
+  // ---- Doorzoekbaar keuzeveld (combobox) ------------------------------
+  // <select data-combo> wordt verrijkt tot een typ-om-te-zoeken keuzeveld.
+  // De originele <select> blijft (verborgen) de bron voor het formulier,
+  // dus zonder JS werkt het als gewone dropdown.
+  function enhanceCombo(select) {
+    if (select.dataset.comboReady) return;
+    select.dataset.comboReady = '1';
+
+    var items = [];
+    Array.prototype.forEach.call(select.children, function (node) {
+      if (node.tagName === 'OPTGROUP') {
+        Array.prototype.forEach.call(node.children, function (opt) {
+          items.push({ value: opt.value, label: opt.textContent, group: node.label });
+        });
+      } else if (node.tagName === 'OPTION') {
+        items.push({ value: node.value, label: node.textContent, group: '' });
+      }
+    });
+
+    var wrap = document.createElement('div');
+    wrap.className = 'combo';
+    select.parentNode.insertBefore(wrap, select);
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'fld__input combo__input';
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('role', 'combobox');
+    input.placeholder = select.getAttribute('data-combo-placeholder') || 'Typ om te zoeken…';
+
+    wrap.appendChild(input);
+    wrap.appendChild(select);
+    select.classList.add('combo__native');
+    select.tabIndex = -1;
+    select.setAttribute('aria-hidden', 'true');
+
+    var menu = document.createElement('div');
+    menu.className = 'combo__menu';
+    menu.hidden = true;
+    wrap.appendChild(menu);
+
+    function currentLabel() {
+      var o = select.options[select.selectedIndex];
+      return o && o.value ? o.textContent : '';
+    }
+    input.value = currentLabel();
+
+    var rendered = [];
+    var activeIdx = -1;
+
+    function buildMenu(filter) {
+      menu.innerHTML = '';
+      rendered = [];
+      var q = (filter || '').trim().toLowerCase();
+      var lastGroup = null;
+      items.forEach(function (it) {
+        if (q && it.label.toLowerCase().indexOf(q) === -1) return;
+        if (it.group && it.group !== lastGroup) {
+          var h = document.createElement('div');
+          h.className = 'combo__group';
+          h.textContent = it.group;
+          menu.appendChild(h);
+          lastGroup = it.group;
+        }
+        var b = document.createElement('div');
+        b.className = 'combo__opt';
+        b.textContent = it.label || '— geen —';
+        if (it.value === select.value) b.classList.add('sel');
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); pick(it.value, it.label); });
+        menu.appendChild(b);
+        rendered.push(b);
+      });
+      if (!rendered.length) {
+        var none = document.createElement('div');
+        none.className = 'combo__empty';
+        none.textContent = 'Niets gevonden';
+        menu.appendChild(none);
+      }
+      activeIdx = -1;
+    }
+
+    function open(filter) { buildMenu(filter); menu.hidden = false; }
+    function close() { menu.hidden = true; }
+    function pick(value, label) {
+      select.value = value;
+      input.value = value ? label : '';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      close();
+    }
+    function highlight(idx) {
+      rendered.forEach(function (b, i) { b.classList.toggle('active', i === idx); });
+      if (rendered[idx]) rendered[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('focus', function () { open(''); });
+    input.addEventListener('input', function () { open(input.value); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (menu.hidden) open(''); activeIdx = Math.min(activeIdx + 1, rendered.length - 1); highlight(activeIdx); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); highlight(activeIdx); }
+      else if (e.key === 'Enter') { if (!menu.hidden && rendered[activeIdx]) { e.preventDefault(); rendered[activeIdx].dispatchEvent(new MouseEvent('mousedown')); } }
+      else if (e.key === 'Escape') { close(); }
+    });
+    input.addEventListener('blur', function () {
+      setTimeout(function () { close(); if (input.value !== currentLabel()) input.value = currentLabel(); }, 130);
+    });
+  }
+  document.querySelectorAll('select[data-combo]').forEach(enhanceCombo);
+
   // ---- Spinner + dubbel-verzenden voorkomen ---------------------------
   document.addEventListener('submit', function (e) {
     if (e.defaultPrevented) return; // bv. een confirm() die geannuleerd is

@@ -234,6 +234,17 @@ a.stat:hover::after { opacity: 1; color: var(--lime-dark); }
 }
 @keyframes admin-spin { to { transform: rotate(360deg); } }
 
+/* ---- Doorzoekbaar keuzeveld (combobox) ---- */
+.combo { position: relative; }
+.combo__native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.combo__input { cursor: text; }
+.combo__menu { position: absolute; z-index: 50; left: 0; right: 0; top: 100%; margin-top: 4px; max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+.combo__group { padding: 7px 12px 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); position: sticky; top: 0; background: #fff; }
+.combo__opt { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+.combo__opt:hover, .combo__opt.active { background: #fafdf5; }
+.combo__opt.sel { font-weight: 600; color: var(--lime-dark); }
+.combo__empty { padding: 10px 12px; color: var(--muted); font-size: 13px; }
+
 /* ---- Bulk-acties (selecteren + tegelijk bevestigen) ---- */
 .bulk-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; transition: border-color .15s, background .15s; }
 .bulk-bar.is-active { border-color: var(--lime); background: #fafdf5; }
