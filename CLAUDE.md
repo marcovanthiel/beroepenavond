@@ -339,6 +339,11 @@ progressive enhancement (werkt zonder JS).
   `/admin/speakers/new?beroep=ID` met dat beroep voorgeselecteerd
   (`speakers` GET `/new` leest `?beroep`). Ook een dashboard-tegel
   "Beroepen zonder spreker". Stand bij oplevering: **20 van 120**.
+- **Werflijst-export (CSV)**: knop op de "Zonder spreker"-tab → GET
+  `/admin/beroepen/zonder-spreker.csv` (route **vóór `/:id`**, anders
+  vangt `/:id` "zonder-spreker.csv" op). UTF-8 BOM (Excel-proof),
+  kolommen categorie/beroep/status, per categorie gesorteerd — deelbaar
+  onder Rotary-leden voor gerichte werving.
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
