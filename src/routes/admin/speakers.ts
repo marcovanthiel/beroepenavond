@@ -55,6 +55,7 @@ speakersApp.get('/', async (c) => {
   const list = all
     .map(
       (r) => `<tr>
+        <td class="cbcol"><input type="checkbox" form="bulk-speakers" name="ids" value="${esc(r.id)}" data-bulk-item aria-label="Selecteer ${esc(r.full_name)}"></td>
         <td>${r.portrait_url ? `<img src="${esc(r.portrait_url)}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px">` : ''}<strong>${esc(r.full_name)}</strong></td>
         <td>${esc(r.job_title ?? '')}${r.organization ? ` · ${esc(r.organization)}` : ''}</td>
         <td>${r.confirmed ? '<span class="badge badge--on">Bevestigd</span>' : '<span class="badge badge--off">Niet bevestigd</span>'}${r.is_public ? '' : ' <span class="badge badge--off">verborgen</span>'}</td>
@@ -81,13 +82,23 @@ speakersApp.get('/', async (c) => {
       </form>
     </div>`;
 
+  const bulkBar = `
+    <form id="bulk-speakers" method="post" action="/admin/speakers/bulk" class="bulk-bar">
+      <span class="bulk-count" data-bulk-count>0 geselecteerd</span>
+      <span class="bulk-spacer"></span>
+      <label class="bulk-mail"><input type="checkbox" name="mail" value="1"> ook bevestigingsmail sturen</label>
+      <button class="btn btn--primary btn--sm" name="action" value="confirm">✓ Bevestig selectie</button>
+      <button class="btn btn--ghost btn--sm" name="action" value="unconfirm">Trek bevestiging in</button>
+    </form>`;
+
   const body = `
     ${pageHeader('Sprekers', '<a class="btn btn--primary" href="/admin/speakers/new">Nieuwe spreker</a>')}
     ${pubBanner}
     ${filterBar({ targetId: 'tbl-speakers', placeholder: 'Zoek op naam, functie of organisatie…', total: all.length, noun: 'voorlichters' })}
+    ${all.length ? bulkBar : ''}
     <div class="table-wrap"><table class="data" id="tbl-speakers">
-      <thead><tr><th>Naam</th><th>Functie</th><th>Status</th><th></th></tr></thead>
-      <tbody>${list ? list + filterEmptyRow(4) : emptyState({ colspan: 4, title: 'Nog geen voorlichters.', cta: { href: '/admin/speakers/new', label: 'Eerste spreker toevoegen' } })}</tbody>
+      <thead><tr><th class="cbcol"><input type="checkbox" data-bulk-all data-bulk-target="#tbl-speakers" aria-label="Alle zichtbare voorlichters selecteren"></th><th>Naam</th><th>Functie</th><th>Status</th><th></th></tr></thead>
+      <tbody>${list ? list + filterEmptyRow(5) : emptyState({ colspan: 5, title: 'Nog geen voorlichters.', cta: { href: '/admin/speakers/new', label: 'Eerste spreker toevoegen' } })}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Sprekers', activeKey: 'speakers', body, flash: flashFromQuery(c) });
 });
@@ -99,6 +110,42 @@ speakersApp.post('/toggle-publication', async (c) => {
   await c.env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('voorlichters_published', ?)").bind(next).run();
   await logAudit(c, 'publication', 'speakers', undefined, { published: next });
   return redirectOk(c, '/admin/speakers', next === '1' ? 'Voorlichters staan nu LIVE op de site.' : 'Publicatie van voorlichters uitgezet.');
+});
+
+// Bulk: geselecteerde voorlichters tegelijk bevestigen / intrekken.
+speakersApp.post('/bulk', async (c) => {
+  const b = await c.req.parseBody({ all: true });
+  const rawIds = b.ids;
+  const ids = (Array.isArray(rawIds) ? rawIds : rawIds != null ? [rawIds] : []).map(String).filter(Boolean);
+  const action = str(b.action);
+  const sendMail = bool(b.mail);
+  if (!ids.length) return redirectErr(c, '/admin/speakers', 'Geen voorlichters geselecteerd.');
+  if (action !== 'confirm' && action !== 'unconfirm') return redirectErr(c, '/admin/speakers', 'Onbekende bulk-actie.');
+
+  const ph = ids.map(() => '?').join(',');
+  if (action === 'confirm') {
+    await c.env.DB.prepare(`UPDATE speakers SET confirmed = 1, confirmed_at = unixepoch() WHERE id IN (${ph})`).bind(...ids).run();
+  } else {
+    await c.env.DB.prepare(`UPDATE speakers SET confirmed = 0, confirmed_at = NULL WHERE id IN (${ph})`).bind(...ids).run();
+  }
+  await logAudit(c, action === 'confirm' ? 'bulk_confirm' : 'bulk_unconfirm', 'speaker', undefined, { count: ids.length });
+
+  let mailed = 0;
+  if (action === 'confirm' && sendMail) {
+    const settings = await getSettings(c.env.DB);
+    const cfg = mailConfig(c.env, settings);
+    const rows = await c.env.DB.prepare(`SELECT * FROM speakers WHERE id IN (${ph})`).bind(...ids).all<Speaker>();
+    for (const s of rows.results ?? []) {
+      try {
+        const res = await speakerConfirmedMail(cfg, s, settings);
+        if (res.ok) mailed++;
+      } catch (e) {
+        console.error('bulk-bevestigingsmail faalde:', e);
+      }
+    }
+  }
+  const verb = action === 'confirm' ? 'bevestigd' : 'op niet-bevestigd gezet';
+  return redirectOk(c, '/admin/speakers', `${ids.length} voorlichter(s) ${verb}${mailed ? ` · ${mailed} bevestigingsmail(s) verstuurd` : ''}.`);
 });
 
 // Bevestigen (+ bevestigingsmail naar de voorlichter indien mogelijk).

@@ -136,7 +136,8 @@ async function form(c: any, eventId: string, s: Partial<Session>, selectedSpeake
         <div class="span-2">${textarea({ label: 'Omschrijving (markdown)', name: 'description_md', value: s.description_md ?? '', rows: 4 })}</div>
         <div class="span-2">
           <span class="fld__label">Sprekers</span>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-top:6px">${speakerChecks}</div>
+          ${ref.speakers.length ? `<div class="list-search" style="margin:8px 0;max-width:320px"><input type="search" placeholder="Zoek spreker op naam…" autocomplete="off" data-filter-list="#ses-speakers" data-filter-count="#ses-speakers-count"></div><span class="list-count" id="ses-speakers-count">Totaal: ${ref.speakers.length} sprekers</span>` : ''}
+          <div id="ses-speakers" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-top:6px">${speakerChecks}</div>
         </div>
         <div class="span-2">${checkbox({ label: 'Tonen op publieke site', name: 'is_public', checked: s.is_public !== 0 })}</div>
       </div>

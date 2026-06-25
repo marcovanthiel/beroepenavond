@@ -234,6 +234,17 @@ a.stat:hover::after { opacity: 1; color: var(--lime-dark); }
 }
 @keyframes admin-spin { to { transform: rotate(360deg); } }
 
+/* ---- Bulk-acties (selecteren + tegelijk bevestigen) ---- */
+.bulk-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; transition: border-color .15s, background .15s; }
+.bulk-bar.is-active { border-color: var(--lime); background: #fafdf5; }
+.bulk-count { font-size: 13px; color: var(--muted); font-weight: 500; }
+.bulk-bar.is-active .bulk-count { color: var(--ink); }
+.bulk-mail { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.bulk-mail input { margin: 0; }
+.bulk-bar .bulk-spacer { margin-left: auto; }
+table.data th.cbcol, table.data td.cbcol { width: 36px; text-align: center; padding-left: 14px; padding-right: 0; }
+.cbcol input { cursor: pointer; width: 16px; height: 16px; }
+
 /* ---- Mobiel: inschuifbaar zijmenu met hamburger ---- */
 .nav-toggle { position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0; }
 .topbar { display: none; }
