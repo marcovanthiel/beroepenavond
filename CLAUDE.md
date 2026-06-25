@@ -274,6 +274,43 @@ alleen als beide sleutels gezet zijn, anders draait alleen het heuristiek-filter
   (Geen redeploy nodig: setting = D1, secret-put herdeployt zelf.) Uitzetten = de setting
   legen.
 
+## Sessie 6 — admin gebruiksvriendelijker (LIVE, 25 juni 2026)
+
+Beheer-paneel toegankelijker gemaakt voor niet-technische gebruikers
+(Rotary-leden, decanen). Alles blijft server-side; `admin.js` is enkel
+progressive enhancement (werkt zonder JS).
+
+- **Mobiel/tablet**: `.admin`-grid wordt 1-koloms onder 860px met een
+  sticky **hamburger-topbar**; de zijbalk is een inschuifbare drawer
+  (CSS-only checkbox-hack `#nav-toggle` + `.nav-overlay`, géén JS). Brede
+  tabellen scrollen horizontaal. Zie blok onderaan `admin.css`.
+- **Nav-iconen** per menu-item (emoji in `NAV` in
+  `src/views/admin/layout.ts`) + `.nav-ico`.
+- **Direct-zoekfilter** boven de lange lijsten (sprekers, beroepen,
+  leerlingen, vragen, postvak, nieuwsbrief): client-side filteren zonder
+  herladen + teller "X van Y". Helpers `filterBar()` / `filterEmptyRow()`
+  in `layout.ts`, logica in `public/assets/js/admin.js` (input met
+  `data-filter-target="#tabel-id"`). De tabel krijgt dat id; een
+  `[data-filter-empty]`-rij verschijnt bij geen treffers.
+- **Dashboard** (`routes/admin/index.ts`): snelacties in de page-head +
+  **"Klaar voor de avond?"-checklist** met voortgangsbalk (actieve
+  editie, rondes, voorlichters bevestigd, sessies, plattegrond,
+  e-mail aan, publicatie aan) + klikbare stat-tegels (hover/pijl).
+- **Formulieren/acties**: `admin.js` zet een **spinner** op de
+  verzendknop en voorkomt **dubbel verzenden** (`form.dataset.submitting`
+  + 8s vangnet; respecteert `confirm()` via `e.defaultPrevented`, sla
+  over met `data-no-busy`). Verplicht-velden tonen een gekleurde `*`
+  (`field()` + `.req`). Vriendelijke lege-staten met actieknop
+  (`emptyState()`), **terug-links** op detailpagina's (`backLink()`),
+  en een extra bevestiging bij *publicatie uitzetten*.
+- **Nieuwe layout-helpers**: `filterBar`, `filterEmptyRow`, `emptyState`,
+  `backLink` (geëxporteerd uit `views/admin/layout.ts`). Nieuw asset
+  `public/assets/js/admin.js` (via `<script defer>` in de admin-shell;
+  CSP staat `script-src 'self'` toe).
+- **Let op (assets)**: een **nieuw** asset-bestand kan na een succesvolle
+  deploy ~1 min propagatie-vertraging hebben (404 → 200). Een 404 op een
+  gloednieuw pad is dus niet per se een cache-/deploy-fout; even pollen.
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt
