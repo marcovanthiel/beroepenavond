@@ -311,6 +311,24 @@ progressive enhancement (werkt zonder JS).
   deploy ~1 min propagatie-vertraging hebben (404 → 200). Een 404 op een
   gloednieuw pad is dus niet per se een cache-/deploy-fout; even pollen.
 
+### Vervolg (25 juni): bulk-acties + zoeken in keuzelijst
+- **Bulk-bevestigen** op `/admin/speakers`: selectievakje per rij +
+  "alles selecteren" (alléén zichtbare rijen na de zoekfilter) + een
+  **bulk-balk** (`#bulk-speakers`-form) om geselecteerde voorlichters
+  tegelijk te **bevestigen / intrekken**. Checkboxes hangen via het
+  `form="bulk-speakers"`-attribuut aan de balk (géén geneste forms in de
+  tabel). Optioneel ook een bevestigingsmail per voorlichter (vinkje,
+  **standaard uit** om massa-mail te voorkomen). Route **POST
+  `/admin/speakers/bulk`** — **vóór `/:id` registreren** anders vangt
+  `/:id` "bulk" op. Body via `parseBody({ all: true })` (niet
+  `c.req.formData()` — dat gaf lege `ids` in workerd).
+- **Zoeken in de spreker-keuzevakjes** op het sessie-formulier
+  (`#ses-speakers` + `data-filter-list` in admin.js) — handig bij 169
+  voorlichters.
+- **Alle 169 voorlichters op `confirmed = 0` gezet** (op verzoek), zodat
+  ze via de nieuwe bulk-knop opnieuw bevestigd kunnen worden. Publicatie
+  staat (nog) uit.
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt
