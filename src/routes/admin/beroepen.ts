@@ -18,6 +18,9 @@ import {
   backLink,
 } from '../../views/admin/layout';
 import { str, strOrNull, intOr, redirectOk, redirectErr } from '../../lib/forms';
+import { buildWerflijstPdf } from '../../lib/pdf';
+
+const MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 
 export const beroepenApp = new Hono<AdminEnv>();
 
@@ -78,7 +81,7 @@ beroepenApp.get('/', async (c) => {
 
   const headerActions = `${
     filter === 'zonder' && zonder.length
-      ? '<a class="btn btn--ghost" href="/admin/beroepen/zonder-spreker.csv">⬇ Werflijst (CSV)</a> '
+      ? '<a class="btn btn--ghost" href="/admin/beroepen/zonder-spreker.pdf">⬇ Werflijst (PDF)</a> '
       : ''
   }<a class="btn btn--primary" href="/admin/beroepen/new">Nieuw beroep</a>`;
   const body = `
@@ -112,6 +115,32 @@ beroepenApp.get('/zonder-spreker.csv', async (c) => {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="beroepen-zonder-voorlichter.csv"',
+    },
+  });
+});
+
+// Werflijst-export als PDF met Rotary-logo (deelbaar/afdrukbaar).
+beroepenApp.get('/zonder-spreker.pdf', async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT b.name AS beroep, cat.name AS categorie
+       FROM beroepen b LEFT JOIN categories cat ON cat.id = b.category_id
+      WHERE NOT EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id)
+      ORDER BY cat.sort_order, b.sort_order, b.name`
+  ).all<{ beroep: string; categorie: string | null }>();
+  const logoRes = await c.env.ASSETS.fetch(new Request(new URL('/assets/img/rotary-logo.png', c.req.url)));
+  const logo = new Uint8Array(await logoRes.arrayBuffer());
+  const d = new Date();
+  const dateLabel = `${d.getUTCDate()} ${MAAND[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  const bytes = await buildWerflijstPdf({
+    logo,
+    rows: (rows.results ?? []).map((r) => ({ categorie: r.categorie ?? 'Overig', beroep: r.beroep })),
+    dateLabel,
+  });
+  await logAudit(c, 'export_pdf', 'beroepen_zonder_spreker', undefined, { count: (rows.results ?? []).length });
+  return new Response(bytes, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename="beroepen-zonder-voorlichter.pdf"',
     },
   });
 });
