@@ -122,18 +122,18 @@ beroepenApp.get('/zonder-spreker.csv', async (c) => {
 // Werflijst-export als PDF met Rotary-logo (deelbaar/afdrukbaar).
 beroepenApp.get('/zonder-spreker.pdf', async (c) => {
   const rows = await c.env.DB.prepare(
-    `SELECT b.name AS beroep, cat.name AS categorie
+    `SELECT b.name AS beroep, cat.name AS categorie, cat.color AS color
        FROM beroepen b LEFT JOIN categories cat ON cat.id = b.category_id
       WHERE NOT EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id)
       ORDER BY cat.sort_order, b.sort_order, b.name`
-  ).all<{ beroep: string; categorie: string | null }>();
+  ).all<{ beroep: string; categorie: string | null; color: string | null }>();
   const logoRes = await c.env.ASSETS.fetch(new Request(new URL('/assets/img/rotary-logo.png', c.req.url)));
   const logo = new Uint8Array(await logoRes.arrayBuffer());
   const d = new Date();
   const dateLabel = `${d.getUTCDate()} ${MAAND[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   const bytes = await buildWerflijstPdf({
     logo,
-    rows: (rows.results ?? []).map((r) => ({ categorie: r.categorie ?? 'Overig', beroep: r.beroep })),
+    rows: (rows.results ?? []).map((r) => ({ categorie: r.categorie ?? 'Overig', beroep: r.beroep, color: r.color })),
     dateLabel,
   });
   await logAudit(c, 'export_pdf', 'beroepen_zonder_spreker', undefined, { count: (rows.results ?? []).length });

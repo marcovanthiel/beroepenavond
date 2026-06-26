@@ -20,9 +20,18 @@ function winansi(s: string): string {
   return (s ?? '').replace(/[^\x00-\xFF]/g, (ch) => map[ch] ?? '?');
 }
 
+/** '#rrggbb' → pdf-lib rgb; valt terug op grijs bij ontbrekende/foute waarde. */
+function hexToRgb(hex?: string | null) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex ?? '').trim());
+  if (!m) return rgb(0.55, 0.58, 0.62);
+  const n = parseInt(m[1], 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
 export interface WerflijstRow {
   categorie: string;
   beroep: string;
+  color?: string | null;
 }
 
 export async function buildWerflijstPdf(opts: {
@@ -37,12 +46,12 @@ export async function buildWerflijstPdf(opts: {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await pdf.embedPng(opts.logo);
 
-  // Beroepen groeperen per categorie, brongvolgorde behouden.
-  const groups: { naam: string; items: string[] }[] = [];
+  // Beroepen groeperen per categorie (incl. categoriekleur), brongvolgorde behouden.
+  const groups: { naam: string; color: string | null; items: string[] }[] = [];
   for (const r of opts.rows) {
     const cat = r.categorie || 'Overig';
     let g = groups.find((x) => x.naam === cat);
-    if (!g) { g = { naam: cat, items: [] }; groups.push(g); }
+    if (!g) { g = { naam: cat, color: r.color ?? null, items: [] }; groups.push(g); }
     g.items.push(r.beroep);
   }
 
@@ -94,12 +103,16 @@ export async function buildWerflijstPdf(opts: {
 
   for (const g of groups) {
     if (y < BOTTOM + 42) newPage(); // categorie-kop + eerste item samenhouden
-    text(`${g.naam}  (${g.items.length})`, M, y, 12, bold, INK);
+    const catColor = hexToRgb(g.color);
+    // Gekleurd swatch-vierkantje vóór de categorienaam (zoals op de site).
+    page.drawRectangle({ x: M, y: y - 1, width: 11, height: 11, color: catColor });
+    text(`${g.naam}  (${g.items.length})`, M + 19, y, 12, bold, INK);
     y -= 19;
     for (const beroep of g.items) {
       if (y < BOTTOM) newPage();
-      page.drawRectangle({ x: M, y: y - 1, width: 10, height: 10, borderColor: MUTED, borderWidth: 1 });
-      text(beroep, M + 18, y, 11, font, INK);
+      // Aanvinkvakje in de categoriekleur (gekleurd opsommingsteken, blijft afvinkbaar).
+      page.drawRectangle({ x: M + 19, y: y - 1, width: 10, height: 10, borderColor: catColor, borderWidth: 1.4 });
+      text(beroep, M + 37, y, 11, font, INK);
       y -= 16;
     }
     y -= 10; // ruimte tussen categorieën
