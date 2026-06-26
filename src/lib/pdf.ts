@@ -65,7 +65,7 @@ export async function buildWerflijstPdf(opts: {
 
   function footer() {
     page.drawText(
-      winansi(`Beroepenavond Nijmegen · Rotary Club Nijmegen-Stad en Land · pagina ${pageNo}`),
+      winansi(`Beroepenavond Nijmegen · Rotary Club - Nijmegen Stad en Land · pagina ${pageNo}`),
       { x: M, y: 26, size: 8, font, color: MUTED }
     );
   }
