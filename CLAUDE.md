@@ -339,11 +339,19 @@ progressive enhancement (werkt zonder JS).
   `/admin/speakers/new?beroep=ID` met dat beroep voorgeselecteerd
   (`speakers` GET `/new` leest `?beroep`). Ook een dashboard-tegel
   "Beroepen zonder spreker". Stand bij oplevering: **20 van 120**.
-- **Werflijst-export (CSV)**: knop op de "Zonder spreker"-tab → GET
-  `/admin/beroepen/zonder-spreker.csv` (route **vóór `/:id`**, anders
-  vangt `/:id` "zonder-spreker.csv" op). UTF-8 BOM (Excel-proof),
-  kolommen categorie/beroep/status, per categorie gesorteerd — deelbaar
-  onder Rotary-leden voor gerichte werving.
+- **Werflijst-export (PDF + CSV)**: knop op de "Zonder spreker"-tab →
+  **GET `/admin/beroepen/zonder-spreker.pdf`** (en `.csv` blijft bestaan).
+  Beide routes **vóór `/:id`** registreren, anders vangt `/:id` het
+  bestandspad op. CSV = UTF-8 BOM (Excel-proof). **PDF** via **`pdf-lib`**
+  (pure JS, werkt in de Worker): `src/lib/pdf.ts` `buildWerflijstPdf()`
+  tekent het **Rotary-logo** bovenaan (`public/assets/img/rotary-logo.png`,
+  overgenomen uit de zustersite; opgehaald via de **ASSETS-binding** in de
+  route), titel, datum en de beroepen per categorie met aanvink-vakjes
+  (auto pagina-afbreking + paginanummers). Aandachtspunten: pdf-lib's
+  standaardfonts zijn **WinAnsi** → niet-codeerbare tekens vervangen
+  (`winansi()` helper); datum **handmatig** in NL opgemaakt (geen
+  Intl-afhankelijkheid in de Worker). Bundel met pdf-lib ≈ **290 KiB
+  gzip**, ruim onder de limiet.
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
