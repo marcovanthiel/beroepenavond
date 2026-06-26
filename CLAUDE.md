@@ -351,7 +351,10 @@ progressive enhancement (werkt zonder JS).
   standaardfonts zijn **WinAnsi** → niet-codeerbare tekens vervangen
   (`winansi()` helper); datum **handmatig** in NL opgemaakt (geen
   Intl-afhankelijkheid in de Worker). Bundel met pdf-lib ≈ **290 KiB
-  gzip**, ruim onder de limiet.
+  gzip**, ruim onder de limiet. **Huisstijl**: document-accenten (titel +
+  scheidingslijn) in de Beroepenavond-lime **#88BC1D**; het logo is de
+  **clubversie** = Rotary-merk met "Nijmegen-Stad en Land" eronder in
+  logo-blauw **#17458f** (lockup conform de zustersite).
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
