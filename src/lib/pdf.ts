@@ -7,8 +7,8 @@ import { PDFDocument, StandardFonts, rgb, type PDFPage } from 'pdf-lib';
 const A4 = { w: 595.28, h: 841.89 };
 const M = 50; // paginamarge (pt)
 
-const ROTARY_BLUE = rgb(0x17 / 255, 0x45 / 255, 0x8f / 255); // #17458f
-const GOLD = rgb(0xf7 / 255, 0xa8 / 255, 0x1b / 255); // #f7a81b
+const LIME = rgb(0x88 / 255, 0xbc / 255, 0x1d / 255); // #88BC1D — website-accent (Beroepenavond)
+const ROTARY_BLUE = rgb(0x17 / 255, 0x45 / 255, 0x8f / 255); // #17458f — logo-blauw / clubnaam
 const INK = rgb(0.1, 0.11, 0.12);
 const MUTED = rgb(0.42, 0.45, 0.49);
 
@@ -67,16 +67,19 @@ export async function buildWerflijstPdf(opts: {
     pageNo += 1;
     if (first) {
       const lw = 150;
-      const lh = (160 / 400) * lw; // verhouding logo behouden
-      page.drawImage(logo, { x: M, y: A4.h - M - lh + 10, width: lw, height: lh });
-      let ty = A4.h - M - lh - 18;
-      text('Werflijst voorlichters', M, ty, 20, bold, ROTARY_BLUE);
+      const lh = (160 / 400) * lw; // verhouding logo behouden (400×160)
+      page.drawImage(logo, { x: M, y: A4.h - M - lh, width: lw, height: lh });
+      // Clublogo-lockup: Rotary-merk + clubnaam in logo-blauw eronder.
+      let ty = A4.h - M - lh - 16;
+      text('Nijmegen-Stad en Land', M, ty, 13, bold, ROTARY_BLUE);
+      ty -= 30;
+      text('Werflijst voorlichters', M, ty, 20, bold, LIME);
       ty -= 18;
       text('Beroepen die nog géén voorlichter hebben — voor gerichte werving', M, ty, 11, font, MUTED);
       ty -= 14;
       text(`${opts.rows.length} openstaand · ${opts.dateLabel}`, M, ty, 10, font, MUTED);
       ty -= 16;
-      page.drawLine({ start: { x: M, y: ty }, end: { x: A4.w - M, y: ty }, thickness: 1.2, color: GOLD });
+      page.drawLine({ start: { x: M, y: ty }, end: { x: A4.w - M, y: ty }, thickness: 1.2, color: LIME });
       y = ty - 26;
     } else {
       y = A4.h - M;
