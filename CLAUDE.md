@@ -354,7 +354,10 @@ progressive enhancement (werkt zonder JS).
   gzip**, ruim onder de limiet. **Huisstijl**: document-accenten (titel +
   scheidingslijn) in de Beroepenavond-lime **#88BC1D**; het logo is de
   **clubversie** = Rotary-merk met "Nijmegen-Stad en Land" eronder in
-  logo-blauw **#17458f** (lockup conform de zustersite).
+  logo-blauw **#17458f** (lockup conform de zustersite). Per categorie de
+  eigen **categoriekleur** (`categories.color` via `hexToRgb()`): gevuld
+  swatch-vierkantje bij de kop + aanvinkvakjes in die kleur — net als de
+  gekleurde opsommingstekens op de site.
 
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
