@@ -80,7 +80,7 @@ export async function buildWerflijstPdf(opts: {
       page.drawImage(logo, { x: M, y: A4.h - M - lh, width: lw, height: lh });
       // Clublogo-lockup: Rotary-merk + clubnaam in logo-blauw eronder.
       let ty = A4.h - M - lh - 16;
-      text('Nijmegen-Stad en Land', M, ty, 13, bold, ROTARY_BLUE);
+      text('Nijmegen Stad en Land', M, ty, 13, bold, ROTARY_BLUE);
       ty -= 30;
       text('Werflijst voorlichters', M, ty, 20, bold, LIME);
       ty -= 18;
