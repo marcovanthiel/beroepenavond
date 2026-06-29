@@ -11,12 +11,12 @@
     "db:apply:remote": "for f in 001_init 002_seed 003_beroepen 004_extra 005_pages; do wrangler d1 execute beroepenavond --remote --file=schema/$f.sql; done"
   },
   "dependencies": {
-    "hono": "^4.6.0",
+    "hono": "^4.12.27",
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250612.0",
+    "@cloudflare/workers-types": "^4.20260629.1",
     "typescript": "^5.5.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.105.0"
   }
 }
