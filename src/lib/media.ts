@@ -76,5 +76,11 @@ export async function serveMedia(env: Env, key: string): Promise<Response> {
   obj.writeHttpMetadata(headers as unknown as Headers);
   headers.set('etag', obj.httpEtag);
   headers.set('Cache-Control', 'public, max-age=86400');
+  // Hardening: media nooit als actief document interpreteren. nosniff voorkomt
+  // MIME-sniffing; CSP sandbox neutraliseert scripts bij directe navigatie naar
+  // een geüploade SVG (anders stored-XSS in de inijmegen.com-origin). <img>-embedding
+  // blijft werken (afbeeldingen voeren SVG-scripts sowieso niet uit).
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Content-Security-Policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:");
   return new Response(obj.body as unknown as BodyInit, { headers });
 }

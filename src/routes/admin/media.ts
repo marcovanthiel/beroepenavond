@@ -70,7 +70,9 @@ mediaApp.post('/upload', async (c) => {
 mediaApp.post('/delete', async (c) => {
   const b = await c.req.parseBody();
   const key = String(b.key ?? '');
-  if (key && c.env.ASSETS_R2) {
+  // Alleen binnen de media/-prefix verwijderen — voorkomt dat een willekeurige
+  // R2-key (buiten media/) via deze route gewist wordt.
+  if (key && key.startsWith('media/') && c.env.ASSETS_R2) {
     await c.env.ASSETS_R2.delete(key);
     await logAudit(c, 'delete', 'media', key);
   }

@@ -3,9 +3,9 @@
  *
  * Architectuur:
  *   - Publieke site: server-side gerenderd uit D1 (pages + settings)
- *   - Admin: nog te bouwen onder /admin/* (login + CRUD)
- *   - Statische assets (CSS, JS, hero-foto's) via ASSETS-binding
- *   - Plattegrond + sessies komen later
+ *   - Admin-CMS onder /admin/* (login + CRUD) — gebouwd
+ *   - Leerling-portaal met magic-link-login
+ *   - Statische assets (CSS, JS, foto's) via ASSETS-binding
  */
 import { Hono } from 'hono';
 import type { Env } from './env';

@@ -45,7 +45,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   const sponsorsHtml = sponsors
     .map((sp) => {
       const img = sp.logo_url
-        ? `<img src="${escape(sp.logo_url)}" alt="${escape(sp.name)}" height="50">`
+        ? `<img src="${escape(sp.logo_url)}" alt="${escape(sp.name)}" height="50" loading="lazy" decoding="async">`
         : `<span>${escape(sp.name)}</span>`;
       return sp.website
         ? `<a class="sponsor__logo" href="${escape(sp.website)}" target="_blank" rel="noopener noreferrer">${img}</a>`

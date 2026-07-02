@@ -33,7 +33,7 @@ a:hover { color: var(--c-accent); }
 
 body.home {
   background-color: #ffffff;
-  background-image: url('/assets/img/mannetje.jpg');
+  background-image: url('/assets/img/mannetje.webp');
   background-repeat: no-repeat;
   background-position: right top;
   background-size: contain;
