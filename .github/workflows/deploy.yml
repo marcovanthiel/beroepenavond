@@ -27,7 +27,8 @@ jobs:
         run: npm ci
       - name: Genereer versie-info (public/assets/version.json + updates.json)
         run: |
-          VER=$(node -p "require('./package.json').version" 2>/dev/null || echo 0.0.0)
+          N=$(git rev-list --count HEAD)
+          VER="1.$((N/10)).$((N%10))"   # versie volgt de historie (aantal updates)
           printf '{"version":"%s","commit":"%s","date":"%s"}' "$VER" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > public/assets/version.json
           python3 - <<'PY'
           import subprocess, json
