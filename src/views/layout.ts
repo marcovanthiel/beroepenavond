@@ -212,7 +212,7 @@ ${raw(opts.bodyHtml)}
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
-  fetch('/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+  fetch('/assets/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
     var v=document.getElementById('siteVersion'); if(v&&d&&d.version) v.textContent='· v'+d.version+(d.commit?' · '+d.commit:'');
   }).catch(function(){});
   var t = document.getElementById('navToggle'), l = document.getElementById('navLinks');

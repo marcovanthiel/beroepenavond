@@ -230,10 +230,10 @@ publicApp.get('/updates', async (c) => {
       function fmt(iso){ try{ return new Date(iso).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}); }catch(e){ return (iso||'').slice(0,10); } }
       function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
       var HIDE=/^(chore|ci|build|deps|docs|merge|wip|typo|fmt|lint|revert)\\b|^(bump|update dependencies|dependabot)/i;
-      fetch('/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(v){
+      fetch('/assets/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(v){
         document.getElementById('curVersion').textContent=(v&&v.version)?('v'+v.version+(v.commit?' · '+v.commit:'')):'—';
       }).catch(function(){ document.getElementById('curVersion').textContent='—'; });
-      fetch('/updates.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      fetch('/assets/updates.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
         var box=document.getElementById('updatesList');
         var items=(d&&d.entries||[]).filter(function(e){ return !HIDE.test(e.subject||''); });
         if(!items.length){ box.innerHTML='<p class="muted">Nog geen updates om te tonen.</p>'; return; }

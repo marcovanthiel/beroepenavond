@@ -25,18 +25,18 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Genereer versie-info (public/version.json + updates.json)
+      - name: Genereer versie-info (public/assets/version.json + updates.json)
         run: |
           VER=$(node -p "require('./package.json').version" 2>/dev/null || echo 0.0.0)
-          printf '{"version":"%s","commit":"%s","date":"%s"}' "$VER" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > public/version.json
+          printf '{"version":"%s","commit":"%s","date":"%s"}' "$VER" "${GITHUB_SHA::7}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > public/assets/version.json
           python3 - <<'PY'
           import subprocess, json
           out = subprocess.run(['git','log','-40','--no-merges','--pretty=format:%h%x1f%cI%x1f%s'],
                                capture_output=True, text=True).stdout
           entries=[{'sha':p[0],'date':p[1],'subject':p[2]} for p in (l.split('\x1f') for l in out.splitlines()) if len(p)==3]
-          json.dump({'entries':entries}, open('public/updates.json','w'), ensure_ascii=False)
+          json.dump({'entries':entries}, open('public/assets/updates.json','w'), ensure_ascii=False)
           PY
-          echo "version.json: $(cat public/version.json)"
+          echo "version.json: $(cat public/assets/version.json)"
       - name: Deploy met wrangler
         uses: cloudflare/wrangler-action@v3
         with:
