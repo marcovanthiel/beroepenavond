@@ -24,6 +24,7 @@ import { renderAdminLayout, esc } from '../../views/admin/layout';
 import { str, redirectErr } from '../../lib/forms';
 import { getSettings } from '../../lib/db';
 import { mailConfig, sendEmail, emailShell } from '../../lib/email';
+import pkg from '../../../package.json';
 
 import { pagesApp } from './pages';
 import { settingsApp } from './settings';
@@ -244,6 +245,94 @@ adminApp.get('/', async (c) => {
     </div>`;
 
   return renderAdminLayout(c, { title: 'Overzicht', activeKey: 'dashboard', body });
+});
+
+// ----------------------------------------------------------------------
+// Software & versies — dependency-overzicht (huidig vs. laatste npm-versie)
+// ----------------------------------------------------------------------
+
+const cleanVer = (v: string) => String(v || '').replace(/^[\^~>=<\s]+/, '').trim();
+async function npmLatest(name: string): Promise<string | null> {
+  try {
+    const r = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/latest`, {
+      headers: { accept: 'application/json' },
+      cf: { cacheTtl: 3600, cacheEverything: true },
+    } as RequestInit);
+    if (!r.ok) return null;
+    const j = (await r.json()) as { version?: string };
+    return j.version || null;
+  } catch {
+    return null;
+  }
+}
+type VerStatus = 'up-to-date' | 'minor-or-patch' | 'major' | 'unknown';
+function classifyVer(cur: string, latest: string | null): VerStatus {
+  if (!latest) return 'unknown';
+  const c = cleanVer(cur);
+  if (!c) return 'unknown';
+  if (c === latest) return 'up-to-date';
+  const cMaj = parseInt(c.split('.')[0], 10) || 0;
+  const lMaj = parseInt(latest.split('.')[0], 10) || 0;
+  return lMaj > cMaj ? 'major' : 'minor-or-patch';
+}
+
+adminApp.get('/software', async (c) => {
+  type Row = { name: string; current: string; grp: 'prod' | 'dev'; latest: string | null; status: VerStatus };
+  const entries: Row[] = [
+    ...Object.entries((pkg as any).dependencies || {}).map(([name, current]) => ({ name, current: String(current), grp: 'prod' as const, latest: null, status: 'unknown' as VerStatus })),
+    ...Object.entries((pkg as any).devDependencies || {}).map(([name, current]) => ({ name, current: String(current), grp: 'dev' as const, latest: null, status: 'unknown' as VerStatus })),
+  ];
+  const latests = await Promise.all(entries.map((e) => npmLatest(e.name)));
+  entries.forEach((e, i) => { e.latest = latests[i]; e.status = classifyVer(e.current, latests[i]); });
+  let vinfo: { version?: string; commit?: string; date?: string } | null = null;
+  try {
+    const r = await c.env.ASSETS.fetch(new Request(new URL('/assets/version.json', c.req.url)));
+    if (r.ok) vinfo = await r.json();
+  } catch {}
+  const hono = entries.find((e) => e.name === 'hono');
+
+  const BADGE: Record<VerStatus, [string, string, string]> = {
+    'up-to-date': ['Up-to-date', '#0c7a3f', '#e6f5ec'],
+    'minor-or-patch': ['Minor / patch beschikbaar', '#8a6100', '#fdf4dd'],
+    major: ['Major beschikbaar', '#9b2226', '#fbe6e6'],
+    unknown: ['Onbekend', '#555', '#eee'],
+  };
+  const badge = (s: VerStatus) => { const [t, fg, bg] = BADGE[s]; return `<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:600;color:${fg};background:${bg}">${t}</span>`; };
+  const cnt = (grp: string, s: VerStatus) => entries.filter((e) => e.grp === grp && e.status === s).length;
+  const card = (label: string, big: string, sub: string) => `<div style="background:#0f1729;color:#fff;border-radius:12px;padding:16px 18px"><div style="font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;opacity:.6">${esc(label)}</div><div style="font-size:1.35rem;font-weight:700;margin-top:4px;word-break:break-word">${big}</div>${sub ? `<div style="opacity:.6;font-size:.8rem;margin-top:2px">${sub}</div>` : ''}</div>`;
+  const table = (title: string, grp: 'prod' | 'dev') => {
+    const rows = entries.filter((e) => e.grp === grp);
+    if (!rows.length) return '';
+    const chip = (n: number, fg: string, bg: string) => (n ? `<span style="display:inline-block;padding:1px 9px;border-radius:999px;font-size:.8rem;font-weight:600;color:${fg};background:${bg};margin-left:6px">${n}</span>` : '');
+    return `<div style="margin-top:26px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <h2 style="margin:0">${esc(title)} <span style="opacity:.5;font-weight:400">(${rows.length})</span></h2>
+        <div>${chip(cnt(grp, 'up-to-date'), '#0c7a3f', '#e6f5ec')}${chip(cnt(grp, 'minor-or-patch'), '#8a6100', '#fdf4dd')}${chip(cnt(grp, 'major'), '#9b2226', '#fbe6e6')}</div>
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:10px">
+        <thead><tr style="text-align:left;border-bottom:2px solid #e3e8f0;color:#5a6472;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em">
+          <th style="padding:8px 10px">Pakket</th><th style="padding:8px 10px">Huidig</th><th style="padding:8px 10px">Laatste</th><th style="padding:8px 10px">Status</th></tr></thead>
+        <tbody>${rows.map((e) => `<tr style="border-bottom:1px solid #eef1f6">
+          <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace">${esc(e.name)}</td>
+          <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace;color:#5a6472">${esc(e.current)}</td>
+          <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace;color:#5a6472">${esc(e.latest || '—')}</td>
+          <td style="padding:9px 10px">${badge(e.status)}</td></tr>`).join('')}</tbody>
+      </table></div></div>`;
+  };
+  const outdated = entries.filter((e) => e.status === 'minor-or-patch' || e.status === 'major').length;
+  const body = `
+    <p style="color:#5a6472;max-width:60ch">Overzicht van alle gebruikte software, met aanduiding of we op de meest recente versie zitten. ${outdated ? `<strong>${outdated}</strong> pakket${outdated === 1 ? '' : 'ten'} kan worden bijgewerkt.` : 'Alles is up-to-date.'}</p>
+    <p style="margin:10px 0"><a class="btn" href="/updates" target="_blank" rel="noopener">🕑 Versiegeschiedenis</a> <a class="btn" href="/admin/software">⟳ Vernieuwen</a></p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0 4px">
+      ${card('App-versie', 'v' + esc(vinfo?.version || (pkg as any).version || '0.1.0'), esc(vinfo?.commit || ''))}
+      ${card('Framework', 'Hono ' + esc(hono ? cleanVer(hono.current) : '—'), hono?.latest ? 'laatste ' + esc(hono.latest) : '')}
+      ${card('Runtime', 'Cloudflare Workers', 'workerd · productie')}
+      ${card('Build', esc(vinfo?.date ? String(vinfo.date).slice(0, 10) : '—'), 'inijmegen.com')}
+    </div>
+    ${table('Productie', 'prod')}
+    ${table('Ontwikkeling', 'dev')}
+    <p style="color:#5a6472;font-size:.9rem;margin-top:26px">Laatste versies opgehaald bij de npm-registry. Afhankelijkheden worden <strong>wekelijks</strong> automatisch gecontroleerd en via Dependabot bijgewerkt.</p>`;
+  return renderAdminLayout(c, { title: 'Software & versies', activeKey: 'software', body });
 });
 
 // ----------------------------------------------------------------------

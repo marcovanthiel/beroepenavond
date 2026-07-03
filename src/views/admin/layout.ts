@@ -79,6 +79,7 @@ const NAV: NavGroup[] = [
       { href: '/admin/media', label: 'Mediatheek', key: 'media', icon: '🖼️' },
       { href: '/admin/users', label: 'Gebruikers', key: 'users', icon: '👥' },
       { href: '/admin/audit', label: 'Logboek', key: 'audit', icon: '📜' },
+      { href: '/admin/software', label: 'Software & versies', key: 'software', icon: '🧩' },
       { href: '/admin/account', label: 'Mijn account', key: 'account', icon: '👤' },
     ],
   },
