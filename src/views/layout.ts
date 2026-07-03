@@ -204,14 +204,17 @@ ${raw(opts.bodyHtml)}
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© <span id="year">2026</span> ${s['organization'] || 'Rotary Club Nijmegen-Stad en Land'}</span>
-      <span><a href="/privacy">Privacy</a> · <a href="/admin">Beheer</a></span>
+      <span>© <span id="year">2026</span> ${s['organization'] || 'Rotary Club Nijmegen-Stad en Land'} <a class="footer-version" id="siteVersion" href="/updates" style="opacity:.6;font-size:.85em"></a></span>
+      <span><a href="/privacy">Privacy</a> · <a href="/updates">Updates</a> · <a href="/admin">Beheer</a></span>
     </div>
   </div>
 </footer>
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
+  fetch('/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+    var v=document.getElementById('siteVersion'); if(v&&d&&d.version) v.textContent='· v'+d.version+(d.commit?' · '+d.commit:'');
+  }).catch(function(){});
   var t = document.getElementById('navToggle'), l = document.getElementById('navLinks');
   if (t && l) t.addEventListener('click', function () {
     var open = l.classList.toggle('open');

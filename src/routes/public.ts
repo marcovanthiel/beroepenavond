@@ -216,6 +216,50 @@ publicApp.get('/nieuws/:slug', async (c) => {
 });
 
 // ----------------------------------------------------------------------
+// Updates: deploy-versie + changelog (uit /version.json en /updates.json)
+// ----------------------------------------------------------------------
+
+publicApp.get('/updates', async (c) => {
+  const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
+  const body = `
+    <p>Huidige versie: <strong id="curVersion">…</strong></p>
+    <div id="updatesList"><p class="muted">Updates laden…</p></div>
+    <p class="muted" style="margin-top:22px">De site wordt continu onderhouden; afhankelijkheden worden <strong>wekelijks</strong> automatisch gecontroleerd en bijgewerkt.</p>
+    <script>
+    (function(){
+      function fmt(iso){ try{ return new Date(iso).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}); }catch(e){ return (iso||'').slice(0,10); } }
+      function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+      var HIDE=/^(chore|ci|build|deps|docs|merge|wip|typo|fmt|lint|revert)\\b|^(bump|update dependencies|dependabot)/i;
+      fetch('/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(v){
+        document.getElementById('curVersion').textContent=(v&&v.version)?('v'+v.version+(v.commit?' · '+v.commit:'')):'—';
+      }).catch(function(){ document.getElementById('curVersion').textContent='—'; });
+      fetch('/updates.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+        var box=document.getElementById('updatesList');
+        var items=(d&&d.entries||[]).filter(function(e){ return !HIDE.test(e.subject||''); });
+        if(!items.length){ box.innerHTML='<p class="muted">Nog geen updates om te tonen.</p>'; return; }
+        box.innerHTML='<ul style="list-style:none;padding:0;margin:0">'+items.map(function(e){
+          var s=esc(e.subject); s=s.charAt(0).toUpperCase()+s.slice(1);
+          return '<li style="padding:12px 0;border-bottom:1px solid #e5e7eb"><div style="font-weight:600">'+s+'</div><div class="muted" style="font-size:.85rem">'+fmt(e.date)+' · '+esc(e.sha)+'</div></li>';
+        }).join('')+'</ul>';
+      }).catch(function(){ document.getElementById('updatesList').innerHTML='<p class="muted">Kon updates niet laden.</p>'; });
+    })();
+    </script>`;
+  return c.html(
+    renderLayout({
+      title: 'Updates — Beroepenavond Nijmegen',
+      metaDescription: 'Wat er recent is verbeterd aan de website.',
+      navItems,
+      activeSlug: '',
+      breadcrumbs: [{ label: 'Updates' }],
+      canonicalPath: '/updates',
+      hero: { eyebrow: 'Updates', title: 'Updates', lede: 'Wat er recent is verbeterd aan de website.', compact: true },
+      bodyHtml: body,
+      settings,
+    })
+  );
+});
+
+// ----------------------------------------------------------------------
 // Catch-all: pagina's (met dynamische uitbreidingen)
 // ----------------------------------------------------------------------
 
