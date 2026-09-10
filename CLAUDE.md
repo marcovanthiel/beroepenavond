@@ -549,3 +549,60 @@ een eigen ontwerp gekregen. Ontwerptraject: mockup-rondes in een Artifact
   terecht geweigerd; e2e-testen van die formulieren kan alleen met een
   echte browser(-widget), niet met curl. Voor de mailketen maakt dat niet
   uit: dezelfde `sendEmail` wordt door de wél geteste flows gebruikt.
+
+## Procesinrichting mails & indeling (LIVE, 10 september 2026)
+
+Volledige werkstromen voor voorlichters en leerlingen, gebouwd op een
+**mail-outbox met cron** (elke 5 min; `schema/023`, `src/lib/outbox.ts`,
+`scheduled()` in index.ts). Principe: procesmails worden klaargezet en om
+**9:30 (Europa/Amsterdam)** verstuurd; bevestigingsmails gaan direct.
+Alle teksten zijn bewerkbaar in **beheer → Mails** (placeholders:
+{{naam}} {{voornaam}} {{datum}} {{locatie}} {{rooster}} {{stats}} {{knop}}).
+
+### Voorlichters
+1. **Uitnodigen** (beheer → Uitnodigingen): losse adressen of in bulk
+   "vorig jaar" (bestaande sprekers met e-mail). Mail bevat een
+   persoonlijke link naar `/voorlichter/uitnodiging?token=…`; nieuw =
+   leeg formulier, herhaal = vooringevulde gegevens ter controle.
+   Insturen → speaker confirmed=1 + directe bevestigingsmail +
+   notificatie naar de organisatie.
+2. **Herinnering**: automatisch één keer, 7 dagen zonder reactie (cron).
+3. **Sponsor**: checkbox op uitnodigings- én aanmeldformulier →
+   `sponsor_interest`-vlag + melding in de notificatiemail; logo's beheert
+   admin → Sponsoren; sponsorstrook staat op de home.
+4. **Indelingsmail** (knop op beheer → Mails): rooster + lokaal +
+   instructies (aanmeldbalie/badge, lerarenkamer/koffie, enquête-
+   aankondiging).
+5. **Eventdag-ochtendmail**: automatisch om 9:30 op de dag zelf.
+6. **Evaluatiemail**: automatisch op de avond zodra de eerste sessie van
+   de spreker begonnen is (rondetijden), met tokenlink `/evaluatie` —
+   per sessie deelnemersaantal, vragen, tips, "volgend jaar weer?".
+7. **Evaluatie-dashboard** (beheer → Evaluaties): KPI's, filter, volledige
+   CSV voor eigen draaitabellen.
+8. **Bedankmail + stats**: automatisch gepland op event+10 dagen 9:30;
+   tekst vooraf aanpasbaar in Mails, items tot verzending te annuleren.
+
+### Leerlingen
+- Minimale data (naam/e-mail); voorkeuren = bestaande picks; NIEUW:
+  **tijdblok-blokkades** op het dashboard ("ik kan niet bij ronde X").
+- **Automatische indeling** (knop beheer → Mails): greedy matching van
+  voorkeuren naar sessies per ronde, met blokkades en lokaalcapaciteit
+  (default 30; `classrooms.capacity`); herdraaibaar; stats in de flash.
+  Daarna knop **indelingsmails leerlingen** (verzending volgende ochtend
+  9:30, met rooster + link Mijn avond); rooster ook op het dashboard.
+- **Dag-vooraf-mail** automatisch 9:30; **opvolgmail** event+10 dagen.
+
+### Beheer & gotchas
+- **Outbox**: beheer → Mails toont gepland/verzonden/mislukt + annuleren.
+  Dedup-keys maken alle planners idempotent (cron mag altijd draaien).
+- Cron-config in wrangler.toml (`[triggers] crons`); lokaal testen met
+  `wrangler dev --test-scheduled` + `GET /__scheduled?cron=*/5+*+*+*+*`.
+- 9:30-berekening: maand-heuristiek voor zomertijd (apr t/m okt = UTC+2);
+  rond de omschakeldagen kan de verzendtijd één uur verschuiven.
+- {{knop}}-placeholder wordt op de RUWE tekst gedetecteerd (vul() eerst
+  zou hem wissen — geleerd tijdens de bouw).
+- Secure-cookie + lokale http: curl stuurt de admin-cookie niet mee;
+  cookie-jar met `$4="FALSE"` herschrijven (awk) voor lokale flow-tests.
+- Jaarlijkse cyclus: nieuwe editie aanmaken → uitnodigingen bulk
+  "vorig jaar" → mailteksten nalopen (o.a. slogan/aantallen) → rondes,
+  lokalen (capacity!), sessies → indelen → indelingsmails.
