@@ -606,3 +606,47 @@ Alle teksten zijn bewerkbaar in **beheer → Mails** (placeholders:
 - Jaarlijkse cyclus: nieuwe editie aanmaken → uitnodigingen bulk
   "vorig jaar" → mailteksten nalopen (o.a. slogan/aantallen) → rondes,
   lokalen (capacity!), sessies → indelen → indelingsmails.
+
+## Inkomende mail op de site (code LIVE, 10 september 2026)
+
+De site is voorbereid als eigen MX: Email Routing levert af aan de
+`email()`-handler (`src/lib/mailbox.ts`) die elke mail opslaat in
+`mail_inbox` (schema/024), bijlagen naar R2 zet (blokkadelijst voor
+uitvoerbare/actieve bestanden; inline handtekening-plaatjes overgeslagen),
+de afzender automatisch aan een voorlichter koppelt, een
+ontvangstbevestiging stuurt (met mail-loop-guard) en een audit-regel
+schrijft (`mail_inbox_log`; Workers Logs staan aan via [observability]).
+Beheer → **Mailbox**: lezen, bijlagen downloaden (altijd als download),
+beantwoorden in huisstijl (In-Reply-To voor threading), afhandelen,
+verwijderen (incl. R2-opruiming).
+
+### Nog te doen door Marco (dashboard, 2 min)
+1. Cloudflare → zone → Email → Email Routing → **Enable** (zet de
+   MX/SPF-records automatisch).
+2. Routing rules → **Catch-all** → actie "Send to Worker" →
+   `beroepenavond`.
+3. Optioneel vangnet: onder Destination addresses het privéadres
+   verifiëren en desgewenst setting `mail_forward_to` zetten; dan wordt
+   elke mail óók doorgestuurd. Zonder dit werkt het postvak gewoon.
+4. Daarna evt. setting `mail_reply_to` op info@<domein> zetten zodat
+   antwoorden op procesmails in de Mailbox binnenkomen.
+
+### Domeinwissel-checklist (afgesproken: niets domeinvast)
+Alle code gebruikt settings (`site_host`, `mail_from`, `mail_to`) en het
+ontvangen adres uit het bericht zelf; er staat géén domein hard in code
+of schema. Bij een domeinwissel:
+1. Settings: `site_host`, `mail_from`, `mail_reply_to` bijwerken.
+2. Nieuwe zone: custom domain aan de Worker koppelen (dashboard).
+3. Resend: nieuw domein verifiëren (DKIM/SPF-records) zolang Resend de
+   verzendweg is.
+4. Email Routing op de nieuwe zone aanzetten (stappen hierboven).
+5. Turnstile-widget: nieuw domein toevoegen in het Turnstile-dashboard.
+6. Oude zone: 301-redirect naar het nieuwe domein laten staan.
+
+### Geplande taak (december 2026): verzending naar Cloudflare Email Sending
+Na de editie van 20 november de uitgaande mail migreren van Resend naar
+Cloudflare Email Service (Workers Paid, $5/mnd, 3.000 mails inbegrepen,
+daarna $0,35/1.000; binding `send_email` → geen API-key meer). LET OP:
+nieuwe verzendaccounts hebben een opwarmend dagquotum — ruim vóór de
+campagne van 2027 migreren en rustig volume opbouwen. Dan zit ontvangst
+én verzending volledig bij Cloudflare in onze eigen Worker.
