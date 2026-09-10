@@ -321,6 +321,11 @@ export function volunteerFormHtml(settings: SettingsMap, values?: Vals): string 
         <input type="text" name="profession" value="${val(values, 'profession')}" required placeholder="bijv. Architect, Verpleegkundige, Piloot…"></div>
       <div class="field"><label>Toelichting (optioneel)</label>
         <textarea name="message" placeholder="Vertel kort over jezelf en je vak.">${val(values, 'message')}</textarea></div>
+      <div class="field" id="sponsor"><label style="display:flex;gap:10px;align-items:flex-start;font-weight:500">
+        <input type="checkbox" name="sponsor" value="1" style="width:auto;margin-top:4px"${values?.['sponsor'] ? ' checked' : ''}>
+        <span><strong>Ik heb interesse om sponsor te worden.</strong><br>
+        <small>Je logo komt op de website en we maken er extra reclame mee. De organisatie neemt contact op over de mogelijkheden.</small></span>
+      </label></div>
       <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : ''}
       <div class="form__actions">

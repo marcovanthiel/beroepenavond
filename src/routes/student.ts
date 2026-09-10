@@ -6,6 +6,8 @@
 import { Hono } from 'hono';
 import type { StudentEnv } from '../lib/studentauth';
 import { requestLogin, verifyToken, getCurrentStudent, logoutStudent, requireStudent } from '../lib/studentauth';
+import { getActiveEvent } from '../lib/db';
+import { studentRooster } from '../lib/indeling';
 import { getNavPages, getSettings } from '../lib/db';
 import { renderLayout } from '../views/layout';
 
@@ -97,6 +99,24 @@ studentApp.get('/verify', async (c) => {
   return c.redirect(student ? '/leerling' : '/leerling?error=1', 302);
 });
 
+studentApp.post('/blokkades', requireStudent, async (c) => {
+  const s = c.get('student');
+  const event = await getActiveEvent(c.env.DB);
+  if (event) {
+    const b = await c.req.parseBody({ all: true });
+    const v = b['rounds'];
+    const ids = Array.isArray(v) ? v.map(String) : v != null ? [String(v)] : [];
+    const geldige = new Set(((await c.env.DB.prepare('SELECT id FROM rounds WHERE event_id=?').bind(event.id).all()).results ?? []).map((r: any) => r.id));
+    await c.env.DB.prepare('DELETE FROM student_blocked_rounds WHERE student_id=?').bind(s.id).run();
+    for (const id of ids) {
+      if (geldige.has(id)) {
+        await c.env.DB.prepare('INSERT OR IGNORE INTO student_blocked_rounds (student_id, round_id) VALUES (?, ?)').bind(s.id, id).run();
+      }
+    }
+  }
+  return c.redirect('/leerling?ok=' + encodeURIComponent('Je beschikbaarheid is opgeslagen.'), 302);
+});
+
 studentApp.post('/logout', async (c) => {
   await logoutStudent(c);
   return c.redirect('/leerling', 302);
@@ -162,6 +182,36 @@ async function dashboard(c: any) {
         .join('')}</ul></div>`
     : '';
 
+  // Rooster (na automatische indeling) + tijdblok-blokkades.
+  const event = await getActiveEvent(c.env.DB);
+  let roosterHtml = `<div class="callout"><p>Zodra de organisatie de indeling maakt, zie je hier per ronde
+    in welk lokaal jouw gekozen beroepen plaatsvinden. Je krijgt er ook een mailtje van.</p></div>`;
+  let blokkadeHtml = '';
+  if (event) {
+    const rooster = await studentRooster(c.env.DB, s.id, event.id);
+    if (rooster.length) {
+      roosterHtml = `<table><tr><th>Ronde</th><th>Tijd</th><th>Beroep</th><th>Lokaal</th></tr>${rooster
+        .map((r) => `<tr><td>${r.ronde ?? ''}</td><td>${esc(r.tijd)}</td><td><strong>${esc(r.beroep)}</strong></td><td>${esc(r.lokaal)}</td></tr>`)
+        .join('')}</table>`;
+    }
+    const [rondesQ, blockedQ] = await Promise.all([
+      c.env.DB.prepare('SELECT id, round_no, start_time, end_time FROM rounds WHERE event_id=? ORDER BY round_no').bind(event.id).all(),
+      c.env.DB.prepare('SELECT round_id FROM student_blocked_rounds WHERE student_id=?').bind(s.id).all(),
+    ]);
+    const rondes = (rondesQ.results ?? []) as any[];
+    const blocked = new Set(((blockedQ.results ?? []) as any[]).map((r) => r.round_id));
+    if (rondes.length) {
+      blokkadeHtml = `<div class="card-box" style="margin-top:22px"><h3>Kun je niet de hele avond?</h3>
+        <p class="muted" style="font-size:.9rem">Vink de rondes aan waarop je <strong>niet</strong> kunt; daar houden we bij de indeling rekening mee.</p>
+        <form method="post" action="/leerling/blokkades">
+          ${rondes.map((r) => `<label class="field" style="flex-direction:row;align-items:center;gap:10px;margin-bottom:8px">
+            <input type="checkbox" name="rounds" value="${esc(r.id)}"${blocked.has(r.id) ? ' checked' : ''} style="width:auto">
+            <span>Ronde ${r.round_no} (${esc(r.start_time)} tot ${esc(r.end_time)})</span></label>`).join('')}
+          <button class="btn btn--ghost btn--sm" type="submit">Opslaan</button>
+        </form></div>`;
+    }
+  }
+
   const notice = q.ok ? { type: 'ok' as const, text: String(q.ok) } : null;
 
   const body = `
@@ -178,7 +228,8 @@ async function dashboard(c: any) {
     ${recHtml}
 
     <div class="section-head" style="margin:30px 0 14px"><h2>Mijn rooster</h2></div>
-    <div class="callout"><p>Zodra de organisatie het rooster publiceert, zie je hier per ronde in welk lokaal jouw gekozen beroepen plaatsvinden — met een waarschuwing bij dubbele keuzes. Je keuzes hierboven worden dan automatisch ingepland.</p></div>
+    ${roosterHtml}
+    ${blokkadeHtml}
 
     ${questionsHtml}
 

@@ -22,7 +22,7 @@ function esc(s: string): string {
 
 export async function renderHome(c: Context<{ Bindings: Env }>) {
   const db = c.env.DB;
-  const [settings, event, navItems, cats, beroepCount, rondeRow] = await Promise.all([
+  const [settings, event, navItems, cats, beroepCount, rondeRow, sponsorRows] = await Promise.all([
     getSettings(db),
     getActiveEvent(db),
     getNavPages(db),
@@ -35,6 +35,8 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     db.prepare(
       `SELECT COUNT(*) AS n FROM rounds WHERE event_id = (SELECT id FROM events WHERE is_active = 1 LIMIT 1)`
     ).first<{ n: number }>(),
+    db.prepare('SELECT name, logo_url, website FROM sponsors WHERE is_active = 1 ORDER BY sort_order, name')
+      .all<{ name: string; logo_url: string | null; website: string | null }>(),
   ]);
 
   const published = (settings['voorlichters_published'] ?? '0') === '1';
@@ -209,6 +211,18 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
       </div>
     </div>
   </section>
+
+  ${raw((() => {
+    const sp = sponsorRows.results ?? [];
+    if (!sp.length) return '';
+    const logos = sp.map((x) => {
+      const img = x.logo_url
+        ? `<img src="${esc(x.logo_url)}" alt="${esc(x.name)}" loading="lazy" decoding="async">`
+        : `<span>${esc(x.name)}</span>`;
+      return x.website ? `<a href="${esc(x.website)}" target="_blank" rel="noopener">${img}</a>` : `<span>${img}</span>`;
+    }).join('');
+    return `<div class="bn-sponsors"><span class="bn-sponsors__label">Mede mogelijk gemaakt door</span><div class="bn-sponsors__logos">${logos}</div><a class="bn-sponsors__word" href="/aanmelden#sponsor">Word ook sponsor →</a></div>`;
+  })())}
 
   <div class="bn-voet">
     <span>${esc(organisatie)} · met de decanen van de scholen in Nijmegen e.o.</span>

@@ -155,6 +155,7 @@ export function emailButton(href: string, label: string): string {
 
 interface SubmissionLike {
   type: string;
+  sponsor?: number;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -177,6 +178,7 @@ export async function notifySubmission(
     ['Telefoon', s.phone],
     ['Organisatie', s.organization],
     isVolunteer ? ['Beroep', s.profession] : null,
+    isVolunteer && s.sponsor ? ['Sponsor', 'JA, heeft interesse om sponsor te worden'] : null,
     ['Bericht', s.message],
   ].filter(Boolean) as [string, unknown][];
   const inner = `

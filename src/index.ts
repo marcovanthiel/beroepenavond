@@ -14,6 +14,7 @@ import { adminApp } from './routes/admin';
 import { studentApp } from './routes/student';
 import { renderError } from './views/public';
 import { serveMedia } from './lib/media';
+import { plannerTick, processOutbox } from './lib/outbox';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -144,4 +145,14 @@ app.onError((err, c) => {
 
 export default {
   fetch: app.fetch,
+  /** Cron: plant procesmails (herinneringen, eventdag, opvolg) en verstuurt
+   *  wat in de outbox "due" is. Fouten mogen de tick nooit laten crashen. */
+  async scheduled(_ctrl: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(
+      (async () => {
+        try { await plannerTick(env); } catch (e) { console.error('plannerTick faalde:', e); }
+        try { await processOutbox(env); } catch (e) { console.error('processOutbox faalde:', e); }
+      })()
+    );
+  },
 };

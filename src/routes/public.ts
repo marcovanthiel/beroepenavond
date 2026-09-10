@@ -12,6 +12,7 @@ import {
   volunteerFormHtml,
 } from '../views/sections';
 import { renderBeroepenPagina, renderBeroepDetail } from '../views/beroepen';
+import { procesApp } from './proces';
 import { mailConfig, notifySubmission, confirmToSender, newsletterConfirm } from '../lib/email';
 import { renderLayout } from '../views/layout';
 import { getNavPages } from '../lib/db';
@@ -123,6 +124,7 @@ publicApp.post('/aanmelden', async (c) => {
     organization: str(b.organization),
     profession: str(b.profession),
     message: str(b.message),
+    sponsor: str(b.sponsor) ? 1 : 0,
   };
   if (!data.name || !EMAIL_RE.test(data.email) || !data.profession) {
     const page = await getPage(c.env.DB, '/aanmelden');
@@ -132,7 +134,10 @@ publicApp.post('/aanmelden', async (c) => {
       notice: { type: 'err', text: 'Vul je naam, e-mailadres en het beroep in.' },
     });
   }
-  await storeSubmission(c, data);
+  const subId = await storeSubmission(c, data);
+  if (data.sponsor) {
+    await c.env.DB.prepare('UPDATE submissions SET sponsor_interest = 1 WHERE id = ?').bind(subId).run();
+  }
   await emailForSubmission(c, data);
   return c.redirect('/aanmelden?sent=1', 302);
 });
@@ -258,6 +263,9 @@ publicApp.get('/updates', async (c) => {
     })
   );
 });
+
+// Procespagina's: uitnodiging + evaluatie (token-gebaseerd).
+publicApp.route('/', procesApp);
 
 // ----------------------------------------------------------------------
 // Beroepen (herontwerp): treklijsten + detail. Vóór de catch-all.
