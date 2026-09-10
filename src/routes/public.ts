@@ -5,13 +5,13 @@ import { renderHome } from '../views/home';
 import { renderError, renderPage, renderNotice } from '../views/public';
 import { renderRoosterMap } from '../views/rooster';
 import {
-  renderBeroepenCatalog,
   renderVoorlichters,
   renderNieuwsList,
   renderNieuwsItem,
   contactFormHtml,
   volunteerFormHtml,
 } from '../views/sections';
+import { renderBeroepenPagina, renderBeroepDetail } from '../views/beroepen';
 import { mailConfig, notifySubmission, confirmToSender, newsletterConfirm } from '../lib/email';
 import { renderLayout } from '../views/layout';
 import { getNavPages } from '../lib/db';
@@ -260,6 +260,23 @@ publicApp.get('/updates', async (c) => {
 });
 
 // ----------------------------------------------------------------------
+// Beroepen (herontwerp): treklijsten + detail. Vóór de catch-all.
+// ----------------------------------------------------------------------
+
+publicApp.get('/beroepen', (c) => renderBeroepenPagina(c));
+
+publicApp.get('/beroepen/:id', async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  if (!Number.isFinite(id)) return renderError(c, 404, 'Beroep niet gevonden');
+  const res = await renderBeroepDetail(c, id);
+  if (!res) return renderError(c, 404, 'Beroep niet gevonden');
+  return res;
+});
+
+// Oude catalogus-URL blijft werken.
+publicApp.get('/uitleg-beroepen', (c) => c.redirect('/beroepen', 301));
+
+// ----------------------------------------------------------------------
 // Catch-all: pagina's (met dynamische uitbreidingen)
 // ----------------------------------------------------------------------
 
@@ -294,10 +311,6 @@ publicApp.get('/*', async (c) => {
   switch (slug) {
     case '/rooster':
       append = await renderRoosterMap(c.env.DB).catch(() => '');
-      break;
-    case '/beroepen':
-    case '/uitleg-beroepen':
-      append = await renderBeroepenCatalog(c.env.DB).catch(() => '');
       break;
     case '/voorlichters': {
       const beroepId = q.beroep ? parseInt(q.beroep, 10) : undefined;

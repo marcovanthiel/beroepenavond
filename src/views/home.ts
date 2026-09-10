@@ -1,26 +1,18 @@
 /**
- * Homepage — 1-op-1 nagebootst van beroepenavondnijmegen.nl
- * Sectie-volgorde komt direct uit de bron-HTML:
- *  - block-8a    "DONDERDAG 20 NOVEMBER"          (heading, 48px, links)
- *  - block-8b    "BEROEPENAVOND"                  (heading, 48px, links, #88bc1d)
- *  - block-9a    "2026"                           (heading, 185px, rechts)
- *  - block-9b    banner "Binnenkort alle informatie" (rgba(136,188,29,.25))
- *  - block-4     zwarte balk (sticky nav-placeholder, 50px)
- *  - block-92    accordion-categorieën
- *  - block-56    groene email-button (#88BC1D)
- *  - block-95a   organisatietekst, gecentreerd
- *  - block-95b   "Mede mogelijk gemaakt door" + Schrofenblick-logo
- *  - block-95c   © + Weijsters & Kooij credit
+ * Homepage — herontwerp 2026 "Kleurblok".
  *
- * Het mannetje (`/assets/img/mannetje.jpg`) staat als body-background:
- * right top, contain — zoals bronsite (#page-1369748).
+ * Opbouw: zwarte nav, typografisch monument met de datum (dd.mm) naast een
+ * kleurvlak met het jaarfiguur, de zes categorieblokken als klikbare strip,
+ * dynamische feitenregel, "Hoe werkt het?" in vier stappen, en de zwarte
+ * voorlichters-balk. Alle aantallen komen live uit D1.
  */
 import type { Context } from 'hono';
 import { html, raw } from 'hono/html';
 import type { Env } from '../env';
-import { getCategoriesWithBeroepen, getNavPages, getSettings } from '../lib/db';
+import { getActiveEvent, getNavPages, getSettings } from '../lib/db';
+import { gedaanteVanVandaag, jaarfiguurSvg, tekstOp } from './figuur';
 
-function escape(s: string): string {
+function esc(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -29,91 +21,103 @@ function escape(s: string): string {
 }
 
 export async function renderHome(c: Context<{ Bindings: Env }>) {
-  const [settings, cats, navItems, sponsorRows] = await Promise.all([
-    getSettings(c.env.DB),
-    getCategoriesWithBeroepen(c.env.DB),
-    getNavPages(c.env.DB),
-    c.env.DB.prepare('SELECT name, logo_url, website FROM sponsors WHERE is_active = 1 ORDER BY sort_order, name')
-      .all<{ name: string; logo_url: string | null; website: string | null }>(),
+  const db = c.env.DB;
+  const [settings, event, navItems, cats, beroepCount, rondeRow] = await Promise.all([
+    getSettings(db),
+    getActiveEvent(db),
+    getNavPages(db),
+    db.prepare(
+      `SELECT c.id, c.name, c.color, COUNT(b.id) AS n
+       FROM categories c LEFT JOIN beroepen b ON b.category_id = c.id
+       GROUP BY c.id ORDER BY c.sort_order`
+    ).all<{ id: string; name: string; color: string; n: number }>(),
+    db.prepare('SELECT COUNT(*) AS n FROM beroepen').first<{ n: number }>(),
+    db.prepare(
+      `SELECT COUNT(*) AS n FROM rounds WHERE event_id = (SELECT id FROM events WHERE is_active = 1 LIMIT 1)`
+    ).first<{ n: number }>(),
   ]);
 
-  // Zodra de voorlichters gepubliceerd zijn, wordt elk beroep een klikbare
-  // link naar de voorlichter(s) van dat beroep.
   const published = (settings['voorlichters_published'] ?? '0') === '1';
+  // Teller: bevestigde voorlichters zodra gepubliceerd, anders alle aangemelde.
+  const sprekerRow = published
+    ? await db.prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1 AND confirmed = 1').first<{ n: number }>()
+    : await db.prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1').first<{ n: number }>();
 
-  const sponsors = sponsorRows.results ?? [];
-  const sponsorsHtml = sponsors
-    .map((sp) => {
-      const img = sp.logo_url
-        ? `<img src="${escape(sp.logo_url)}" alt="${escape(sp.name)}" height="50" loading="lazy" decoding="async">`
-        : `<span>${escape(sp.name)}</span>`;
-      return sp.website
-        ? `<a class="sponsor__logo" href="${escape(sp.website)}" target="_blank" rel="noopener noreferrer">${img}</a>`
-        : `<span class="sponsor__logo">${img}</span>`;
+  // Sprekersbalk-lijst: 5 bevestigde voorlichters, of (voor publicatie) 5 beroepen.
+  const lijst: { l: string; r: string }[] = [];
+  if (published) {
+    const rows = await db.prepare(
+      `SELECT s.full_name, s.job_title FROM speakers s
+       WHERE s.is_public = 1 AND s.confirmed = 1 AND s.job_title IS NOT NULL
+       ORDER BY s.full_name LIMIT 5`
+    ).all<{ full_name: string; job_title: string }>();
+    for (const r of rows.results ?? []) lijst.push({ l: r.full_name, r: r.job_title });
+  } else {
+    const rows = await db.prepare(
+      `SELECT b.name, c.name AS cat FROM beroepen b
+       LEFT JOIN categories c ON c.id = b.category_id
+       ORDER BY b.name LIMIT 5`
+    ).all<{ name: string; cat: string | null }>();
+    for (const r of rows.results ?? []) lijst.push({ l: r.name, r: r.cat ?? '' });
+  }
+
+  const eventYear = event?.year ? String(event.year) : settings['event_year'] || '2026';
+  const eventDateLong = settings['event_date_long'] || 'Donderdag 20 november 2026';
+  // Datum-monument dd.mm uit de actieve editie (bron van waarheid = events).
+  const iso = event?.date || c.env.EVENT_DATE || '2026-11-20';
+  const monument = `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
+  const venue = settings['venue_name'] || 'Canisius College Nijmegen';
+  const tijd = (settings['event_time'] || '18:30 tot 21:30').replace(/\s*[–—-]\s*/g, ' tot ');
+  const editie = settings['edition_label'] || '25e';
+  const organisatie = settings['organization'] || 'Rotary Club Nijmegen-Stad en Land';
+
+  // Jaarfiguur (drie gedaanten, wisselt per dag; instelbaar via settings).
+  const figuurBeroep = settings['jaarfiguur_beroep'] || 'de chirurg';
+  const figuurKleur = settings['jaarfiguur_kleur'] || '#2E7ED4';
+  const figuurSvg = jaarfiguurSvg({
+    gedaante: gedaanteVanVandaag(),
+    figuur: '#ffffff',
+    detail: figuurKleur,
+    beroep: figuurBeroep,
+  });
+  const veldTekst = tekstOp(figuurKleur);
+
+  const totBeroepen = beroepCount?.n ?? 0;
+  const totSprekers = sprekerRow?.n ?? 0;
+  const totRondes = rondeRow?.n ?? 0;
+
+  const stripHtml = (cats.results ?? [])
+    .map((cat) => {
+      const kleur = cat.color || '#0d0d0d';
+      return `<a href="/beroepen?cat=${esc(cat.id)}" style="background:${esc(kleur)};color:${tekstOp(kleur)}">${esc(cat.name)}<em>${cat.n}<span aria-hidden="true">→</span></em></a>`;
     })
+    .join('\n      ');
+
+  const lijstHtml = lijst
+    .map((r) => `<div>${esc(r.l)} <span>${esc(r.r)}</span></div>`)
     .join('\n        ');
 
   const navHtml = navItems
-    .map((p) => `<li><a href="${p.slug}">${escape(p.nav_label || p.title)}</a></li>`)
-    .join('');
-
-  const eventYear = settings['event_year'] || '2026';
-  const eventDate = settings['event_date_long'] || 'Donderdag 20 november 2026';
-  const eventDateNoYear = eventDate.replace(/\s+\d{4}\s*$/, '').toUpperCase();
-  const email = settings['contact_email'] || 'info@beroepenavondnijmegen.nl';
-
-  const accordionHtml = cats
-    .map(
-      (cat) => `
-        <article class="accordion-item">
-          <button class="accordion-handle" type="button" aria-expanded="false">
-            <span class="accordion-handle__label">${escape(cat.name)}</span>
-            <svg class="accordion-arrow" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <div class="accordion-panel">
-            <ul>
-              ${cat.beroepen
-                .map((b) =>
-                  published
-                    ? `<li><a class="beroep-link" href="/voorlichters?beroep=${b.id}">${escape(b.name)}</a></li>`
-                    : `<li>${escape(b.name)}</li>`
-                )
-                .join('\n              ')}
-            </ul>
-          </div>
-        </article>`
-    )
-    .join('\n');
-
-  const emailEntities = email
-    .split('')
-    .map((ch) => `&#${ch.charCodeAt(0)};`)
+    .map((p) => `<li><a href="${p.slug}">${esc(p.nav_label || p.title)}</a></li>`)
     .join('');
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: `Beroepenavond Nijmegen ${eventYear}`,
-    description:
-      'Voorlichtingsavond waarop scholieren kennismaken met meer dan 70 beroepen.',
-    startDate: `${c.env.EVENT_DATE}T18:30:00+01:00`,
-    endDate: `${c.env.EVENT_DATE}T21:30:00+01:00`,
+    description: `Voorlichtingsavond waarop scholieren kennismaken met ${totBeroepen || 'ruim 100'} beroepen.`,
+    startDate: `${iso}T18:30:00+01:00`,
+    endDate: `${iso}T21:30:00+01:00`,
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     isAccessibleForFree: true,
     location: {
       '@type': 'Place',
-      name: settings['venue_name'] || 'Canisius College Nijmegen',
+      name: venue,
       address: settings['venue_address'] || 'Berg en Dalseweg 207, 6522 BR Nijmegen',
     },
-    organizer: {
-      '@type': 'Organization',
-      name: settings['organization'] || 'Rotary Club Nijmegen-Stad en Land',
-      url: `https://${c.env.SITE_HOST}`,
-    },
-    image: `https://${c.env.SITE_HOST}/assets/img/mannetje.jpg`,
+    organizer: { '@type': 'Organization', name: organisatie, url: `https://${c.env.SITE_HOST}` },
+    image: `https://${c.env.SITE_HOST}/assets/img/og.png`,
     url: `https://${c.env.SITE_HOST}/`,
   };
 
@@ -123,24 +127,21 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beroepenavond ${eventYear} — Nijmegen</title>
-<meta name="description" content="Donderdag 20 november 2026 — Beroepenavond Nijmegen. Voorlichtingsavond voor middelbare scholieren in Canisius College Nijmegen.">
-<meta name="theme-color" content="#88bc1d">
+<meta name="description" content="${eventDateLong}: Beroepenavond Nijmegen. ${totBeroepen} beroepen, ${totSprekers} professionals, één avond in ${venue}. Gratis voor scholieren.">
+<meta name="theme-color" content="#0d0d0d">
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/style.css?v=2">
 <meta property="og:title" content="Beroepenavond ${eventYear} — Nijmegen">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/mannetje.jpg">
+<meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/og.png">
 <link rel="canonical" href="https://${c.env.SITE_HOST}/">
 <script type="application/ld+json">${raw(JSON.stringify(jsonLd))}</script>
 </head>
-<body class="home">
+<body>
 <a class="skip-link" href="#main">Naar inhoud</a>
-<header class="site-header site-header--home">
+<header class="site-header">
   <nav class="nav" aria-label="Hoofdmenu">
     <a class="nav__logo" href="/"><span>Beroepenavond</span><small>Nijmegen</small></a>
     <button class="nav__toggle" id="navToggle" aria-label="Menu" aria-expanded="false">
@@ -154,101 +155,63 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   </nav>
 </header>
 
-<div class="home-wrap" id="main">
+<main id="main">
+  <div class="bn-hero">
+    <div class="bn-hero__tekst">
+      <h1>${monument}</h1>
+      <div class="bn-hero__sub"><b>${eventDateLong}</b> · ${venue} · ${tijd} · gratis toegang</div>
+      <div class="bn-hero__cta">
+        <a class="btn btn--primary btn--lg" href="#hoe">Hoe werkt het?</a>
+        <a class="btn btn--ghost btn--lg" href="/beroepen">Alle beroepen</a>
+      </div>
+    </div>
+    <div class="bn-veld" style="background:${figuurKleur}">
+      <div class="bn-veld__wie" style="color:${veldTekst}"><span>Figuur van ${eventYear}</span><span>${esc(figuurBeroep)}</span></div>
+      ${raw(figuurSvg)}
+    </div>
+  </div>
 
-  <!-- block-8a: "DONDERDAG 20 NOVEMBER" -->
-  <section class="b-8a">
-    <div class="b-inner">
-      <h1 class="heading-2">${eventDateNoYear}</h1>
+  <nav class="bn-strip" aria-label="Beroepen per categorie">
+      ${raw(stripHtml)}
+  </nav>
+
+  <div class="bn-feit">
+    <span><b>${totBeroepen}</b> beroepen</span>
+    ${totSprekers ? raw(`<span><b>${totSprekers}</b> professionals</span>`) : ''}
+    ${totRondes ? raw(`<span><b>${totRondes}</b> rondes van 25 min.</span>`) : ''}
+    <span><b>${editie}</b> editie</span>
+  </div>
+
+  <section class="bn-stappen" id="hoe">
+    <h2>Hoe werkt het?</h2>
+    <div class="bn-stappen__grid">
+      <div class="bn-stap"><div class="nr" aria-hidden="true">1</div><h3>Kies je beroepen</h3><p>Blader door de zes vakgebieden of zoek direct. Klik door tot je de mensen ziet die het werk echt doen.</p></div>
+      <div class="bn-stap"><div class="nr" aria-hidden="true">2</div><h3>Bouw je avond</h3><p>Log in met alleen je e-mailadres en zet je favoriete beroepen in <a href="/leerling">Mijn avond</a>: dat wordt je persoonlijke rooster.</p></div>
+      <div class="bn-stap"><div class="nr" aria-hidden="true">3</div><h3>Stel je vraag vast</h3><p>Elke voorlichter leest vooraf jouw vragen. Vraag wat je écht wilt weten, ook wat je in de klas niet vraagt.</p></div>
+      <div class="bn-stap"><div class="nr" aria-hidden="true">4</div><h3>Kom op ${monument.replace('.', '/')}</h3><p>${venue}, ${tijd.split(' ')[0]} uur. Je rooster staat op je telefoon en wijst je per ronde naar het juiste lokaal.</p></div>
     </div>
   </section>
 
-  <!-- block-8b: "BEROEPENAVOND" in lime -->
-  <section class="b-8b">
-    <div class="b-inner">
-      <h2 class="heading-2 accent">BEROEPENAVOND</h2>
-    </div>
-  </section>
-
-  <!-- block-9a: "2026" gigantisch rechts -->
-  <section class="b-9a">
-    <div class="b-inner">
-      <h2 class="heading-year">${eventYear}</h2>
-    </div>
-  </section>
-
-  <!-- block-9b: lichtgroene banner -->
-  <section class="b-9b">
-    <div class="b-inner">
-      <h2 class="heading-banner"><span class="accent">Binnenkort</span> alle informatie</h2>
-    </div>
-  </section>
-
-  <!-- block-4: zwarte sticky balk -->
-  <header class="b-4" data-sticky></header>
-
-  <!-- block-92: accordion -->
-  <section class="b-92">
-    <div class="b-inner">
-      <div class="accordion" aria-label="Beroepen per categorie">
-        ${raw(accordionHtml)}
+  <section class="bn-sprekers">
+    <div class="bn-sprekers__in">
+      <div>
+        <h2>${totSprekers > 0 ? `${totSprekers} professionals.` : 'Professionals gezocht.'}<br>Eén missie.</h2>
+        <p>Zij staan op ${eventDateLong.toLowerCase().replace(/^\w/, (m) => m)} voor een vol lokaal om hun vak door te geven. Werk jij in een beroep dat scholieren moeten leren kennen?</p>
+        <a class="knop" href="/aanmelden">Meld je aan als voorlichter</a>
+      </div>
+      <div class="bn-sprekers__lijst">
+        ${raw(lijstHtml)}
       </div>
     </div>
   </section>
 
-  <!-- block-56: groene email-button -->
-  <section class="b-56">
-    <div class="b-inner">
-      <a class="email-btn" href="mailto:${raw(emailEntities)}">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-          <path fill="currentColor" d="M12 12.713L.015 3h23.97L12 12.713zm0 2.574L0 5.562V21h24V5.562l-12 9.725z"/>
-        </svg>
-        <span>${raw(emailEntities)}</span>
-      </a>
-    </div>
-  </section>
-
-  <!-- block-95a: organisatie-tekst -->
-  <footer class="b-95a">
-    <div class="b-inner text-6">
-      <p><strong>Rotary Club Nijmegen-Stad en Land | Canisius College Nijmegen</strong><br>
-      in samenwerking met de decanen<br>
-      van de middelbare scholen in Nijmegen e.o.</p>
-    </div>
-  </footer>
-
-  <!-- block-95b: sponsoren (dynamisch uit de database) -->
-  ${raw(
-    sponsors.length
-      ? `<footer class="b-95b">
-    <div class="b-inner sponsor">
-      <p class="sponsor__label">Mede mogelijk gemaakt door</p>
-      <div class="sponsor__logos">
-        ${sponsorsHtml}
-      </div>
-    </div>
-  </footer>`
-      : ''
-  )}
-
-  <!-- block-95c: copyright -->
-  <footer class="b-95c">
-    <div class="b-inner text-6">
-      <p>© ${eventYear} ${escape(settings['organization'] || 'Rotary Club Nijmegen-Stad en Land')}</p>
-      <p><a href="/privacy">Privacy</a> · <a href="/toegankelijkheid">Toegankelijkheidsverklaring</a></p>
-    </div>
-  </footer>
-
-</div>
+  <div class="bn-voet">
+    <span>${esc(organisatie)} · met de decanen van de scholen in Nijmegen e.o.</span>
+    <span><a href="/nieuwsbrief">Nieuwsbrief</a> · <a href="/privacy">Privacy</a> · <a href="/toegankelijkheid">Toegankelijkheid</a> · <a href="/updates">Updates</a> · <a href="/admin">Beheer</a></span>
+  </div>
+</main>
 
 <script>
-  document.querySelectorAll('.accordion-handle').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const item = btn.closest('.accordion-item');
-      const open = item.classList.toggle('open');
-      btn.setAttribute('aria-expanded', String(open));
-    });
-  });
   var t = document.getElementById('navToggle'), l = document.getElementById('navLinks');
   if (t && l) t.addEventListener('click', function () {
     var open = l.classList.toggle('open');

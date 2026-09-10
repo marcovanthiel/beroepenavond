@@ -30,11 +30,13 @@ app.use('*', async (c, next) => {
 // Content-Security-Policy: 'unsafe-inline' is nodig voor onze inline
 // scripts/styles; Google Fonts + https/data-afbeeldingen (externe
 // portretten) zijn toegestaan. Verkleint XSS-impact.
+// Fonts zijn sinds het herontwerp self-hosted (Archivo in /assets/fonts),
+// dus Google Fonts staat niet meer in de CSP.
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: https:",
   "connect-src 'self' https://challenges.cloudflare.com",
   "frame-src https://challenges.cloudflare.com",
@@ -101,13 +103,15 @@ app.get('/media/*', async (c) => {
 // 4b. Dynamische sitemap uit gepubliceerde pagina's + nieuws.
 app.get('/sitemap.xml', async (c) => {
   const host = `https://${c.env.SITE_HOST}`;
-  const [pages, news] = await Promise.all([
+  const [pages, news, beroepen] = await Promise.all([
     c.env.DB.prepare('SELECT slug, updated_at FROM pages WHERE is_published = 1').all<{ slug: string; updated_at: number }>(),
     c.env.DB.prepare('SELECT slug, updated_at FROM announcements WHERE is_published = 1').all<{ slug: string; updated_at: number }>(),
+    c.env.DB.prepare('SELECT id FROM beroepen').all<{ id: number }>(),
   ]);
   const urls: { loc: string; lastmod?: number }[] = [];
   for (const p of pages.results ?? []) urls.push({ loc: host + p.slug, lastmod: p.updated_at });
   for (const n of news.results ?? []) urls.push({ loc: `${host}/nieuws/${n.slug}`, lastmod: n.updated_at });
+  for (const b of beroepen.results ?? []) urls.push({ loc: `${host}/beroepen/${b.id}` });
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls

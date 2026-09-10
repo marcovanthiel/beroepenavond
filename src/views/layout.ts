@@ -30,6 +30,8 @@ export interface LayoutOpts {
   jsonLd?: unknown;
   ogImage?: string | null;
   canonicalPath?: string | null;
+  /** true = bodyHtml wordt zonder .section/.wrap gerenderd (full-bleed pagina's). */
+  bare?: boolean;
 }
 
 function attr(s: unknown): string {
@@ -39,7 +41,7 @@ function attr(s: unknown): string {
 export function renderLayout(opts: LayoutOpts) {
   const s = opts.settings;
   const host = `https://${s['site_host'] || 'inijmegen.com'}`;
-  const ogImage = opts.ogImage || s['seo_og_image'] || '/assets/img/mannetje.jpg';
+  const ogImage = opts.ogImage || s['seo_og_image'] || '/assets/img/og.png';
   const canonical = opts.canonicalPath ? host + opts.canonicalPath : null;
 
   const navHtml = opts.navItems
@@ -128,14 +130,11 @@ ${opts.metaDescription ? raw(`<meta property="og:description" content="${attr(op
 <meta property="og:image" content="${attr(ogImage.startsWith('http') ? ogImage : host + ogImage)}">
 ${canonical ? raw(`<meta property="og:url" content="${attr(canonical)}">`) : ''}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#88bc1d">
+<meta name="theme-color" content="#0d0d0d">
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/style.css?v=2">
 ${raw(jsonLdHtml)}
 </head>
 <body>
@@ -170,12 +169,14 @@ ${opts.hero
   : ''}
 ${raw(crumbsHtml)}
 
-<main class="section" id="main">
+${opts.bare
+  ? raw(`<main id="main">${opts.notice ? `<div class="wrap"><div class="notice notice--${opts.notice.type}">${attr(opts.notice.text)}</div></div>` : ''}${opts.bodyHtml}</main>`)
+  : html`<main class="section" id="main">
   <div class="wrap">
 ${opts.notice ? raw(`<div class="notice notice--${opts.notice.type}">${attr(opts.notice.text)}</div>`) : ''}
 ${raw(opts.bodyHtml)}
   </div>
-</main>
+</main>`}
 
 <footer class="site-footer">
   <div class="wrap">
