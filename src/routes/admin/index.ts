@@ -80,7 +80,7 @@ adminApp.post('/login', async (c) => {
         await sendEmail(cfg, {
           to: email,
           subject: `Je inlogcode ${code} — Beheer Beroepenavond`,
-          html: emailShell('Inlogcode', inner),
+          html: emailShell('Inlogcode', inner, cfg.brand),
           text: `Je inlogcode voor het beheer van de Beroepenavond is: ${code}\n\nDe code is 10 minuten geldig.`,
         });
       } catch (e) {

@@ -11,12 +11,20 @@
 import type { Env } from '../env';
 import type { SettingsMap } from '../env';
 
+/** Merkgegevens voor het brandingblok onderin elke mail. */
+export interface MailBrand {
+  slogan: string;
+  datum: string;
+  host: string;
+}
+
 export interface MailConfig {
   apiKey?: string;
   from: string;
   to: string;
   replyTo?: string;
   enabled: boolean;
+  brand: MailBrand;
 }
 
 export function mailConfig(env: Env, settings: SettingsMap): MailConfig {
@@ -26,6 +34,13 @@ export function mailConfig(env: Env, settings: SettingsMap): MailConfig {
     to: settings['mail_to'] || 'info@beroepenavondnijmegen.nl',
     replyTo: settings['mail_reply_to'] || undefined,
     enabled: (settings['mail_enabled'] ?? '1') === '1',
+    brand: {
+      // Overschrijfbaar via de settings-tabel (admin → Instellingen).
+      slogan: settings['mail_slogan'] || '169 professionals. Eén missie.',
+      datum: (settings['event_date_long'] || 'Donderdag 20 november 2026') +
+        ' · ' + (settings['venue_name'] || 'Canisius College Nijmegen'),
+      host: settings['site_host'] || 'inijmegen.com',
+    },
   };
 }
 
@@ -90,10 +105,28 @@ function esc(s: unknown): string {
  * mailclients), geen border-radius. De zes categoriekleuren vormen de
  * merkstrip onder de zwarte kopbalk.
  */
-export function emailShell(title: string, inner: string): string {
+export function emailShell(title: string, inner: string, brand?: MailBrand): string {
   const strip = ['#E14B64', '#2E7ED4', '#F0A400', '#55862A', '#8A4FD0', '#0A9B9B']
     .map((c) => `<td style="height:8px;background:${c};font-size:0;line-height:0">&nbsp;</td>`)
     .join('');
+  // Jaarfiguur wisselt per dag van gedaante (man/vrouw/X), net als op de site.
+  const dag = Math.floor(Date.now() / 86400000);
+  const gedaante = (['man', 'vrouw', 'x'] as const)[dag % 3];
+  const host = brand?.host || 'inijmegen.com';
+  const merkblok = brand
+    ? `<tr><td style="background:#0d0d0d;padding:0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="padding:24px 28px;vertical-align:middle">
+            <span style="display:block;color:#ffffff;font-size:21px;font-weight:800;line-height:1.15">${esc(brand.slogan)}</span>
+            <span style="display:block;color:#bbbbbb;font-size:13px;margin-top:10px">${esc(brand.datum)}</span>
+            <a href="https://${esc(host)}/" style="display:inline-block;color:#ffffff;font-size:13px;font-weight:bold;margin-top:12px;text-decoration:underline">Ontdek alle beroepen op ${esc(host)}</a>
+          </td>
+          <td width="120" style="background:#2E7ED4;vertical-align:bottom;padding:0;line-height:0">
+            <img src="https://${esc(host)}/assets/img/mail-figuur-${gedaante}.png" width="120" height="156" alt="Het jaarfiguur van de Beroepenavond" style="display:block;width:120px;height:auto;border:0">
+          </td>
+        </tr></table>
+      </td></tr>`
+    : '';
   return `<!DOCTYPE html><html lang="nl"><body style="margin:0;padding:0;background:#f2f2ef">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2ef"><tr><td align="center" style="padding:24px 12px">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:Arial,Helvetica,sans-serif;color:#0d0d0d">
@@ -106,6 +139,7 @@ export function emailShell(title: string, inner: string): string {
       <tr><td style="background:#ffffff;border:1px solid #e2e2e0;border-top:none;padding:26px 28px;font-size:14px;line-height:1.6">
         ${inner}
       </td></tr>
+      ${merkblok}
       <tr><td style="padding:16px 8px 0;text-align:center;color:#8a8a86;font-size:12px;line-height:1.5">
         Rotary Club Nijmegen-Stad en Land · met de decanen van de scholen in Nijmegen e.o.<br>
         Canisius College Nijmegen
@@ -160,7 +194,7 @@ export async function notifySubmission(
   await sendEmail(cfg, {
     to: cfg.to,
     subject: `${title}${s.name ? ` — ${s.name}` : ''}`,
-    html: emailShell(title, inner),
+    html: emailShell(title, inner, cfg.brand),
     replyTo: s.email || undefined,
   });
 }
@@ -179,7 +213,7 @@ export async function confirmToSender(
   await sendEmail(cfg, {
     to: s.email,
     subject: 'Bedankt voor je bericht — Beroepenavond Nijmegen',
-    html: emailShell('Bevestiging', inner),
+    html: emailShell('Bevestiging', inner, cfg.brand),
   });
 }
 
@@ -204,7 +238,7 @@ export async function speakerConfirmedMail(
   return sendEmail(cfg, {
     to: speaker.email,
     subject: 'Je deelname aan de Beroepenavond is bevestigd',
-    html: emailShell('Bevestiging deelname', inner),
+    html: emailShell('Bevestiging deelname', inner, cfg.brand),
   });
 }
 
@@ -222,6 +256,6 @@ export async function newsletterConfirm(
   await sendEmail(cfg, {
     to: email,
     subject: 'Bevestig je aanmelding — Beroepenavond Nijmegen',
-    html: emailShell('Nieuwsbrief', inner),
+    html: emailShell('Nieuwsbrief', inner, cfg.brand),
   });
 }

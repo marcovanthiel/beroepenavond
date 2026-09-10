@@ -80,7 +80,7 @@ export async function requestLogin(
       <p>Klik op de knop om in te loggen bij jouw Beroepenavond-account:</p>
       <p>${emailButton(link, 'Inloggen bij Mijn avond')}</p>
       <p style="color:#8a8a86;font-size:13px">De link is 30 minuten geldig. Niet aangevraagd? Negeer deze mail.</p>`;
-    const res = await sendEmail(cfg, { to: email, subject: 'Jouw inloglink — Beroepenavond Nijmegen', html: emailShell('Inloggen', inner) });
+    const res = await sendEmail(cfg, { to: email, subject: 'Jouw inloglink — Beroepenavond Nijmegen', html: emailShell('Inloggen', inner, cfg.brand) });
     mailed = !!res.ok;
   } catch (e) {
     console.error('magic-mail faalde:', e);
