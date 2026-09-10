@@ -10,7 +10,7 @@ import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { Env } from '../env';
 import { randomHex } from './auth';
 import { getSettings } from './db';
-import { mailConfig, sendEmail, emailShell } from './email';
+import { mailConfig, sendEmail, emailShell, emailButton } from './email';
 
 export interface StudentRow {
   id: string;
@@ -78,8 +78,8 @@ export async function requestLogin(
     const inner = `
       <p>Hoi${data.name ? ' ' + esc(data.name) : ''},</p>
       <p>Klik op de knop om in te loggen bij jouw Beroepenavond-account:</p>
-      <p><a href="${esc(link)}" style="background:#88bc1d;color:#15171a;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Inloggen</a></p>
-      <p style="color:#8a9099;font-size:13px">De link is 30 minuten geldig. Niet aangevraagd? Negeer deze mail.</p>`;
+      <p>${emailButton(link, 'Inloggen bij Mijn avond')}</p>
+      <p style="color:#8a8a86;font-size:13px">De link is 30 minuten geldig. Niet aangevraagd? Negeer deze mail.</p>`;
     const res = await sendEmail(cfg, { to: email, subject: 'Jouw inloglink — Beroepenavond Nijmegen', html: emailShell('Inloggen', inner) });
     mailed = !!res.ok;
   } catch (e) {

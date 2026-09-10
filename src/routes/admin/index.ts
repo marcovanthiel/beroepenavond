@@ -75,7 +75,7 @@ adminApp.post('/login', async (c) => {
         const inner = `
           <p>Hoi${user.name ? ' ' + esc(user.name) : ''},</p>
           <p>Gebruik deze code om in te loggen op het beheer van de Beroepenavond:</p>
-          <p style="text-align:center;margin:22px 0"><span style="display:inline-block;background:#f3f5f7;border:1px solid #e3e6ea;border-radius:10px;padding:14px 26px;font-size:30px;font-weight:bold;letter-spacing:8px;color:#15171a">${code}</span></p>
+          <p style="text-align:center;margin:22px 0"><span style="display:inline-block;background:#ffffff;border:3px solid #0d0d0d;padding:14px 26px;font-size:30px;font-weight:bold;letter-spacing:8px;color:#0d0d0d">${code}</span></p>
           <p style="color:#8a9099;font-size:13px">De code is 10 minuten geldig. Niet aangevraagd? Negeer deze e-mail.</p>`;
         await sendEmail(cfg, {
           to: email,

@@ -170,7 +170,7 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
   .map-section { margin-top: 8px; }
   .map-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
   .map-tab { padding:8px 16px; border:1px solid #d8dde1; background:#fff; border-radius:999px; font:inherit; cursor:pointer; }
-  .map-tab.active { background:#88bc1d; border-color:#88bc1d; color:#15171a; font-weight:500; }
+  .map-tab.active { background:#0d0d0d; border-color:#0d0d0d; color:#fff; font-weight:600; }
   .map-panel { border:1px solid #e3e6ea; border-radius:12px; overflow:hidden; background:#fafbfc; }
   .map-svg { display:block; width:100%; height:auto; }
   .map-room { cursor:pointer; }

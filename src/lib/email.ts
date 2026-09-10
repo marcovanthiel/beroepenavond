@@ -84,21 +84,39 @@ function esc(s: unknown): string {
     .replace(/>/g, '&gt;');
 }
 
-/** Eenvoudige, nette e-mail-wrapper in de huisstijl. */
+/**
+ * E-mail-wrapper in de huisstijl "Kleurblok" (herontwerp 2026).
+ * E-mailveilig: tabellen, inline CSS, systeemfonts (geen webfonts in
+ * mailclients), geen border-radius. De zes categoriekleuren vormen de
+ * merkstrip onder de zwarte kopbalk.
+ */
 export function emailShell(title: string, inner: string): string {
-  return `<!DOCTYPE html><html><body style="margin:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#15171a">
-  <div style="max-width:560px;margin:0 auto;padding:24px">
-    <div style="background:#15171a;color:#fff;padding:18px 24px;border-radius:12px 12px 0 0">
-      <strong style="font-size:18px">Beroepenavond Nijmegen</strong>
-      <span style="color:#88bc1d;font-size:12px;letter-spacing:.1em;text-transform:uppercase;display:block">${esc(title)}</span>
-    </div>
-    <div style="background:#fff;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e3e6ea;border-top:none">
-      ${inner}
-    </div>
-    <p style="color:#8a9099;font-size:12px;text-align:center;margin-top:16px">
-      Rotary Club Nijmegen-Stad en Land · Canisius College Nijmegen
-    </p>
-  </div></body></html>`;
+  const strip = ['#E14B64', '#2E7ED4', '#F0A400', '#55862A', '#8A4FD0', '#0A9B9B']
+    .map((c) => `<td style="height:8px;background:${c};font-size:0;line-height:0">&nbsp;</td>`)
+    .join('');
+  return `<!DOCTYPE html><html lang="nl"><body style="margin:0;padding:0;background:#f2f2ef">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2ef"><tr><td align="center" style="padding:24px 12px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:Arial,Helvetica,sans-serif;color:#0d0d0d">
+      <tr><td style="background:#0d0d0d;padding:20px 28px">
+        <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:.5px">BEROEPENAVOND</span>
+        <span style="color:#9a9a9a;font-size:12px;letter-spacing:2px;font-weight:600">&nbsp;NIJMEGEN</span>
+        <span style="display:block;color:#bbbbbb;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-top:6px">${esc(title)}</span>
+      </td></tr>
+      <tr><td style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${strip}</tr></table></td></tr>
+      <tr><td style="background:#ffffff;border:1px solid #e2e2e0;border-top:none;padding:26px 28px;font-size:14px;line-height:1.6">
+        ${inner}
+      </td></tr>
+      <tr><td style="padding:16px 8px 0;text-align:center;color:#8a8a86;font-size:12px;line-height:1.5">
+        Rotary Club Nijmegen-Stad en Land · met de decanen van de scholen in Nijmegen e.o.<br>
+        Canisius College Nijmegen
+      </td></tr>
+    </table>
+  </td></tr></table></body></html>`;
+}
+
+/** Knop in de huisstijl: zwart vlak, witte vette tekst, geen radius. */
+export function emailButton(href: string, label: string): string {
+  return `<a href="${esc(href)}" style="display:inline-block;background:#0d0d0d;color:#ffffff;padding:13px 24px;text-decoration:none;font-weight:bold;font-size:14px">${esc(label)}</a>`;
 }
 
 interface SubmissionLike {
@@ -138,7 +156,7 @@ export async function notifySubmission(
         )
         .join('')}
     </table>
-    <p style="margin-top:18px"><a href="${esc(adminUrl)}" style="background:#88bc1d;color:#15171a;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:bold">Bekijk in beheer</a></p>`;
+    <p style="margin-top:18px">${emailButton(adminUrl, 'Bekijk in beheer')}</p>`;
   await sendEmail(cfg, {
     to: cfg.to,
     subject: `${title}${s.name ? ` — ${s.name}` : ''}`,
@@ -199,8 +217,8 @@ export async function newsletterConfirm(
   const inner = `
     <p>Bevestig je aanmelding voor updates over de Beroepenavond Nijmegen
     door op de knop te klikken:</p>
-    <p><a href="${esc(confirmUrl)}" style="background:#88bc1d;color:#15171a;padding:11px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Aanmelding bevestigen</a></p>
-    <p style="color:#8a9099;font-size:13px">Heb je je niet aangemeld? Dan kun je deze mail negeren.</p>`;
+    <p>${emailButton(confirmUrl, 'Aanmelding bevestigen')}</p>
+    <p style="color:#8a8a86;font-size:13px">Heb je je niet aangemeld? Dan kun je deze mail negeren.</p>`;
   await sendEmail(cfg, {
     to: email,
     subject: 'Bevestig je aanmelding — Beroepenavond Nijmegen',

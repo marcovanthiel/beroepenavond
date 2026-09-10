@@ -7,7 +7,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFPage } from 'pdf-lib';
 const A4 = { w: 595.28, h: 841.89 };
 const M = 50; // paginamarge (pt)
 
-const LIME = rgb(0x88 / 255, 0xbc / 255, 0x1d / 255); // #88BC1D — website-accent (Beroepenavond)
+const LIME = rgb(0x0d / 255, 0x0d / 255, 0x0d / 255); // #0D0D0D — inkt-accent (herontwerp Kleurblok)
 const ROTARY_BLUE = rgb(0x17 / 255, 0x45 / 255, 0x8f / 255); // #17458f — logo-blauw / clubnaam
 const INK = rgb(0.1, 0.11, 0.12);
 const MUTED = rgb(0.42, 0.45, 0.49);
