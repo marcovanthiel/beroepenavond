@@ -485,6 +485,10 @@ een eigen ontwerp gekregen. Ontwerptraject: mockup-rondes in een Artifact
   drie gedaanten (man/vrouw/X via haarvorm) die **per dag** wisselen
   (deterministisch, cache-veilig). Nieuw jaar = nieuwe beroepslaag tekenen
   in figuur.ts + settings bijwerken.
+- **E-mail**: alle uitgaande mail loopt door `emailShell()` + `emailButton()`
+  in `src/lib/email.ts` (zwarte kopbalk, zes-kleurenstrip, zwarte knoppen;
+  e-mailveilig: tabellen, inline CSS, systeemfonts). Nieuwe mailsoorten
+  altijd via deze helpers bouwen.
 - **Iconen**: favicon = 6-kleurenraster, og.png = 20.11-poster (beide
   gegenereerd, bron-HTML in de sessie-scratchpad; opnieuw maken = klein
   HTML'tje + headless-chrome-screenshot op maat).
