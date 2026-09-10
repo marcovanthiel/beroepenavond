@@ -465,3 +465,64 @@ public/
   deploy.yml               # cloudflare/wrangler-action@v3
 wrangler.toml              # Worker + D1 + assets-binding
 ```
+
+## Herontwerp 2026 "Kleurblok" (LIVE, 10 september 2026)
+
+Het gekopieerde bron-ontwerp mocht niet langer gebruikt worden; de site heeft
+een eigen ontwerp gekregen. Ontwerptraject: mockup-rondes in een Artifact
+(8 richtingen → keuze "Kleurblok" → 9 kritiekrondes), daarna ingebouwd.
+
+### Designsysteem
+- **Typografie**: Archivo (variabel) + Archivo Black, **self-hosted** in
+  `public/assets/fonts/` (latin-subsets, samen ~45 KB). Google Fonts is uit
+  de CSP verwijderd. Display-klasse via CSS-var `--zb`.
+- **Kleuren**: zwart/wit-basis (`--c-ink #0d0d0d`); de zes categoriekleuren
+  zijn geharmoniseerd in D1 (022): roze #E14B64, blauw #2E7ED4, geel #F0A400,
+  groen #55862A, paars #8A4FD0, teal #0A9B9B. Tekstkleur op een vlak bepaalt
+  `tekstOp()` in `src/views/figuur.ts` (geel krijgt donkere tekst).
+- **Jaarfiguur**: Aicher-stijl pictogram in `src/views/figuur.ts`; elk jaar
+  één beroep (settings `jaarfiguur_beroep` + `jaarfiguur_kleur`), altijd in
+  drie gedaanten (man/vrouw/X via haarvorm) die **per dag** wisselen
+  (deterministisch, cache-veilig). Nieuw jaar = nieuwe beroepslaag tekenen
+  in figuur.ts + settings bijwerken.
+- **Iconen**: favicon = 6-kleurenraster, og.png = 20.11-poster (beide
+  gegenereerd, bron-HTML in de sessie-scratchpad; opnieuw maken = klein
+  HTML'tje + headless-chrome-screenshot op maat).
+
+### Pagina's
+- **Home** (`src/views/home.ts`): monument "dd.mm" (uit de actieve editie),
+  jaarfiguur-veld, categoriestrip (links naar /beroepen?cat=…), dynamische
+  feitenregel, "Hoe werkt het?" (4 stappen), sprekersbalk. Teller-logica:
+  bevestigde voorlichters zodra gepubliceerd én er ≥1 bevestigd is, anders
+  aangemelde (vangnet tegen "0 professionals").
+- **/beroepen** (`src/views/beroepen.ts`): treklijsten per categorie
+  (native `details/summary`, werkt zonder JS); `?cat=<id>` klapt
+  server-side open. Rij-aantallen (N voorlichters) alleen bij publicatie.
+- **/beroepen/:id**: detail met categorie-mini-strip + beroep-blokjes
+  (max 12 + "alle N"), voorlichters, rondes/lokaal uit het programma,
+  leerling-acties met **tooltip** ("+ Zet in mijn avond",
+  aria-describedby; op touch een vaste uitlegregel). `/uitleg-beroepen`
+  → 301 naar /beroepen; pages-rij is in 022 omgezet.
+- **Layout** (`renderLayout`): optie `bare: true` rendert bodyHtml zonder
+  .section/.wrap (voor full-bleed pagina's zoals het beroep-detail).
+- Alle overige pagina's + leerling-portaal erven het nieuwe thema via de
+  herschreven `style.css` (bestaande classnamen behouden). Admin-css is
+  bewust ongemoeid.
+
+### Valkuilen bij dit ontwerp
+- `.section a` (0,1,1) wint van componentklassen (0,1,0): nieuwe
+  klikcomponenten in een sectie hebben een expliciete
+  `text-decoration:none`-regel nodig (zie regel met `.section a.btn`).
+- Cache-buster `?v=2` op style.css — **bumpen bij elke CSS-wijziging**.
+- Schrijfstijl: geen en/em-dashes, ook niet in settings-waarden
+  (`event_time` is in 022 op "18:30 tot 21:30" gezet).
+- Migratienummering: er bestonden al twee 021-bestanden; dit werd 022.
+  Check altijd even `ls schema/` voor het volgende nummer.
+
+### Open punten na het herontwerp
+- Publicatieschakelaar staat AAN op prod met 0 bevestigde voorlichters
+  (bulk-bevestigen via /admin/speakers als de namen zichtbaar mogen).
+- Jaarfiguur-reeks 2023 t/m 2025 met terugwerkende kracht invullen of pas
+  vanaf 2026 opbouwen: keuze Marco.
+- Campagneposter (A3-PDF met sectorenfiguur in drie gedaanten): nog te
+  maken zodra gewenst.
