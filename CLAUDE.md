@@ -526,3 +526,17 @@ een eigen ontwerp gekregen. Ontwerptraject: mockup-rondes in een Artifact
   vanaf 2026 opbouwen: keuze Marco.
 - Campagneposter (A3-PDF met sectorenfiguur in drie gedaanten): nog te
   maken zodra gewenst.
+
+### E2E-test accounts & mail (10 september 2026)
+- **Leerling-flow live getest**: login-POST → magic-link-mail (Resend
+  accepteerde zonder fout; token uit `student_tokens` is plaintext, handig
+  voor e2e-tests) → verify → ingelogde sessie → beroep gekozen → vraag
+  verstuurd. Alles werkend; testdata daarna uit D1 verwijderd.
+- **Admin-codemail live getest**: login-POST verstuurt de 6-cijferige code
+  zonder Resend-fout (code-rij daarna opgeruimd).
+- **LET OP, correctie op eerdere docs: Turnstile staat AAN op productie**
+  (`TURNSTILE_SECRET_KEY` is gezet en de widget-key staat in settings).
+  Een POST zonder Turnstile-token op /aanmelden en /contact wordt dus
+  terecht geweigerd; e2e-testen van die formulieren kan alleen met een
+  echte browser(-widget), niet met curl. Voor de mailketen maakt dat niet
+  uit: dezelfde `sendEmail` wordt door de wél geteste flows gebruikt.
