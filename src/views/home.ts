@@ -235,6 +235,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   <footer class="b-95c">
     <div class="b-inner text-6">
       <p>© ${eventYear} ${escape(settings['organization'] || 'Rotary Club Nijmegen-Stad en Land')}</p>
+      <p><a href="/privacy">Privacy</a> · <a href="/toegankelijkheid">Toegankelijkheidsverklaring</a></p>
     </div>
   </footer>
 

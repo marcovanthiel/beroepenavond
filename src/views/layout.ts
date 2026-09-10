@@ -205,7 +205,7 @@ ${raw(opts.bodyHtml)}
     </div>
     <div class="footer-bottom">
       <span>© <span id="year">2026</span> ${s['organization'] || 'Rotary Club Nijmegen-Stad en Land'} <a class="footer-version" id="siteVersion" href="/updates" style="opacity:.6;font-size:.85em"></a></span>
-      <span><a href="/privacy">Privacy</a> · <a href="/updates">Updates</a> · <a href="/admin">Beheer</a></span>
+      <span><a href="/privacy">Privacy</a> · <a href="/toegankelijkheid">Toegankelijkheidsverklaring</a> · <a href="/updates">Updates</a> · <a href="/admin">Beheer</a></span>
     </div>
   </div>
 </footer>

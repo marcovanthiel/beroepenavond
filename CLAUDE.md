@@ -359,6 +359,19 @@ progressive enhancement (werkt zonder JS).
   swatch-vierkantje bij de kop + aanvinkvakjes in die kleur — net als de
   gekleurde opsommingstekens op de site.
 
+## Sessie 7 — toegankelijkheidsverklaring (LIVE, 10 september 2026)
+
+- **`/toegankelijkheid`**: toegankelijkheidsverklaring als footer-only
+  pagina in D1 (`schema/021_toegankelijkheid.sql`, nav_order 901,
+  lokaal + remote toegepast). Inhoud: streven naar WCAG 2.2 AA in lijn
+  met de European Accessibility Act en EN 301 549; naar beste weten
+  geheel of grotendeels conform, geen afwijkingen bekend; melden via
+  marco@marcovanthiel.nl; opgesteld 10 september 2026. U-vorm.
+- Footerlink **"Toegankelijkheidsverklaring"** in de gedeelde footer
+  (`src/views/layout.ts`, dus ook leerling-portaal) én in het
+  copyright-blok b-95c van de homepage (`src/views/home.ts`, daar samen
+  met een Privacy-link).
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt
