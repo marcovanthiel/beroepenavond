@@ -38,14 +38,19 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   ]);
 
   const published = (settings['voorlichters_published'] ?? '0') === '1';
-  // Teller: bevestigde voorlichters zodra gepubliceerd, anders alle aangemelde.
-  const sprekerRow = published
-    ? await db.prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1 AND confirmed = 1').first<{ n: number }>()
-    : await db.prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1').first<{ n: number }>();
+  // Teller: bevestigde voorlichters zodra gepubliceerd; vangnet: zolang er
+  // nog niemand bevestigd is tellen de aangemelde voorlichters mee (anders
+  // zou de home "0 professionals" tonen terwijl er 169 aangemeld zijn).
+  const bevestigdRow = await db.prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1 AND confirmed = 1').first<{ n: number }>();
+  const aangemeldRow = await db.prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1').first<{ n: number }>();
+  const bevestigd = bevestigdRow?.n ?? 0;
+  const sprekerRow = published && bevestigd > 0 ? bevestigdRow : aangemeldRow;
+  const toonNamen = published && bevestigd > 0;
 
-  // Sprekersbalk-lijst: 5 bevestigde voorlichters, of (voor publicatie) 5 beroepen.
+  // Sprekersbalk-lijst: 5 bevestigde voorlichters, of (zolang die er niet
+  // zijn) 5 beroepen als voorproefje.
   const lijst: { l: string; r: string }[] = [];
-  if (published) {
+  if (toonNamen) {
     const rows = await db.prepare(
       `SELECT s.full_name, s.job_title FROM speakers s
        WHERE s.is_public = 1 AND s.confirmed = 1 AND s.job_title IS NOT NULL
