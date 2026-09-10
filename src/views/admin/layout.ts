@@ -72,6 +72,7 @@ const NAV: NavGroup[] = [
       { href: '/admin/nieuws', label: 'Nieuws', key: 'announcements', icon: '📣' },
       { href: '/admin/sponsors', label: 'Sponsoren', key: 'sponsors', icon: '🤝' },
       { href: '/admin/uitnodigingen', label: 'Uitnodigingen', key: 'uitnodigingen', icon: '✉️' },
+      { href: '/admin/mailbox', label: 'Mailbox', key: 'mailbox', icon: '📨' },
       { href: '/admin/mails', label: 'Mails', key: 'mails', icon: '📬' },
       { href: '/admin/evaluaties', label: 'Evaluaties', key: 'evaluaties', icon: '📊' },
     ],

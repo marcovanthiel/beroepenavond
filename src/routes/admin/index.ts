@@ -47,6 +47,7 @@ import { auditApp } from './audit';
 import { sponsorsApp } from './sponsors';
 import { leerlingenApp } from './leerlingen';
 import { uitnodigingenApp, mailsApp, evaluatiesApp } from './proces';
+import { mailboxApp } from './mailbox';
 
 export const adminApp = new Hono<AdminEnv>();
 
@@ -357,6 +358,7 @@ adminApp.route('/nieuws', announcementsApp);
 adminApp.route('/sponsors', sponsorsApp);
 adminApp.route('/leerlingen', leerlingenApp);
 adminApp.route('/uitnodigingen', uitnodigingenApp);
+adminApp.route('/mailbox', mailboxApp);
 adminApp.route('/mails', mailsApp);
 adminApp.route('/evaluaties', evaluatiesApp);
 adminApp.route('/users', usersApp);

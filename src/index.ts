@@ -15,6 +15,7 @@ import { studentApp } from './routes/student';
 import { renderError } from './views/public';
 import { serveMedia } from './lib/media';
 import { plannerTick, processOutbox } from './lib/outbox';
+import { handleInkomendeMail } from './lib/mailbox';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -147,6 +148,10 @@ export default {
   fetch: app.fetch,
   /** Cron: plant procesmails (herinneringen, eventdag, opvolg) en verstuurt
    *  wat in de outbox "due" is. Fouten mogen de tick nooit laten crashen. */
+  /** Inkomende mail via Email Routing (eigen MX): opslaan in het postvak. */
+  async email(message: ForwardableEmailMessage, env: Env, _ctx: ExecutionContext) {
+    await handleInkomendeMail(message, env);
+  },
   async scheduled(_ctrl: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(
       (async () => {

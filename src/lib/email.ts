@@ -50,6 +50,7 @@ interface SendArgs {
   html: string;
   text?: string;
   replyTo?: string;
+  headers?: Record<string, string>;
 }
 
 export async function sendEmail(
@@ -73,6 +74,7 @@ export async function sendEmail(
         html: args.html,
         text: args.text,
         reply_to: args.replyTo ?? cfg.replyTo,
+        headers: args.headers,
       }),
     });
     if (!res.ok) {
