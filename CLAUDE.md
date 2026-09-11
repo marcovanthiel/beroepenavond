@@ -467,6 +467,30 @@ public/
 wrangler.toml              # Worker + D1 + assets-binding
 ```
 
+## Categorie-uitschuifmenu op de home (drawer, LIVE 11-9-2026)
+
+Klik op een categorietegel in de home-strip → een paneel schuift van rechts
+over de homepage (blijft op de home, navigeert niet). Opbouw in
+`src/views/home.ts` + CSS `.cat-drawer*` in style.css (cachebuster ?v=3):
+- Elke tegel blijft een echte link `/beroepen?cat=<id>` (werkt zónder JS);
+  het inline script onderschept de klik en opent het paneel.
+- Paneelinhoud per categorie staat als verborgen `<template data-cat>` in
+  de HTML (server-side, geen fetch). Script kopieert de juiste template in
+  `#catBody`.
+- Wisselen: het oude paneel schuift dicht, dan het nieuwe open (Marco's
+  volgorde; timing = CSS-duur 340ms). Wisselen kan via de verlichte
+  strip-tegels (blijven boven de scrim, z-index 95) én via de kleurstippen
+  bovenin het paneel (altijd bereikbaar, ook voor tegels onder het paneel).
+- "Ligt bovenop": schermhoog paneel rechts + schaduw + scrim die de rest
+  dimt; strip blijft verlicht als tabbladen. Mobiel <480px = schermvullend.
+- A11y: Esc sluit, focus naar de paneelkop, `prefers-reduced-motion`
+  (geen slide, directe wissel), aria-expanded/aria-current.
+- Deep-link: `/#vak=<categorie-id>` opent dat paneel direct (deelbaar).
+- Verifiëren: het script opent via rAF, dus headless `--screenshot` toont de
+  dichte staat; visueel checken doe je door de open-staat te injecteren
+  (body.cat-open + drawer.open + #catBody vullen + scrim.show) op de echte
+  HTML/CSS, of via de deep-link met echte browser.
+
 ## Herontwerp 2026 "Kleurblok" (LIVE, 10 september 2026)
 
 Het gekopieerde bron-ontwerp mocht niet langer gebruikt worden; de site heeft
