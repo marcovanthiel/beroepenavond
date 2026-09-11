@@ -373,6 +373,21 @@ progressive enhancement (werkt zonder JS).
   copyright-blok b-95c van de homepage (`src/views/home.ts`, daar samen
   met een Privacy-link).
 
+## Rollen in het beheer (relatiebeheerder toegevoegd 11-9-2026)
+`users.role` kent drie waarden: **admin** (Beheerder, alles incl. gebruikers),
+**editor** (Redacteur, inhoud + programma) en **relatiebeheerder**
+(Relatiebeheerder). Aanmaken via beheer → Gebruikers (alleen admins), inloggen
+via de e-mailcode-flow (wachtwoord optioneel). Labels via `roleLabel()`.
+- **Relatiebeheerder** = mag het HELE beheer inzien (alle GET), maar alleen
+  **voorlichters bewerken**. Afgedwongen met een middleware in
+  `routes/admin/index.ts` ná `requireAuth`: voor deze rol worden niet-GET-
+  verzoeken buiten `/admin/speakers` (+ `/admin/account`, `/admin/logout`)
+  geweigerd met een nette melding. `/admin/users` blijft admin-only.
+- Naamkeuze bewust: bij nijmegenduckstad heet de vergelijkbare rol
+  "accountmanager" (beheert eigen prijzen); hier "relatiebeheerder" op verzoek.
+- Nieuwe mutatie-route toevoegen die relatiebeheerders óók mogen? Zet het pad
+  in de `toegestaan`-lijst van die middleware.
+
 ## Belangrijke gotchas (bij eerdere bugs gevonden)
 
 1. **`c.env.ASSETS.fetch(c.req.raw)` faalt soms** in productie. Werkt
