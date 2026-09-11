@@ -489,6 +489,13 @@ CSS `.cat-drawer*` in style.css (cachebuster staat nu op ?v=5):
   "Bekijk dit hele vakgebied →" onderin. Vaste-maat binnenlaag (#catInner,
   JS zet de eindmaat) zodat de inhoud niet verspringt terwijl het paneel
   groeit; het paneel klipt de inhoud. Mobiel <480px = bijna schermvullend.
+- VALKUIL (opgelost 11-9-2026): de sluit-✕ in de kop is `position:absolute`
+  maar de eyebrow-tekst is een blok over de VOLLE breedte en lag eroverheen,
+  waardoor die de klik afving en het kruisje nergens sloot. Fix: sluitknop
+  `z-index` + ruimere klikzone, en decoratieve labels (eyebrow/count)
+  `pointer-events:none`. Verifieer interactieve UI met Playwright (klik echt
+  op de knoppen), niet alleen met screenshots — een headless `--screenshot`
+  toont zo'n overlap niet.
 - Techniek: JS zet left/top/width/height op het paneel en animeert die
   (transition op die vier eigenschappen, .notrans-klasse om de startpositie
   zonder animatie te zetten). DUR (360ms) = de CSS-duur.
