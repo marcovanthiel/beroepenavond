@@ -530,8 +530,12 @@ een eigen ontwerp gekregen. Ontwerptraject: mockup-rondes in een Artifact
   Check altijd even `ls schema/` voor het volgende nummer.
 
 ### Open punten na het herontwerp
-- Publicatieschakelaar staat AAN op prod met 0 bevestigde voorlichters
-  (bulk-bevestigen via /admin/speakers als de namen zichtbaar mogen).
+- Voorlichter-zichtbaarheid: publicatie AAN + 0 bevestigd → vangnet
+  (11-9-2026): publieke pagina's tonen aangemelde voorlichters
+  (`publiekSprekerFilter` in lib/db.ts) totdat de eerste bevestiging
+  binnen is; daarna tellen alleen bevestigde. LET OP: zodra de
+  uitnodigingsflow de eerste bevestiging oplevert, krimpt de publieke
+  lijst dus bewust naar alleen-bevestigden.
 - Jaarfiguur-reeks 2023 t/m 2025 met terugwerkende kracht invullen of pas
   vanaf 2026 opbouwen: keuze Marco.
 - Campagneposter (A3-PDF met sectorenfiguur in drie gedaanten): nog te
