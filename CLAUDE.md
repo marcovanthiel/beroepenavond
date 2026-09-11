@@ -469,9 +469,12 @@ wrangler.toml              # Worker + D1 + assets-binding
 
 ## Categorie-uitschuifmenu op de home (drawer, LIVE 11-9-2026)
 
-Klik op een categorietegel in de home-strip → een paneel schuift van rechts
-over de homepage (blijft op de home, navigeert niet). Opbouw in
-`src/views/home.ts` + CSS `.cat-drawer*` in style.css (cachebuster ?v=3):
+Klik op een categorietegel in de home-strip → het gekozen kleurvlak GROEIT
+op zijn eigen plek open tot een paneel ("container transform"): start =
+exact de tegel-rechthoek, eind = een comfortabel paneel dat vanaf de tegel
+opengroeit (horizontaal verankerd, schuift omhoog als het onder de tegel niet
+past). Blijft op de home, navigeert niet. Opbouw in `src/views/home.ts` +
+CSS `.cat-drawer*` in style.css (cachebuster staat nu op ?v=5):
 - Elke tegel blijft een echte link `/beroepen?cat=<id>` (werkt zónder JS);
   het inline script onderschept de klik en opent het paneel.
 - Paneelinhoud per categorie staat als verborgen `<template data-cat>` in
@@ -480,9 +483,15 @@ over de homepage (blijft op de home, navigeert niet). Opbouw in
 - Wisselen: het oude paneel schuift dicht, dan het nieuwe open (Marco's
   volgorde; timing = CSS-duur 340ms). Wisselen kan via de verlichte
   strip-tegels (blijven boven de scrim, z-index 95) én via de kleurstippen
-  bovenin het paneel (altijd bereikbaar, ook voor tegels onder het paneel).
-- "Ligt bovenop": schermhoog paneel rechts + schaduw + scrim die de rest
-  dimt; strip blijft verlicht als tabbladen. Mobiel <480px = schermvullend.
+  ONDERIN het paneel (altijd bereikbaar, ook voor tegels onder het paneel).
+- Paneelopbouw: gekleurde kop bovenaan (= het groeiende blok; tekstkleur via
+  tekstOp, dus donker op geel), leesbare witte beroepenlijst, kleurstippen +
+  "Bekijk dit hele vakgebied →" onderin. Vaste-maat binnenlaag (#catInner,
+  JS zet de eindmaat) zodat de inhoud niet verspringt terwijl het paneel
+  groeit; het paneel klipt de inhoud. Mobiel <480px = bijna schermvullend.
+- Techniek: JS zet left/top/width/height op het paneel en animeert die
+  (transition op die vier eigenschappen, .notrans-klasse om de startpositie
+  zonder animatie te zetten). DUR (360ms) = de CSS-duur.
 - A11y: Esc sluit, focus naar de paneelkop, `prefers-reduced-motion`
   (geen slide, directe wissel), aria-expanded/aria-current.
 - Deep-link: `/#vak=<categorie-id>` opent dat paneel direct (deelbaar).
