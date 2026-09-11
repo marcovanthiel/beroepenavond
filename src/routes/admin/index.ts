@@ -254,6 +254,11 @@ adminApp.get('/', async (c) => {
       <div class="progress" aria-hidden="true"><span style="width:${pct}%"></span></div>
       <ul class="checklist">${checklistHtml}</ul>
     </div>
+    <div class="card">
+      <div class="card__head"><h2>Materialen</h2></div>
+      <p style="margin:0 0 10px">Kant-en-klare campagneposter voor prikborden, scholen en socials — A3, PDF, met de datum en het jaarfiguur in drie gedaanten.</p>
+      <a class="btn btn--primary btn--sm" href="/assets/campagneposter-beroepenavond-2026.pdf" target="_blank" rel="noopener" download>⬇ Campagneposter A3 (PDF)</a>
+    </div>
     <div class="stat-grid">
       ${stat(newMsgs, 'Openstaande berichten', '/admin/inbox', true)}
       ${stat(beroepenZonder, 'Beroepen zonder spreker', '/admin/beroepen?filter=zonder', true)}
