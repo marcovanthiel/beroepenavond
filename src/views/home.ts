@@ -178,7 +178,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="stylesheet" href="/assets/css/style.css?v=5">
+<link rel="stylesheet" href="/assets/css/style.css?v=6">
 <meta property="og:title" content="Beroepenavond ${eventYear} — Nijmegen">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/og.png">

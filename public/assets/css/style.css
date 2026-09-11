@@ -611,20 +611,22 @@ body.cat-open .bn-strip { position: relative; z-index: 95; }
 
 .cat-drawer__head { position: relative; padding: 20px 22px 18px; flex: 0 0 auto; }
 .cat-drawer__close {
-  position: absolute; top: 12px; right: 14px;
+  position: absolute; top: 10px; right: 12px; z-index: 2;
   background: transparent; border: 0; color: inherit;
-  font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 8px; opacity: .85;
+  font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 10px; opacity: .85;
 }
 .cat-drawer__close:hover { opacity: 1; }
+/* Decoratieve labels mogen de sluitknop nooit afvangen. */
 .cat-drawer__eyebrow {
   display: block; font-size: .7rem; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; opacity: .82;
+  text-transform: uppercase; opacity: .82; pointer-events: none;
+  padding-right: 40px;
 }
 .cat-drawer__head h2 {
   font-family: var(--zb); font-size: clamp(1.4rem, 1.1rem + 1.2vw, 1.9rem);
   letter-spacing: -.02em; margin: 9px 0 4px; line-height: 1; outline: none;
 }
-.cat-drawer__count { font-size: .85rem; font-weight: 600; opacity: .9; }
+.cat-drawer__count { font-size: .85rem; font-weight: 600; opacity: .9; pointer-events: none; }
 .cat-drawer__list { list-style: none; margin: 0; padding: 4px 0; overflow-y: auto; flex: 1; }
 .cat-drawer__list a {
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
