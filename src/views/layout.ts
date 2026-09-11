@@ -134,7 +134,7 @@ ${canonical ? raw(`<meta property="og:url" content="${attr(canonical)}">`) : ''}
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="stylesheet" href="/assets/css/style.css?v=2">
+<link rel="stylesheet" href="/assets/css/style.css?v=3">
 ${raw(jsonLdHtml)}
 </head>
 <body>

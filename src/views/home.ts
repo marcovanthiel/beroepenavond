@@ -9,7 +9,7 @@
 import type { Context } from 'hono';
 import { html, raw } from 'hono/html';
 import type { Env } from '../env';
-import { getActiveEvent, getNavPages, getSettings } from '../lib/db';
+import { getActiveEvent, getCategoriesWithBeroepen, getNavPages, getSettings } from '../lib/db';
 import { gedaanteVanVandaag, jaarfiguurSvg, tekstOp } from './figuur';
 
 function esc(s: string): string {
@@ -22,15 +22,11 @@ function esc(s: string): string {
 
 export async function renderHome(c: Context<{ Bindings: Env }>) {
   const db = c.env.DB;
-  const [settings, event, navItems, cats, beroepCount, rondeRow, sponsorRows] = await Promise.all([
+  const [settings, event, navItems, catsFull, beroepCount, rondeRow, sponsorRows] = await Promise.all([
     getSettings(db),
     getActiveEvent(db),
     getNavPages(db),
-    db.prepare(
-      `SELECT c.id, c.name, c.color, COUNT(b.id) AS n
-       FROM categories c LEFT JOIN beroepen b ON b.category_id = c.id
-       GROUP BY c.id ORDER BY c.sort_order`
-    ).all<{ id: string; name: string; color: string; n: number }>(),
+    getCategoriesWithBeroepen(db),
     db.prepare('SELECT COUNT(*) AS n FROM beroepen').first<{ n: number }>(),
     db.prepare(
       `SELECT COUNT(*) AS n FROM rounds WHERE event_id = (SELECT id FROM events WHERE is_active = 1 LIMIT 1)`
@@ -95,12 +91,49 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   const totSprekers = sprekerRow?.n ?? 0;
   const totRondes = rondeRow?.n ?? 0;
 
-  const stripHtml = (cats.results ?? [])
+  // Categoriestrip: elke tegel is een gewone link naar /beroepen?cat=…
+  // (werkt zonder JS). Met JS onderschept het drawer-script de klik en
+  // schuift het paneel met de beroepen uit, bovenop de homepage.
+  const stripHtml = catsFull
     .map((cat) => {
       const kleur = cat.color || '#0d0d0d';
-      return `<a href="/beroepen?cat=${esc(cat.id)}" style="background:${esc(kleur)};color:${tekstOp(kleur)}">${esc(cat.name)}<em>${cat.n}<span aria-hidden="true">→</span></em></a>`;
+      return `<a class="bn-cat" data-cat="${esc(cat.id)}" href="/beroepen?cat=${esc(cat.id)}" aria-expanded="false" aria-controls="catDrawer" style="background:${esc(kleur)};color:${tekstOp(kleur)}">${esc(cat.name)}<em>${cat.beroepen.length}<span class="bn-cat__pijl" aria-hidden="true">→</span></em></a>`;
     })
     .join('\n      ');
+
+  // Persistente kleur-schakelaar in het paneel: met één klik naar een ander
+  // vakgebied, ook als de categorietegel op de home onder het paneel valt.
+  const drawerTabs = catsFull
+    .map(
+      (cat) =>
+        `<button type="button" class="cat-dot" data-goto="${esc(cat.id)}" style="background:${esc(cat.color || '#0d0d0d')};color:${esc(cat.color || '#0d0d0d')}" aria-label="${esc(cat.name)}" title="${esc(cat.name)}"></button>`
+    )
+    .join('');
+
+  // Verborgen paneel-inhoud per categorie (het drawer-script kopieert de
+  // juiste template in het paneel). Zo is de inhoud er meteen, zonder extra
+  // netwerkverzoek, en blijft alles server-side gerenderd.
+  const drawerData = catsFull
+    .map((cat) => {
+      const kleur = cat.color || '#0d0d0d';
+      const opKleur = tekstOp(kleur);
+      const items = cat.beroepen
+        .map(
+          (b) =>
+            `<li><a href="/beroepen/${b.id}"><span>${esc(b.name)}</span><span class="cat-drawer__pijl" aria-hidden="true">→</span></a></li>`
+        )
+        .join('');
+      return `<template data-cat="${esc(cat.id)}">
+        <div class="cat-drawer__head" style="background:${esc(kleur)};color:${opKleur}">
+          <span class="cat-drawer__eyebrow">Beroepen in dit vakgebied</span>
+          <h2 tabindex="-1">${esc(cat.name)}</h2>
+          <span class="cat-drawer__count">${cat.beroepen.length} ${cat.beroepen.length === 1 ? 'beroep' : 'beroepen'}</span>
+        </div>
+        <ul class="cat-drawer__list">${items}</ul>
+        <div class="cat-drawer__foot"><a href="/beroepen?cat=${esc(cat.id)}">Bekijk dit hele vakgebied →</a></div>
+      </template>`;
+    })
+    .join('\n');
 
   const lijstHtml = lijst
     .map((r) => `<div>${esc(r.l)} <span>${esc(r.r)}</span></div>`)
@@ -141,7 +174,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="stylesheet" href="/assets/css/style.css?v=2">
+<link rel="stylesheet" href="/assets/css/style.css?v=3">
 <meta property="og:title" content="Beroepenavond ${eventYear} — Nijmegen">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/og.png">
@@ -230,6 +263,19 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     <span>${esc(organisatie)} · ${esc(venue)}, ${esc(venueAdres)}</span>
     <span><a href="/nieuwsbrief">Nieuwsbrief</a> · <a href="/privacy">Privacy</a> · <a href="/toegankelijkheid">Toegankelijkheid</a> · <a href="/updates">Updates</a> · <a href="/admin">Beheer</a></span>
   </div>
+
+  <!-- Uitschuifpaneel per beroepscategorie (ligt bovenop de home). -->
+  <div class="cat-scrim" id="catScrim" hidden></div>
+  <aside class="cat-drawer" id="catDrawer" role="dialog" aria-modal="false" aria-label="Beroepen" hidden>
+    <div class="cat-drawer__tabs" role="tablist" aria-label="Kies een vakgebied">
+      ${raw(drawerTabs)}
+      <button type="button" class="cat-drawer__x" data-close aria-label="Menu sluiten">✕</button>
+    </div>
+    <div class="cat-drawer__body" id="catBody"></div>
+  </aside>
+  <div id="catData" hidden>
+    ${raw(drawerData)}
+  </div>
 </main>
 
 <script>
@@ -238,6 +284,135 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     var open = l.classList.toggle('open');
     t.setAttribute('aria-expanded', String(open));
   });
+
+  // Uitschuifmenu per categorie op de homepage.
+  (function () {
+    var strip = document.querySelector('.bn-strip');
+    var drawer = document.getElementById('catDrawer');
+    var scrim = document.getElementById('catScrim');
+    var data = document.getElementById('catData');
+    var bodyEl = document.getElementById('catBody');
+    if (!strip || !drawer || !scrim || !data || !bodyEl) return;
+    var body = document.body;
+    var tabs = drawer.querySelector('.cat-drawer__tabs');
+    var DUR = 340; // moet gelijk zijn aan de CSS-transitieduur
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    var current = null, lastBtn = null, switchTimer = null;
+
+    function tpl(id) {
+      var list = data.getElementsByTagName('template');
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].getAttribute('data-cat') === id) return list[i].innerHTML;
+      }
+      return null;
+    }
+    function markDot(id) {
+      var dots = drawer.querySelectorAll('.cat-dot');
+      for (var i = 0; i < dots.length; i++) {
+        var on = dots[i].getAttribute('data-goto') === id;
+        dots[i].classList.toggle('is-active', on);
+        dots[i].setAttribute('aria-current', on ? 'true' : 'false');
+      }
+    }
+    function markStrip(id) {
+      var links = strip.querySelectorAll('a[data-cat]');
+      for (var i = 0; i < links.length; i++) {
+        var on = links[i].getAttribute('data-cat') === id;
+        links[i].classList.toggle('is-active', on);
+        links[i].setAttribute('aria-expanded', on ? 'true' : 'false');
+      }
+    }
+    function fill(id) {
+      var t = tpl(id);
+      if (t === null) return false;
+      bodyEl.innerHTML = t;
+      current = id;
+      markDot(id);
+      markStrip(id);
+      var h = bodyEl.querySelector('h2');
+      drawer.setAttribute('aria-label', h ? h.textContent : 'Beroepen');
+      if (h) setTimeout(function () { try { h.focus(); } catch (e) {} }, reduce ? 0 : DUR);
+      return true;
+    }
+    function open(id, btn) {
+      if (!fill(id)) return;
+      if (btn) lastBtn = btn;
+      body.classList.add('cat-open');
+      scrim.hidden = false; drawer.hidden = false;
+      void drawer.offsetWidth; // reflow: transitie vertrekt vanaf de dichte staat
+      requestAnimationFrame(function () {
+        drawer.classList.add('open');
+        scrim.classList.add('show');
+      });
+    }
+    function afterClose() {
+      body.classList.remove('cat-open');
+      scrim.hidden = true; drawer.hidden = true;
+      bodyEl.innerHTML = '';
+    }
+    function clearStrip() {
+      var links = strip.querySelectorAll('a[data-cat].is-active');
+      for (var i = 0; i < links.length; i++) {
+        links[i].classList.remove('is-active');
+        links[i].setAttribute('aria-expanded', 'false');
+      }
+    }
+    function closeFull() {
+      if (!current) return;
+      var btn = lastBtn;
+      current = null;
+      clearStrip();
+      drawer.classList.remove('open');
+      scrim.classList.remove('show');
+      if (reduce) afterClose(); else setTimeout(afterClose, DUR);
+      if (btn) try { btn.focus(); } catch (e) {}
+    }
+    function goto(id, btn) {
+      if (current === id) { closeFull(); return; }
+      if (current) {
+        // Marco's volgorde: eerst het huidige menu dicht, dan het nieuwe open.
+        if (reduce) { fill(id); return; }
+        drawer.classList.remove('open'); // scrim blijft staan tijdens het wisselen
+        clearTimeout(switchTimer);
+        switchTimer = setTimeout(function () {
+          if (!fill(id)) return;
+          void drawer.offsetWidth;
+          requestAnimationFrame(function () { drawer.classList.add('open'); });
+        }, DUR);
+      } else {
+        open(id, btn);
+      }
+    }
+
+    // Klik op een categorietegel op de home: paneel openen i.p.v. navigeren.
+    strip.addEventListener('click', function (e) {
+      var a = e.target.closest ? e.target.closest('a[data-cat]') : null;
+      if (!a) return;
+      e.preventDefault();
+      goto(a.getAttribute('data-cat'), a);
+    });
+    // Kleur-schakelaar in het paneel + sluitknop.
+    tabs.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('button') : null;
+      if (!t) return;
+      if (t.hasAttribute('data-close')) { closeFull(); return; }
+      var id = t.getAttribute('data-goto');
+      if (id) goto(id, lastBtn);
+    });
+    scrim.addEventListener('click', function () { closeFull(); });
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 'Escape' || e.key === 'Esc') && current) closeFull();
+    });
+
+    // Deep-link: /#vak=<categorie> opent dat paneel direct (deelbare link).
+    function fromHash() {
+      var m = /#vak=([\w-]+)/.exec(location.hash || '');
+      if (m && tpl(m[1])) open(m[1], null);
+    }
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+  })();
 </script>
 </body>
 </html>`);
