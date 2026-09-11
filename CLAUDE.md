@@ -791,8 +791,58 @@ screenshots) op de lokale dev-server.
     IDL-property blijft `false` → test met `el.matches(':disabled')` of
     visueel, niet met `el.disabled`.
 
-### Openstaand (content-besluit Marco)
-- **Footer-contactadres** toont nog `info@beroepenavondnijmegen.nl` (oud
-  Strato-adres, bounced). Kandidaat-vervanging: `marco@marcovanthiel.nl` of
-  een nieuw `info@beroepenavond2026.nl` (vergt Email Routing-adres op de
-  nieuwe zone). Zit in settings `contact_email` + `mail_to`/`mail_reply_to`.
+### Openstaand (content-besluit Marco) — BESLIST 11-9-2026
+- **Footer-contactadres**: Marco koos `info@beroepenavond2026.nl`. Wordt
+  gezet zodra inkomende mail op beroepenavond2026.nl aanstaat (anders
+  bouncet info@). Zie sectie hieronder.
+
+## Sessie 11-9-2026 (vervolg) — datum, Turnstile, campagneposter
+
+### Datum editie 2026 gecorrigeerd: donderdag 12 november 2026
+De avond is op **donderdag 12 november 2026** (was foutief 20 november; 12
+nov is een donderdag, geverifieerd). Doorgevoerd in D1 (`events.date` van
+`ev_2026`, settings `event_date`/`event_date_long`) én in alle code-fallbacks
+(`EVENT_DATE` in wrangler.toml, home/email/outbox/student/proces). Het
+datum-monument `dd.mm` volgt automatisch uit `events.date` (nu 12.11).
+Losse hardcoded datum in de home-content (hero_eyebrow, meta_description) en
+het nieuwsbericht `datum-2026-bekend` bijgewerkt; in dat bericht stond ook
+ten onrechte "Canisius College" → gecorrigeerd naar Montessori College
+Nijmegen (venue-settings zijn de bron). VALKUIL: datum staat op meerdere
+plekken — settings (live, direct zichtbaar) + code-fallbacks (deploy) +
+losse content in pages/announcements. Scan D1-content bij een datumwissel.
+
+### Turnstile-domein na domeinwissel (domeinwissel-checklist punt 5)
+De Turnstile-widget stond nog op `inijmegen.com` → op beroepenavond2026.nl
+gaf `/aanmelden` "Kan geen verbinding maken met website". Marco heeft in het
+Turnstile-dashboard `beroepenavond2026.nl` + `www.` toegevoegd (Hostname
+Management). Widget laadt weer (Playwright-geverifieerd). LES: bij elke
+domeinwissel is dit een verplichte losse stap; de API-token in `~/.cf-token`
+heeft géén Turnstile-edit-recht, dus dit gaat via het dashboard of een
+ruimer token.
+
+### Campagneposter A3 (PDF) + download in admin
+Nieuwe campagneposter in de Kleurblok-huisstijl: datummonument, jaarfiguur
+(de chirurg) in drie gedaanten (Hij/Zij/X), zes categoriekleuren, Archivo
+Black self-hosted. Reproduceerbare generator
+`scripts/poster/build-poster.mjs` (Playwright, auto-fit-monument voor elke
+datum; editie-constanten bovenin spiegelen de D1-settings). Uitvoer:
+`public/assets/campagneposter-beroepenavond-2026.pdf`, geserveerd via
+`/assets/` en te downloaden via het admin-dashboard (kaart "Materialen").
+Bij een nieuwe editie: constanten in het script bijwerken en opnieuw draaien,
+dan committen (deploy via push). NB: PDF is schermkwaliteit (RGB, geen
+bleed/snijtekens); voor professioneel drukwerk desgewenst een CMYK+bleed-
+variant maken.
+
+### Jaarfiguur-reeks: alleen vanaf 2026 (besluit Marco 11-9-2026)
+Geen terugwerkende reeks 2023–2025; de jaarfiguur-laag wordt pas vanaf 2026
+opgebouwd. Geen codewijziging nodig (huidige gedrag).
+
+### Inkomende mail op beroepenavond2026.nl — WACHT OP TOKEN
+Marco wil inbound mail aan (catch-all → Worker) op de nieuwe zone. De
+API-token in `~/.cf-token` mist **Email Routing: Edit** (GET
+`/zones/{id}/email/routing` → auth error). Marco voegt die permissie toe;
+daarna: Email Routing enablen + catch-all-rule → Worker `beroepenavond`, en
+settings `contact_email` + `mail_reply_to` = `info@beroepenavond2026.nl`
+zetten. Zone-id beroepenavond2026.nl = `629f76653401f79fd5f072e5080d46b2`.
+Zolang inbound uit staat blijft `mail_to`/reply op `marco@marcovanthiel.nl`
+(werkt, bouncet niet).
