@@ -846,3 +846,63 @@ settings `contact_email` + `mail_reply_to` = `info@beroepenavond2026.nl`
 zetten. Zone-id beroepenavond2026.nl = `629f76653401f79fd5f072e5080d46b2`.
 Zolang inbound uit staat blijft `mail_to`/reply op `marco@marcovanthiel.nl`
 (werkt, bouncet niet).
+
+## UX-verbeterronde 2 (36 bevindingen, LIVE 11-9-2026, ?v=8)
+
+Grondige UX-scan van de drie personas (leerling, voorlichter, relatiebeheerder)
+via drie parallelle audit-agents; alle bevindingen doorgevoerd en met Playwright
++ curl echt door de flows geverifieerd (lokale dev). Kernpunten:
+
+### Leerling (`src/routes/student.ts`, `studentauth.ts`, `beroepen.ts`, `sections.ts`)
+- **Intentie-behoud**: een uitgelogde bezoeker die op een beroeppagina "+ Zet in
+  mijn avond" of een vraag verstuurt, verliest dat niet meer. `/leerling/kies` en
+  `/leerling/vraag` zetten bij uitgelogd een korte **intent-cookie** (`ba_intent`,
+  base64 JSON, 30 min) + redirect naar `/leerling?intent=...&next=<beroeppad>`;
+  na de magic-link-login voert `GET /verify` de bewaarde pick/vraag alsnog uit en
+  stuurt door naar `next`. `requireStudent` geeft voor GET-routes nu `?next=` mee.
+  `next` is altijd afgeschermd (`safeNext`, alleen interne paden).
+- Labels aan velden gekoppeld (`for`/`id`) in login + profiel; interesse-checkboxes
+  naar `.check-row`. Lege vraag → nette foutmelding i.p.v. valse bevestiging
+  (textarea's `required`). Mislukte inlogmail wordt gemeld (`?mailfail=1`, leest
+  `requestLogin().mailed`). AJAX-toggle op `/kiezen` checkt `res.ok/redirected`
+  (geen valse "gekozen" bij verlopen sessie). Verwijderknop `aria-label`. Vraag-
+  status NL ("beantwoord"). Nudge naar interesses bij leeg profiel. `.ics` DTSTAMP.
+- Dashboard toont nu ook `?err`-flash. Microcopy geünificeerd ("+ Zet in mijn avond").
+
+### Voorlichter (`src/routes/proces.ts`, `src/lib/email.ts`)
+- Uitnodigingsformulier: bij een servervalidatiefout wordt het formulier **opnieuw
+  getoond met de ingevulde waarden + een foutmelding** (`uitnodigingPage()` gedeeld
+  door GET en POST), niet meer stil geredirect met dataverlies. Native `required`/
+  `type=email` vangt de meeste fouten al in de browser; de server is de backstop.
+- Verlopen/ongeldige uitnodigingslink → vriendelijke pagina (`ongeldigeUitnodiging()`)
+  met "Meld je aan als voorlichter" + mailto-CTA, i.p.v. kale 404.
+- Dubbele bevestigingsmail voorkomen (guard op `status='aangemeld'` in de POST).
+- Spontane aanmelder (`/aanmelden`) krijgt nu een **warme, dankbare** bevestigingsmail
+  (`confirmToSender` splitst op `type==='volunteer'`), niet de koele contact-tekst.
+- Alle directe mails hebben een **plaintext-variant** (deliverability). Sponsor-
+  checkbox naar `.check-row`, autocomplete op alle velden, verplicht-legenda,
+  `<noscript>`-hint bij Turnstile op `/aanmelden` + `/contact`.
+
+### Relatiebeheerder (`admin/layout.ts`, `admin/index.ts`, `admin/account.ts`, `admin.js`, `admin.css`)
+- **`data-confirm` werkte niet** (geen JS-handler): toegevoegd in `admin.js` vóór de
+  spinner-listener, zodat "Nodig ze allemaal uit" en uitnodiging-verwijderen weer om
+  bevestiging vragen.
+- **Actieknop-ankers op alleen-lezen pagina's geneutraliseerd**: een `<fieldset
+  disabled>` schakelt geen `<a>` uit → CSS `.ro-lock a.btn--primary/.btn--danger
+  {pointer-events:none;opacity:.45}`. Geen doodlopende "+ Nieuw"-paden meer.
+- **Dashboard niet meer als alleen-lezen** getoond (`isOverview`-uitzondering): zachte
+  rol-banner i.p.v. gele "Alleen-lezen"-balk + disabled fieldset.
+- **Rolbewuste** snelacties (geen "+ Nieuwsbericht") en checklist-fixknoppen (alleen
+  links binnen zijn bewerkdomein). **Contextbewuste banner** per pad (Voorlichters /
+  Uitnodigingen / Postvak / Je eigen account), als `role="note"` met
+  `aria-describedby` vanuit het vergrendelde fieldset. Account: e-mailveld `readonly`,
+  wachtwoord-doodlopend vervangen door uitleg "inloggen gaat via e-mailcode",
+  `roleLabel()` gebruikt. 403-pagina + banner noemen nu ook het eigen account.
+
+### Overig
+- **Alle gebruikersgerichte em/en-dashes verwijderd** (harde stijlregel): titel-
+  scheiders → ` · `, lege-waarde → `-`, keuze-placeholders → `(geen)`, zin-dashes →
+  komma, tijd-ranges → "tot". De winansi-map in `pdf.ts` en de dash-normaliserende
+  regex in `home.ts` bewust ongemoeid; resterende dashes staan alleen in code-comments.
+- Publieke flash-notices krijgen `role="status"`/`role="alert"`; admin-zoekteller
+  `aria-live="polite"`.
