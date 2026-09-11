@@ -19,10 +19,12 @@ import { handleInkomendeMail } from './lib/mailbox';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// 1. www → apex (canonical).
+// 1. Canoniek domein: élke andere host (www, oud domein) → 301 naar
+//    SITE_HOST met behoud van pad. Domeinwissel = alleen SITE_HOST
+//    omzetten in wrangler.toml (plus custom domain koppelen).
 app.use('*', async (c, next) => {
   const url = new URL(c.req.url);
-  if (url.hostname === `www.${c.env.SITE_HOST}`) {
+  if (url.hostname !== c.env.SITE_HOST && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
     url.hostname = c.env.SITE_HOST;
     return c.redirect(url.toString(), 301);
   }

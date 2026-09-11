@@ -651,3 +651,25 @@ daarna $0,35/1.000; binding `send_email` → geen API-key meer). LET OP:
 nieuwe verzendaccounts hebben een opwarmend dagquotum — ruim vóór de
 campagne van 2027 migreren en rustig volume opbouwen. Dan zit ontvangst
 én verzending volledig bij Cloudflare in onze eigen Worker.
+
+## Domeinmigratie naar beroepenavond2026.nl (gestart 11-9-2026)
+
+Stand: zone bestaat in het account (629f76653401f79fd5f072e5080d46b2,
+NS georgia/keanu.ns.cloudflare.com), custom domains apex + www zijn al
+aan de Worker gekoppeld via de API, de Worker redirect élke niet-canonieke
+host 301 naar SITE_HOST (dus oud domein → nieuw zodra SITE_HOST omgaat).
+
+Volgorde omschakeling (zodra de zone "active" is):
+1. wrangler.toml: SITE_HOST = "beroepenavond2026.nl" → push (CI deployt).
+2. D1-setting `site_host` → beroepenavond2026.nl (mails/links volgen dan).
+3. Volledige test (pagina's, redirect oud→nieuw, leerling-magic-link,
+   uitnodiging, admin-code, sitemap/canonical, Turnstile-formulieren).
+4. HANDMATIG (Marco, dashboard): Turnstile-widget 0x4AAAAAADqvV4f--hXcokE0
+   → nieuwe domeinen toevoegen (API-token mag dit niet); Email Routing op
+   de nieuwe zone aanzetten (enable + catch-all → Worker) voor de Mailbox;
+   Always Use HTTPS op de nieuwe zone.
+5. LATER (MacBook, Resend-key): beroepenavond2026.nl in Resend verifiëren
+   en settings mail_from/mail_reply_to omzetten; tot die tijd blijft de
+   afzender noreply@inijmegen.com (werkt gewoon).
+BLOKKEREND: nameservers bij de registrar op georgia + keanu
+.ns.cloudflare.com zetten (alleen Marco kan dit; zone staat op "pending").
