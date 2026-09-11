@@ -29,7 +29,9 @@ interface NavGroup {
 
 /** Rol-weergave in het Nederlands (opgeslagen waarde blijft admin/editor). */
 export function roleLabel(role: string): string {
-  return role === 'admin' ? 'Beheerder' : 'Redacteur';
+  if (role === 'admin') return 'Beheerder';
+  if (role === 'relatiebeheerder') return 'Relatiebeheerder';
+  return 'Redacteur';
 }
 
 const NAV: NavGroup[] = [

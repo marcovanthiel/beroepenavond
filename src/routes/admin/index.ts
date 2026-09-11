@@ -20,7 +20,7 @@ import {
   logAudit,
 } from '../../lib/auth';
 import { renderLogin, renderSetup, renderCodeForm } from '../../views/admin/login';
-import { renderAdminLayout, esc } from '../../views/admin/layout';
+import { renderAdminLayout, esc, pageHeader } from '../../views/admin/layout';
 import { str, redirectErr } from '../../lib/forms';
 import { getSettings } from '../../lib/db';
 import { mailConfig, sendEmail, emailShell } from '../../lib/email';
@@ -149,6 +149,27 @@ adminApp.post('/logout', async (c) => {
 // ----------------------------------------------------------------------
 
 adminApp.use('*', requireAuth);
+
+// Rol 'relatiebeheerder': mag alles inzien (GET), maar alleen voorlichters
+// bewerken. Wijzigingen buiten /admin/speakers (+ eigen account/uitloggen)
+// worden geweigerd met een nette melding.
+adminApp.use('*', async (c, next) => {
+  const user = c.get('user');
+  if (user.role !== 'relatiebeheerder') return next();
+  const m = c.req.method.toUpperCase();
+  if (m === 'GET' || m === 'HEAD') return next();
+  const path = new URL(c.req.url).pathname;
+  const toegestaan =
+    path.startsWith('/admin/speakers') ||
+    path.startsWith('/admin/account') ||
+    path === '/admin/logout';
+  if (toegestaan) return next();
+  return renderAdminLayout(c, {
+    title: 'Alleen-lezen',
+    activeKey: '',
+    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>, maar alleen de <a href="/admin/speakers">voorlichters</a> bewerken. Vraag een beheerder om andere wijzigingen.</p></div>`,
+  });
+});
 
 // ----------------------------------------------------------------------
 // 3. Dashboard

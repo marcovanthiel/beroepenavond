@@ -55,9 +55,12 @@ usersApp.get('/', async (c) => {
 });
 
 const ROLES = [
+  { value: 'relatiebeheerder', label: 'Relatiebeheerder (alles inzien, alleen voorlichters bewerken)' },
   { value: 'editor', label: 'Redacteur (inhoud + programma)' },
   { value: 'admin', label: 'Beheerder (alles incl. gebruikers)' },
 ];
+const ROLE_VALUES = ROLES.map((r) => r.value);
+const parseRole = (v: unknown) => (ROLE_VALUES.includes(String(v)) ? String(v) : 'editor');
 
 usersApp.get('/new', (c) => {
   const body = `
@@ -81,7 +84,7 @@ usersApp.post('/new', async (c) => {
   const password = str(b.password).length >= 10 ? str(b.password) : randomHex(16);
   if (!str(b.name) || !email) return redirectErr(c, '/admin/users/new', 'Vul naam en e-mailadres in.');
   if (await findUserByEmail(c.env.DB, email)) return redirectErr(c, '/admin/users/new', 'Er bestaat al een gebruiker met dit e-mailadres.');
-  const role = str(b.role) === 'admin' ? 'admin' : 'editor';
+  const role = parseRole(b.role);
   const id = await createUser(c.env.DB, { name: str(b.name), email, password, role });
   await logAudit(c, 'create', 'user', id);
   return redirectOk(c, '/admin/users', 'Gebruiker aangemaakt.');
@@ -109,7 +112,7 @@ usersApp.get('/:id', async (c) => {
 usersApp.post('/:id', async (c) => {
   const id = c.req.param('id');
   const b = await c.req.parseBody();
-  const role = str(b.role) === 'admin' ? 'admin' : 'editor';
+  const role = parseRole(b.role);
   await c.env.DB.prepare('UPDATE users SET name = ?, email = ?, role = ?, updated_at = unixepoch() WHERE id = ?')
     .bind(str(b.name), str(b.email).toLowerCase(), role, id)
     .run();
