@@ -10,7 +10,7 @@
  */
 import type { Context } from 'hono';
 import type { Env } from '../env';
-import { getNavPages, getSettings } from '../lib/db';
+import { getNavPages, getSettings, publiekSprekerFilter } from '../lib/db';
 import { renderLayout } from './layout';
 import { categoriePictogram, tekstOp } from './figuur';
 
@@ -30,8 +30,9 @@ interface CatRow { id: string; name: string; color: string | null; }
 interface BeroepRow { id: number; category_id: string | null; name: string; description_md: string | null; }
 
 async function speakerCounts(db: Env['DB']): Promise<Map<number, number>> {
+  const filter = await publiekSprekerFilter(db);
   const rows = await db
-    .prepare('SELECT beroep_id, COUNT(*) AS n FROM speakers WHERE is_public = 1 AND confirmed = 1 AND beroep_id IS NOT NULL GROUP BY beroep_id')
+    .prepare(`SELECT beroep_id, COUNT(*) AS n FROM speakers WHERE ${filter} AND beroep_id IS NOT NULL GROUP BY beroep_id`)
     .all<{ beroep_id: number; n: number }>();
   const map = new Map<number, number>();
   for (const r of rows.results ?? []) map.set(r.beroep_id, r.n);
@@ -139,7 +140,7 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
 
   const sprekers = published
     ? (await db
-        .prepare('SELECT full_name, job_title, organization, portrait_url, linkedin FROM speakers WHERE is_public = 1 AND confirmed = 1 AND beroep_id = ? ORDER BY full_name')
+        .prepare(`SELECT full_name, job_title, organization, portrait_url, linkedin FROM speakers WHERE ${await publiekSprekerFilter(db)} AND beroep_id = ? ORDER BY full_name`)
         .bind(beroepId)
         .all<{ full_name: string; job_title: string | null; organization: string | null; portrait_url: string | null; linkedin: string | null }>()).results ?? []
     : [];

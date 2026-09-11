@@ -99,3 +99,16 @@ export async function getCategoriesWithBeroepen(
     beroepen: byCat.get(c.id) ?? [],
   }));
 }
+
+/**
+ * Vangnet voor de aanloopfase: zolang nog geen enkele voorlichter
+ * bevestigd is, tonen publieke pagina's de aangemelde voorlichters
+ * (is_public=1). Zodra het bevestigen begint, tellen alleen bevestigde mee.
+ * Retourneert het WHERE-fragment voor speakers-queries.
+ */
+export async function publiekSprekerFilter(db: D1Database): Promise<string> {
+  const r = await db
+    .prepare('SELECT COUNT(*) AS n FROM speakers WHERE is_public = 1 AND confirmed = 1')
+    .first<{ n: number }>();
+  return (r?.n ?? 0) > 0 ? 'is_public = 1 AND confirmed = 1' : 'is_public = 1';
+}

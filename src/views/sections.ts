@@ -5,6 +5,7 @@
  */
 import type { D1Database } from '@cloudflare/workers-types';
 import type { SettingsMap } from '../env';
+import { publiekSprekerFilter } from '../lib/db';
 import { renderMarkdown } from '../lib/markdown';
 
 function esc(s: unknown): string {
@@ -89,9 +90,10 @@ export async function renderVoorlichters(db: D1Database, beroepId?: number): Pro
       .prepare('SELECT b.name, c.name AS cat_name, c.color AS cat_color FROM beroepen b LEFT JOIN categories c ON c.id = b.category_id WHERE b.id = ?')
       .bind(beroepId)
       .first<{ name: string; cat_name: string | null; cat_color: string | null }>();
+    const filter = await publiekSprekerFilter(db);
     const sp = await db
       .prepare(
-        'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 AND confirmed = 1 AND beroep_id = ? ORDER BY full_name'
+        `SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE ${filter} AND beroep_id = ? ORDER BY full_name`
       )
       .bind(beroepId)
       .all<SpeakerRow>();
@@ -125,11 +127,12 @@ export async function renderVoorlichters(db: D1Database, beroepId?: number): Pro
     return `${heading}<div class="grid grid--auto">${items.map(speakerCard).join('')}</div>${studentBox}`;
   }
 
+  const filterAlle = await publiekSprekerFilter(db);
   const [cats, spk] = await Promise.all([
     db.prepare('SELECT id, name, color FROM categories ORDER BY sort_order').all<{ id: string; name: string; color: string | null }>(),
     db
       .prepare(
-        'SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE is_public = 1 AND confirmed = 1 ORDER BY full_name'
+        `SELECT full_name, job_title, organization, portrait_url, linkedin, category_id FROM speakers WHERE ${filterAlle} ORDER BY full_name`
       )
       .all<SpeakerRow>(),
   ]);
