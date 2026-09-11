@@ -15,6 +15,10 @@ export interface Env {
   // Cloudflare Turnstile secret (optioneel). Aanwezig => formulieren verifiëren
   // de Turnstile-token; afwezig => alleen het heuristiek-spamfilter.
   TURNSTILE_SECRET_KEY?: string;
+  // Anthropic API-key (optioneel): met key worden veel vragen-vooraf per
+  // beroep AI-samengevat; zonder key een nette opsomming (graceful fallback).
+  ANTHROPIC_API_KEY?: string;
+  ANTHROPIC_MODEL?: string;
   // Vars uit wrangler.toml
   SITE_NAME: string;
   SITE_HOST: string;

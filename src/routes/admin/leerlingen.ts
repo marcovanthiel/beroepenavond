@@ -66,8 +66,27 @@ leerlingenApp.get('/vragen', async (c) => {
     )
     .join('');
   const total = (rows.results ?? []).length;
+  // Teller per beroep: hoeveel vragen er binnen zijn en hoeveel er nog naar
+  // de voorlichter verstuurd moeten worden (2 dagen vooraf + ochtendmail).
+  const perBeroep = await c.env.DB.prepare(
+    `SELECT COALESCE(b.name, 'Algemeen') AS beroep, COUNT(*) AS n,
+            SUM(CASE WHEN q.sent_to_speaker = 0 THEN 1 ELSE 0 END) AS nog
+       FROM student_questions q LEFT JOIN beroepen b ON b.id = q.beroep_id
+      GROUP BY q.beroep_id ORDER BY n DESC, beroep`
+  ).all<{ beroep: string; n: number; nog: number }>();
+  const teller = (perBeroep.results ?? []).length
+    ? `<div class="card" style="margin-bottom:16px">
+        <h3 style="margin-top:0">Vragen per beroep</h3>
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th>Beroep</th><th style="text-align:right">Vragen</th><th style="text-align:right">Nog te versturen</th></tr></thead>
+          <tbody>${(perBeroep.results ?? []).map((r) => `<tr><td>${esc(r.beroep)}</td><td style="text-align:right">${r.n}</td><td style="text-align:right">${r.nog > 0 ? `<span class="badge badge--on">${r.nog}</span>` : '0'}</td></tr>`).join('')}</tbody>
+        </table></div>
+        <p class="muted" style="font-size:.85rem;margin:8px 0 0">Twee dagen voor de avond gaan de tot dan ingestuurde vragen automatisch naar de voorlichters; wat daarna binnenkomt gaat mee in de ochtendmail.</p>
+      </div>`
+    : '';
   const body = `
     ${pageHeader('Vragen vooraf', tabs('q'))}
+    ${teller}
     ${filterBar({ targetId: 'tbl-vragen', placeholder: 'Zoek in vragen, beroep of leerling…', total, noun: 'vragen' })}
     <div class="table-wrap"><table class="data" id="tbl-vragen">
       <thead><tr><th>Beroep</th><th>Vraag</th><th>Leerling</th><th>Status</th><th></th></tr></thead>

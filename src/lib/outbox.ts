@@ -77,12 +77,15 @@ export function renderTemplate(
       if (blokRuw.includes('{{knop}}')) {
         return payload.link ? `<p style="margin:18px 0">${emailButton(payload.link, payload.knop_label || 'Open de pagina')}</p>` : '';
       }
-      const regels = vul(blokRuw)
+      const gevuld = vul(blokRuw).trim();
+      if (!gevuld) return ''; // leeg geworden blok (bv. {{vragen}} zonder vragen) overslaan
+      const regels = gevuld
         .split('\n')
         .map((r) => esc(r).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'))
         .join('<br>');
       return `<p>${regels}</p>`;
     })
+    .filter(Boolean)
     .join('');
   return { subject, html: (cfg) => emailShell(tpl.name.split(':')[1]?.trim() || tpl.name, alineas, cfg.brand), text: bodyText };
 }
@@ -149,6 +152,81 @@ function stdPayload(settings: SettingsMap): MailPayload {
   };
 }
 
+/** Datum (YYYY-MM-DD) van `iso` plus/minus dagen. */
+function datumPlus(iso: string, dagen: number): string {
+  const t = Date.parse(iso + 'T12:00:00Z');
+  if (!Number.isFinite(t)) return iso;
+  return new Date(t + dagen * 86400000).toISOString().slice(0, 10);
+}
+
+/** Ontdubbelt vragen (hoofdletter/spatie-ongevoelig), behoudt de eerste vorm. */
+function ontdubbel(vragen: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of vragen) {
+    const q = v.trim();
+    if (!q) continue;
+    const k = q.toLowerCase().replace(/\s+/g, ' ').replace(/[?.!]+$/, '');
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(q);
+  }
+  return out;
+}
+
+/** Bouwt de vragen-tekst voor in de mail: opsomming, of AI-samenvatting bij
+ *  veel vragen (alleen als er een Anthropic-key is; anders nette terugval). */
+async function vragenTekst(env: Env, beroepNaam: string, vragen: string[]): Promise<string> {
+  const uniek = ontdubbel(vragen);
+  if (!uniek.length) return '';
+  const lijst = uniek.map((v) => '- ' + v).join('\n');
+  if (uniek.length <= 10 || !env.ANTHROPIC_API_KEY) return lijst;
+  try {
+    const prompt =
+      `Hieronder staan vragen die scholieren vooraf stelden aan een voorlichter (beroep: ${beroepNaam}). ` +
+      `Vat ze samen tot een beknopte, gegroepeerde lijst met streepjes-bullets in het Nederlands: voeg vergelijkbare vragen samen, haal dubbele eruit, behoud de kern. ` +
+      `Geef ALLEEN de bullets, geen inleiding.\n\n${uniek.map((v) => '- ' + v).join('\n')}`;
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) return lijst;
+    const j = (await res.json()) as { content?: { type: string; text?: string }[] };
+    const txt = (j.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('\n').trim();
+    return txt || lijst;
+  } catch {
+    return lijst;
+  }
+}
+
+/** Openstaande (nog niet verstuurde) vragen voor een beroep + hun ids. */
+async function openVragen(db: D1Database, beroepId: number): Promise<{ ids: number[]; teksten: string[] }> {
+  const rows = await db
+    .prepare('SELECT id, question FROM student_questions WHERE beroep_id = ? AND sent_to_speaker = 0 ORDER BY created_at')
+    .bind(beroepId)
+    .all<{ id: number; question: string }>();
+  const r = rows.results ?? [];
+  return { ids: r.map((x) => x.id), teksten: r.map((x) => x.question) };
+}
+
+async function markVragenVerstuurd(db: D1Database, ids: number[]): Promise<void> {
+  for (let i = 0; i < ids.length; i += 40) {
+    const chunk = ids.slice(i, i + 40);
+    await db.prepare(`UPDATE student_questions SET sent_to_speaker = 1 WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).run();
+  }
+}
+
+/** Is er al een (welk dan ook) outbox-item met deze dedup-key? */
+async function bestaatOutbox(db: D1Database, dedupKey: string): Promise<boolean> {
+  const r = await db.prepare('SELECT 1 FROM mail_outbox WHERE dedup_key = ? LIMIT 1').bind(dedupKey).first();
+  return !!r;
+}
+
 export async function plannerTick(env: Env): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const db = env.DB;
@@ -174,18 +252,58 @@ export async function plannerTick(env: Env): Promise<void> {
     await db.prepare('UPDATE speaker_invites SET reminded_at = ? WHERE token = ?').bind(now, inv.token).run();
   }
 
-  // 2. Ochtend van het event: opsteker voor bevestigde voorlichters (9:30).
+  // 2a. Twee dagen vóór het event: vragen-vooraf per beroep naar de
+  //     bevestigde voorlichters (9:30). Voorlichters zonder vragen overslaan.
+  if (datumPlus(event.date, -2) === vandaag) {
+    const sprekers = await db.prepare(
+      `SELECT sp.id, sp.full_name, sp.email, sp.beroep_id, b.name AS beroep
+       FROM speakers sp LEFT JOIN beroepen b ON b.id = sp.beroep_id
+       WHERE sp.is_public = 1 AND sp.confirmed = 1 AND sp.email IS NOT NULL AND sp.email != '' AND sp.beroep_id IS NOT NULL`
+    ).all<{ id: string; full_name: string; email: string; beroep_id: number; beroep: string | null }>();
+    for (const s of sprekers.results ?? []) {
+      const dedup = `vl_vragen:${event.id}:${s.id}`;
+      if (await bestaatOutbox(db, dedup)) continue;
+      const { ids, teksten } = await openVragen(db, s.beroep_id);
+      if (!ids.length) continue; // geen vragen → geen mail, later evt. alsnog
+      const vragen = await vragenTekst(env, s.beroep || 'dit beroep', teksten);
+      await queueMail(db, {
+        templateKey: 'vl_vragen', to: s.email,
+        payload: { ...std, naam: s.full_name, vragen },
+        scheduledFor: volgende930(now),
+        dedupKey: dedup,
+      });
+      await markVragenVerstuurd(db, ids);
+    }
+  }
+
+  // 2b. Ochtend van het event: opsteker voor bevestigde voorlichters (9:30),
+  //     met de vragen die ná de vragen-mail nog zijn binnengekomen.
   if (vandaag === event.date) {
     const sprekers = await db.prepare(
-      "SELECT id, full_name, email FROM speakers WHERE is_public = 1 AND confirmed = 1 AND email IS NOT NULL AND email != ''"
-    ).all<{ id: string; full_name: string; email: string }>();
+      `SELECT sp.id, sp.full_name, sp.email, sp.beroep_id, b.name AS beroep
+       FROM speakers sp LEFT JOIN beroepen b ON b.id = sp.beroep_id
+       WHERE sp.is_public = 1 AND sp.confirmed = 1 AND sp.email IS NOT NULL AND sp.email != ''`
+    ).all<{ id: string; full_name: string; email: string; beroep_id: number | null; beroep: string | null }>();
     for (const s of sprekers.results ?? []) {
+      const dedup = `vl_eventdag:${event.id}:${s.id}`;
+      if (await bestaatOutbox(db, dedup)) continue;
+      let vragenBlok = '';
+      let laatIds: number[] = [];
+      if (s.beroep_id) {
+        const { ids, teksten } = await openVragen(db, s.beroep_id);
+        if (ids.length) {
+          laatIds = ids;
+          const vragen = await vragenTekst(env, s.beroep || 'dit beroep', teksten);
+          vragenBlok = 'Nog enkele vragen die sinds ons vorige berichtje binnenkwamen:\n' + vragen;
+        }
+      }
       await queueMail(db, {
         templateKey: 'vl_eventdag', to: s.email,
-        payload: { ...std, naam: s.full_name },
+        payload: { ...std, naam: s.full_name, vragen: vragenBlok },
         scheduledFor: volgende930(now - 86400) <= now ? now : volgende930(now),
-        dedupKey: `vl_eventdag:${event.id}:${s.id}`,
+        dedupKey: dedup,
       });
+      if (laatIds.length) await markVragenVerstuurd(db, laatIds);
     }
   }
 
