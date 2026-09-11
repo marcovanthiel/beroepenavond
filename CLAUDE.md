@@ -10,7 +10,8 @@
 Website voor de **Beroepenavond Nijmegen** — jaarlijkse
 voorlichtingsavond door **Rotary Club Nijmegen-Stad en Land** samen met
 de **decanen van de middelbare scholen in Nijmegen e.o.**, gehost op
-het **Canisius College**.
+het **Montessori College Nijmegen** (Kwakkenbergweg 27; gecorrigeerd
+11-9-2026, stond eerder onterecht als Canisius College).
 
 - **Datum 2026**: donderdag 20 november 2026, 18:30 – 21:30
 - **Live**: `https://inijmegen.com/` (NB: `.com`, niet `.nl` — die is van

@@ -73,7 +73,9 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   // Datum-monument dd.mm uit de actieve editie (bron van waarheid = events).
   const iso = event?.date || c.env.EVENT_DATE || '2026-11-20';
   const monument = `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
-  const venue = settings['venue_name'] || 'Canisius College Nijmegen';
+  const venue = settings['venue_name'] || 'Montessori College Nijmegen';
+  const venueAdres = settings['venue_address'] || 'Kwakkenbergweg 27, 6523 MJ Nijmegen';
+  const venueStraat = venueAdres.split(',')[0].trim();
   const tijd = (settings['event_time'] || '18:30 tot 21:30').replace(/\s*[–—-]\s*/g, ' tot ');
   const editie = settings['edition_label'] || '25e';
   const organisatie = settings['organization'] || 'Rotary Club Nijmegen-Stad en Land';
@@ -121,7 +123,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     location: {
       '@type': 'Place',
       name: venue,
-      address: settings['venue_address'] || 'Berg en Dalseweg 207, 6522 BR Nijmegen',
+      address: settings['venue_address'] || 'Kwakkenbergweg 27, 6523 MJ Nijmegen',
     },
     organizer: { '@type': 'Organization', name: organisatie, url: `https://${c.env.SITE_HOST}` },
     image: `https://${c.env.SITE_HOST}/assets/img/og.png`,
@@ -166,7 +168,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   <div class="bn-hero">
     <div class="bn-hero__tekst">
       <h1>${monument}</h1>
-      <div class="bn-hero__sub"><b>${eventDateLong}</b> · ${venue} · ${tijd} · gratis toegang</div>
+      <div class="bn-hero__sub"><b>${eventDateLong}</b> · ${venue}, ${venueStraat} · ${tijd} · gratis toegang</div>
       <div class="bn-hero__cta">
         <a class="btn btn--primary btn--lg" href="#hoe">Hoe werkt het?</a>
         <a class="btn btn--ghost btn--lg" href="/beroepen">Alle beroepen</a>
@@ -225,7 +227,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   })())}
 
   <div class="bn-voet">
-    <span>${esc(organisatie)} · met de decanen van de scholen in Nijmegen e.o.</span>
+    <span>${esc(organisatie)} · ${esc(venue)}, ${esc(venueAdres)}</span>
     <span><a href="/nieuwsbrief">Nieuwsbrief</a> · <a href="/privacy">Privacy</a> · <a href="/toegankelijkheid">Toegankelijkheid</a> · <a href="/updates">Updates</a> · <a href="/admin">Beheer</a></span>
   </div>
 </main>

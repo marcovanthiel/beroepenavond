@@ -38,7 +38,7 @@ export function mailConfig(env: Env, settings: SettingsMap): MailConfig {
       // Overschrijfbaar via de settings-tabel (admin → Instellingen).
       slogan: settings['mail_slogan'] || '169 professionals. Eén missie.',
       datum: (settings['event_date_long'] || 'Donderdag 20 november 2026') +
-        ' · ' + (settings['venue_name'] || 'Canisius College Nijmegen'),
+        ' · ' + (settings['venue_name'] || 'Montessori College Nijmegen'),
       host: settings['site_host'] || 'inijmegen.com',
     },
   };
@@ -143,8 +143,7 @@ export function emailShell(title: string, inner: string, brand?: MailBrand): str
       </td></tr>
       ${merkblok}
       <tr><td style="padding:16px 8px 0;text-align:center;color:#8a8a86;font-size:12px;line-height:1.5">
-        Rotary Club Nijmegen-Stad en Land · met de decanen van de scholen in Nijmegen e.o.<br>
-        Canisius College Nijmegen
+        Rotary Club Nijmegen-Stad en Land · met de decanen van de scholen in Nijmegen e.o.
       </td></tr>
     </table>
   </td></tr></table></body></html>`;
