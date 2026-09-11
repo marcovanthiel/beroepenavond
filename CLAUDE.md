@@ -756,3 +756,43 @@ Volgorde omschakeling (zodra de zone "active" is):
    afzender noreply@inijmegen.com (werkt gewoon).
 BLOKKEREND: nameservers bij de registrar op georgia + keanu
 .ns.cloudflare.com zetten (alleen Marco kan dit; zone staat op "pending").
+
+## UX-ronde 3 personas (LIVE, 11-9-2026, cachebuster ?v=7)
+
+Volledige UX-scan + verbeteringen voor leerling, voorlichter en
+relatiebeheerder, met Playwright echt door de UI gedreven (niet alleen
+screenshots) op de lokale dev-server.
+
+### Leerling
+- **Beroepen kiezen** (`/leerling/kiezen`, `src/routes/student.ts`): elk
+  beroep is nu een toggle-knop (`.pick-btn`, `aria-pressed`) met **live
+  zoekveld** (`#kiesZoek`), **teller** ("N beroepen gekozen", `#kiesTeller`,
+  `aria-live`) en **lege-staat**. Toggelen gaat via **AJAX** (fetch POST,
+  geen herlaad; wisselt `remove.disabled` + knop-klasse/label). No-JS-
+  fallback: het blijft een echt `<form class="pick-form">` dat submit.
+- **Checkboxes** (nieuwsbrief + tijdblok-blokkades): waren via `.field`
+  uitgerekt over de volle breedte (label ver weg). Nu klasse **`.check-row`**
+  (flex, `input[type=checkbox]{width:auto}`) → net vinkje met label ernaast;
+  nieuwsbrief kreeg een `<noscript>` opslaan-knop.
+- Em-dash uit de login-intro gehaald ("geen wachtwoord nodig.").
+
+### Relatiebeheerder (zichtbaarheid van zijn grenzen)
+- Nieuw **`src/lib/perms.ts`** = enige bron van waarheid
+  (`RELATIEBEHEERDER_BEWERKT` + `relatiebeheerderMagBewerken(path)`), gebruikt
+  door zowel de 403-middleware (`routes/admin/index.ts`) als de layout.
+- `renderAdminLayout` toont nu een **`.rb-banner`**: op bewerkbare pagina's
+  "Relatiebeheerder"-uitleg, op alleen-lees-pagina's een gele
+  **"Alleen-lezen"**-balk met snelkoppelingen naar zijn wél-domein
+  (Voorlichters, Uitnodigingen, Postvak). De pagina-body wordt daar in een
+  **`<fieldset class="ro-lock" disabled>`** gewikkeld → alle velden grijs en
+  niet-interactief. CSS in `admin.css` (`.rb-banner`, `.ro-lock`).
+  - GOTCHA (test): een input in `<fieldset disabled>` is functioneel
+    vergrendeld en matcht `:disabled` (grijs), maar zijn eigen `.disabled`
+    IDL-property blijft `false` → test met `el.matches(':disabled')` of
+    visueel, niet met `el.disabled`.
+
+### Openstaand (content-besluit Marco)
+- **Footer-contactadres** toont nog `info@beroepenavondnijmegen.nl` (oud
+  Strato-adres, bounced). Kandidaat-vervanging: `marco@marcovanthiel.nl` of
+  een nieuw `info@beroepenavond2026.nl` (vergt Email Routing-adres op de
+  nieuwe zone). Zit in settings `contact_email` + `mail_to`/`mail_reply_to`.
