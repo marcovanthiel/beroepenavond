@@ -125,12 +125,16 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
         .join('');
       return `<template data-cat="${esc(cat.id)}">
         <div class="cat-drawer__head" style="background:${esc(kleur)};color:${opKleur}">
+          <button type="button" class="cat-drawer__close" data-close aria-label="Menu sluiten">✕</button>
           <span class="cat-drawer__eyebrow">Beroepen in dit vakgebied</span>
           <h2 tabindex="-1">${esc(cat.name)}</h2>
           <span class="cat-drawer__count">${cat.beroepen.length} ${cat.beroepen.length === 1 ? 'beroep' : 'beroepen'}</span>
         </div>
         <ul class="cat-drawer__list">${items}</ul>
-        <div class="cat-drawer__foot"><a href="/beroepen?cat=${esc(cat.id)}">Bekijk dit hele vakgebied →</a></div>
+        <div class="cat-drawer__foot">
+          <div class="cat-drawer__switch" role="tablist" aria-label="Ander vakgebied">${drawerTabs}</div>
+          <a class="cat-drawer__all" href="/beroepen?cat=${esc(cat.id)}">Bekijk dit hele vakgebied →</a>
+        </div>
       </template>`;
     })
     .join('\n');
@@ -174,7 +178,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="stylesheet" href="/assets/css/style.css?v=3">
+<link rel="stylesheet" href="/assets/css/style.css?v=5">
 <meta property="og:title" content="Beroepenavond ${eventYear} — Nijmegen">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/og.png">
@@ -267,11 +271,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   <!-- Uitschuifpaneel per beroepscategorie (ligt bovenop de home). -->
   <div class="cat-scrim" id="catScrim" hidden></div>
   <aside class="cat-drawer" id="catDrawer" role="dialog" aria-modal="false" aria-label="Beroepen" hidden>
-    <div class="cat-drawer__tabs" role="tablist" aria-label="Kies een vakgebied">
-      ${raw(drawerTabs)}
-      <button type="button" class="cat-drawer__x" data-close aria-label="Menu sluiten">✕</button>
-    </div>
-    <div class="cat-drawer__body" id="catBody"></div>
+    <div class="cat-drawer__inner" id="catInner"></div>
   </aside>
   <div id="catData" hidden>
     ${raw(drawerData)}
@@ -285,20 +285,22 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     t.setAttribute('aria-expanded', String(open));
   });
 
-  // Uitschuifmenu per categorie op de homepage.
+  // Uitschuifmenu per categorie: het gekozen kleurvlak groeit op zijn eigen
+  // plek open tot het paneel ("container transform"). Bij wisselen krimpt het
+  // huidige terug naar zijn tegel en groeit het nieuwe uit de nieuwe tegel.
   (function () {
     var strip = document.querySelector('.bn-strip');
     var drawer = document.getElementById('catDrawer');
+    var inner = document.getElementById('catInner');
     var scrim = document.getElementById('catScrim');
     var data = document.getElementById('catData');
-    var bodyEl = document.getElementById('catBody');
-    if (!strip || !drawer || !scrim || !data || !bodyEl) return;
+    if (!strip || !drawer || !inner || !scrim || !data) return;
     var body = document.body;
-    var tabs = drawer.querySelector('.cat-drawer__tabs');
-    var DUR = 340; // moet gelijk zijn aan de CSS-transitieduur
+    var DUR = 360; // gelijk aan de CSS-transitieduur
     var reduce = false;
     try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
-    var current = null, lastBtn = null, switchTimer = null;
+    var PANEL_W = 380, GAP = 8;
+    var current = null, lastBtn = null, origin = null, switchTimer = null;
 
     function tpl(id) {
       var list = data.getElementsByTagName('template');
@@ -307,81 +309,104 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
       }
       return null;
     }
-    function markDot(id) {
+    function markActive(id) {
       var dots = drawer.querySelectorAll('.cat-dot');
       for (var i = 0; i < dots.length; i++) {
         var on = dots[i].getAttribute('data-goto') === id;
         dots[i].classList.toggle('is-active', on);
         dots[i].setAttribute('aria-current', on ? 'true' : 'false');
       }
-    }
-    function markStrip(id) {
       var links = strip.querySelectorAll('a[data-cat]');
-      for (var i = 0; i < links.length; i++) {
-        var on = links[i].getAttribute('data-cat') === id;
-        links[i].classList.toggle('is-active', on);
-        links[i].setAttribute('aria-expanded', on ? 'true' : 'false');
+      for (var j = 0; j < links.length; j++) {
+        var lon = links[j].getAttribute('data-cat') === id;
+        links[j].classList.toggle('is-active', lon);
+        links[j].setAttribute('aria-expanded', lon ? 'true' : 'false');
       }
+    }
+    // Doelrechthoek: het paneel groeit vanaf de tegel (start = de tegel) open
+    // tot een comfortabele hoogte. Horizontaal verankerd aan de tegel; als het
+    // onder de tegel niet past, schuift het omhoog zodat het altijd op het
+    // scherm past en ruimte biedt voor de beroepen.
+    function target(rect) {
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var w = vw < 480 ? (vw - 2 * GAP) : Math.min(PANEL_W, vw - 2 * GAP);
+      var left = Math.max(GAP, Math.min(rect.left, vw - w - GAP));
+      var h = Math.min(Math.max(420, Math.round(vh * 0.72)), vh - 2 * GAP);
+      var top = rect.top;
+      if (top + h > vh - GAP) top = vh - GAP - h;
+      top = Math.max(GAP, top);
+      return { left: left, top: top, width: w, height: h };
+    }
+    function setRect(r) {
+      drawer.style.left = r.left + 'px';
+      drawer.style.top = r.top + 'px';
+      drawer.style.width = r.width + 'px';
+      drawer.style.height = r.height + 'px';
     }
     function fill(id) {
       var t = tpl(id);
       if (t === null) return false;
-      bodyEl.innerHTML = t;
+      inner.innerHTML = t;
       current = id;
-      markDot(id);
-      markStrip(id);
-      var h = bodyEl.querySelector('h2');
+      markActive(id);
+      var h = inner.querySelector('h2');
       drawer.setAttribute('aria-label', h ? h.textContent : 'Beroepen');
       if (h) setTimeout(function () { try { h.focus(); } catch (e) {} }, reduce ? 0 : DUR);
       return true;
     }
-    function open(id, btn) {
+    function groei(rect, id) {
+      var tgt = target(rect);
+      origin = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      inner.style.width = tgt.width + 'px';
+      inner.style.height = tgt.height + 'px';
+      scrim.hidden = false; drawer.hidden = false;
+      if (reduce) { setRect(tgt); scrim.classList.add('show'); return; }
+      drawer.classList.add('notrans');
+      setRect(origin);            // start: exact op de tegel
+      void drawer.offsetWidth;    // reflow
+      drawer.classList.remove('notrans');
+      requestAnimationFrame(function () { setRect(tgt); scrim.classList.add('show'); });
+    }
+    function open(id, btn, rect) {
       if (!fill(id)) return;
       if (btn) lastBtn = btn;
       body.classList.add('cat-open');
-      scrim.hidden = false; drawer.hidden = false;
-      void drawer.offsetWidth; // reflow: transitie vertrekt vanaf de dichte staat
-      requestAnimationFrame(function () {
-        drawer.classList.add('open');
-        scrim.classList.add('show');
-      });
+      groei(rect, id);
     }
     function afterClose() {
       body.classList.remove('cat-open');
       scrim.hidden = true; drawer.hidden = true;
-      bodyEl.innerHTML = '';
-    }
-    function clearStrip() {
-      var links = strip.querySelectorAll('a[data-cat].is-active');
-      for (var i = 0; i < links.length; i++) {
-        links[i].classList.remove('is-active');
-        links[i].setAttribute('aria-expanded', 'false');
-      }
+      inner.innerHTML = '';
+      drawer.removeAttribute('style');
+      inner.removeAttribute('style');
     }
     function closeFull() {
       if (!current) return;
       var btn = lastBtn;
       current = null;
-      clearStrip();
-      drawer.classList.remove('open');
+      markActive(null);
       scrim.classList.remove('show');
-      if (reduce) afterClose(); else setTimeout(afterClose, DUR);
+      if (reduce || !origin) { afterClose(); }
+      else { setRect(origin); setTimeout(afterClose, DUR); } // krimp terug naar de tegel
       if (btn) try { btn.focus(); } catch (e) {}
     }
+    function rectOf(id) {
+      var a = strip.querySelector('a[data-cat="' + id + '"]');
+      return a ? a.getBoundingClientRect() : null;
+    }
     function goto(id, btn) {
+      var rect = rectOf(id);
+      if (!rect) return;
       if (current === id) { closeFull(); return; }
       if (current) {
-        // Marco's volgorde: eerst het huidige menu dicht, dan het nieuwe open.
-        if (reduce) { fill(id); return; }
-        drawer.classList.remove('open'); // scrim blijft staan tijdens het wisselen
+        // Marco's volgorde: huidige krimpt naar zijn tegel, nieuwe groeit open.
+        markActive(id);
+        if (reduce) { open(id, btn, rect); return; }
+        if (origin) setRect(origin); // krimp huidige terug
         clearTimeout(switchTimer);
-        switchTimer = setTimeout(function () {
-          if (!fill(id)) return;
-          void drawer.offsetWidth;
-          requestAnimationFrame(function () { drawer.classList.add('open'); });
-        }, DUR);
+        switchTimer = setTimeout(function () { open(id, btn, rect); }, DUR);
       } else {
-        open(id, btn);
+        open(id, btn, rect);
       }
     }
 
@@ -392,8 +417,9 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
       e.preventDefault();
       goto(a.getAttribute('data-cat'), a);
     });
-    // Kleur-schakelaar in het paneel + sluitknop.
-    tabs.addEventListener('click', function (e) {
+    // Kleur-schakelaar + sluitknop in het paneel (inhoud wisselt, dus
+    // klikafhandeling via delegatie op het paneel).
+    drawer.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('button') : null;
       if (!t) return;
       if (t.hasAttribute('data-close')) { closeFull(); return; }
@@ -408,7 +434,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     // Deep-link: /#vak=<categorie> opent dat paneel direct (deelbare link).
     function fromHash() {
       var m = /#vak=([\w-]+)/.exec(location.hash || '');
-      if (m && tpl(m[1])) open(m[1], null);
+      if (m) { var r = rectOf(m[1]); if (r && tpl(m[1])) open(m[1], null, r); }
     }
     fromHash();
     window.addEventListener('hashchange', fromHash);

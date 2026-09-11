@@ -589,37 +589,33 @@ body.cat-open .bn-strip { position: relative; z-index: 95; }
 .bn-cat.is-active { box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .9); }
 .bn-cat.is-active .bn-cat__pijl { transform: rotate(90deg); }
 
+/* Het paneel wordt door JS geplaatst (left/top/width/height) en groeit vanaf
+   de aangeklikte tegel open. De vaste-maat binnenlaag zorgt dat de inhoud
+   niet verspringt terwijl het paneel groeit; het paneel klipt de inhoud. */
 .cat-drawer {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 100;
-  width: min(380px, 100vw); max-width: 100vw;
-  background: #fff; display: flex; flex-direction: column; overflow: hidden;
-  box-shadow: -26px 0 70px -24px rgba(13, 13, 13, .5);
-  transform: translateX(112%);
-  transition: transform .34s cubic-bezier(.22, .61, .36, 1);
+  position: fixed; z-index: 100; overflow: hidden; background: #fff;
+  box-shadow: 0 26px 70px -20px rgba(13, 13, 13, .5), 0 6px 20px -8px rgba(13, 13, 13, .32);
+  transition: left .36s cubic-bezier(.22, .61, .36, 1),
+              top .36s cubic-bezier(.22, .61, .36, 1),
+              width .36s cubic-bezier(.22, .61, .36, 1),
+              height .36s cubic-bezier(.22, .61, .36, 1);
 }
-.cat-drawer.open { transform: translateX(0); }
+.cat-drawer.notrans { transition: none; }
 .cat-drawer[hidden] { display: none; }
+/* Vaste-maat binnenlaag (JS zet de eindmaat) zodat de inhoud niet verspringt
+   terwijl het paneel groeit; het paneel klipt de inhoud. */
+.cat-drawer__inner {
+  position: absolute; top: 0; left: 0;
+  display: flex; flex-direction: column;
+}
 
-/* Kleur-schakelaar bovenin: één klik naar een ander vakgebied. */
-.cat-drawer__tabs {
-  display: flex; align-items: center; gap: 11px;
-  padding: 14px 18px; border-bottom: 1px solid #ececea; flex: 0 0 auto;
+.cat-drawer__head { position: relative; padding: 20px 22px 18px; flex: 0 0 auto; }
+.cat-drawer__close {
+  position: absolute; top: 12px; right: 14px;
+  background: transparent; border: 0; color: inherit;
+  font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 8px; opacity: .85;
 }
-.cat-dot {
-  width: 18px; height: 18px; border-radius: 50%; border: 0; padding: 0;
-  cursor: pointer; opacity: .5; transition: opacity .15s ease, transform .15s ease;
-  box-shadow: 0 0 0 2px #fff;
-}
-.cat-dot:hover { opacity: .85; }
-.cat-dot.is-active { opacity: 1; transform: scale(1.25); box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor; }
-.cat-drawer__x {
-  margin-inline-start: auto; background: transparent; border: 0; cursor: pointer;
-  font-size: 1.1rem; line-height: 1; color: var(--c-mut); padding: 6px 4px;
-}
-.cat-drawer__x:hover { color: var(--c-ink); }
-.cat-drawer__body { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-
-.cat-drawer__head { position: relative; padding: 20px 22px 18px; }
+.cat-drawer__close:hover { opacity: 1; }
 .cat-drawer__eyebrow {
   display: block; font-size: .7rem; font-weight: 700; letter-spacing: .12em;
   text-transform: uppercase; opacity: .82;
@@ -642,9 +638,16 @@ body.cat-open .bn-strip { position: relative; z-index: 95; }
   transition: transform .15s ease, color .15s ease;
 }
 .cat-drawer__list a:hover .cat-drawer__pijl { color: var(--c-ink); transform: translateX(3px); }
-.cat-drawer__foot { padding: 15px 22px; border-top: 1px solid #e2e2e0; }
-.cat-drawer__foot a { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-@media (max-width: 480px) { .cat-drawer { width: 100vw; } }
+.cat-drawer__foot { padding: 12px 22px 15px; border-top: 1px solid #e2e2e0; flex: 0 0 auto; }
+/* Kleur-schakelaar onderin: één klik naar een ander vakgebied. */
+.cat-drawer__switch { display: flex; align-items: center; gap: 12px; padding: 4px 0 12px; }
+.cat-dot {
+  width: 17px; height: 17px; border-radius: 50%; border: 0; padding: 0;
+  cursor: pointer; opacity: .55; transition: opacity .15s ease, transform .15s ease;
+}
+.cat-dot:hover { opacity: .85; }
+.cat-dot.is-active { opacity: 1; transform: scale(1.28); box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor; }
+.cat-drawer__all { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   .cat-drawer, .cat-scrim { transition: none; }
 }
