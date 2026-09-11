@@ -14,8 +14,8 @@ het **Montessori College Nijmegen** (Kwakkenbergweg 27; gecorrigeerd
 11-9-2026, stond eerder onterecht als Canisius College).
 
 - **Datum 2026**: donderdag 20 november 2026, 18:30 – 21:30
-- **Live**: `https://inijmegen.com/` (NB: `.com`, niet `.nl` — die is van
-  Stichting Gemeenschapsservice)
+- **Live**: `https://beroepenavond2026.nl/` (sinds 11-9-2026; oude domein
+  inijmegen.com redirect 301 met padbehoud en blijft van ons)
 - **Repo**: `marcovanthiel/beroepenavond` (public)
 - **Bron-content**: gekopieerd van `beroepenavondnijmegen.nl` (mei 2026)
 
@@ -654,7 +654,9 @@ campagne van 2027 migreren en rustig volume opbouwen. Dan zit ontvangst
 
 ## Domeinmigratie naar beroepenavond2026.nl (gestart 11-9-2026)
 
-Stand: zone bestaat in het account (629f76653401f79fd5f072e5080d46b2,
+Stand: MIGRATIE VOLTOOID 11-9-2026 (zone actief, SITE_HOST + D1-setting
+omgezet, volledige workflowtest groen op het nieuwe domein). Historie:
+zone bestond in het account (629f76653401f79fd5f072e5080d46b2,
 NS georgia/keanu.ns.cloudflare.com), custom domains apex + www zijn al
 aan de Worker gekoppeld via de API, de Worker redirect élke niet-canonieke
 host 301 naar SITE_HOST (dus oud domein → nieuw zodra SITE_HOST omgaat).
