@@ -65,9 +65,9 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
   }
 
   const eventYear = event?.year ? String(event.year) : settings['event_year'] || '2026';
-  const eventDateLong = settings['event_date_long'] || 'Donderdag 20 november 2026';
+  const eventDateLong = settings['event_date_long'] || 'Donderdag 12 november 2026';
   // Datum-monument dd.mm uit de actieve editie (bron van waarheid = events).
-  const iso = event?.date || c.env.EVENT_DATE || '2026-11-20';
+  const iso = event?.date || c.env.EVENT_DATE || '2026-11-12';
   const monument = `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
   const venue = settings['venue_name'] || 'Montessori College Nijmegen';
   const venueAdres = settings['venue_address'] || 'Kwakkenbergweg 27, 6523 MJ Nijmegen';

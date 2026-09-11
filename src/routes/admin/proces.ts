@@ -17,7 +17,7 @@ const dat = (unix: number | null | undefined) =>
 
 function stdPayload(settings: Record<string, string>) {
   return {
-    datum: settings['event_date_long'] || 'donderdag 20 november 2026',
+    datum: settings['event_date_long'] || 'donderdag 12 november 2026',
     locatie: settings['venue_name'] || 'Montessori College Nijmegen',
   };
 }

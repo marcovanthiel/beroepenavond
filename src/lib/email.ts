@@ -37,7 +37,7 @@ export function mailConfig(env: Env, settings: SettingsMap): MailConfig {
     brand: {
       // Overschrijfbaar via de settings-tabel (admin → Instellingen).
       slogan: settings['mail_slogan'] || '169 professionals. Eén missie.',
-      datum: (settings['event_date_long'] || 'Donderdag 20 november 2026') +
+      datum: (settings['event_date_long'] || 'Donderdag 12 november 2026') +
         ' · ' + (settings['venue_name'] || 'Montessori College Nijmegen'),
       host: settings['site_host'] || 'inijmegen.com',
     },

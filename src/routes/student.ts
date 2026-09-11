@@ -432,7 +432,7 @@ studentApp.get('/rooster.ics', requireStudent, async (c) => {
   const s = c.get('student');
   const settings = await getSettings(c.env.DB);
   const picks = await c.env.DB.prepare('SELECT b.name FROM student_picks p JOIN beroepen b ON b.id=p.beroep_id WHERE p.student_id=? ORDER BY b.name').bind(s.id).all<{ name: string }>();
-  const date = (settings['event_date'] || c.env.EVENT_DATE || '2026-11-20').replace(/-/g, '');
+  const date = (settings['event_date'] || c.env.EVENT_DATE || '2026-11-12').replace(/-/g, '');
   const venue = `${settings['venue_name'] || ''}, ${settings['venue_address'] || ''}`.replace(/^,\s*/, '');
   const chosen = (picks.results ?? []).map((p) => p.name).join(', ') || 'Nog geen beroepen gekozen';
   const desc = `Mijn gekozen beroepen: ${chosen}. Bekijk je avond op https://${settings['site_host'] || 'inijmegen.com'}/leerling`.replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
