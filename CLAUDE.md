@@ -637,6 +637,22 @@ Alle teksten zijn bewerkbaar in **beheer → Mails** (placeholders:
   9:30, met rooster + link Mijn avond); rooster ook op het dashboard.
 - **Dag-vooraf-mail** automatisch 9:30; **opvolgmail** event+10 dagen.
 
+### Vragen vooraf naar de voorlichter (11-9-2026)
+Leerlingen stellen op een beroeppagina "Je vraag aan de voorlichter"
+(`student_questions`, per beroep). Twee mailmomenten, via de planner:
+- **2 dagen voor de avond, 9:30**: elke bevestigde voorlichter met e-mail
+  krijgt de tot dan ingestuurde vragen voor zijn beroep (mailtekst
+  `vl_vragen`, bewerkbaar in beheer → Mails). Ontdubbeld; **AI-samenvatting
+  bij >10 vragen** als `ANTHROPIC_API_KEY` gezet is (haiku), anders een nette
+  opsomming (graceful fallback). Voorlichters zonder vragen worden overgeslagen.
+- **Ochtend van de avond**: de vragen die ná die mail nog binnenkwamen gaan
+  mee in `vl_eventdag` (placeholder `{{vragen}}`, in migratie 026 toegevoegd).
+Anoniem (alleen de vraagtekst, geen leerlinggegevens). Kolom
+`student_questions.sent_to_speaker` voorkomt dubbel versturen; `bestaatOutbox`
+maakt de planner idempotent. Teller per beroep staat in beheer → Vragen vooraf.
+Lege mailblokken (bv. `{{vragen}}` zonder vragen) worden in `renderTemplate`
+overgeslagen. AAN TE ZETTEN voor AI: `wrangler secret put ANTHROPIC_API_KEY`.
+
 ### Beheer & gotchas
 - **Outbox**: beheer → Mails toont gepland/verzonden/mislukt + annuleren.
   Dedup-keys maken alle planners idempotent (cron mag altijd draaien).
