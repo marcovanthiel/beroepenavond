@@ -30,7 +30,7 @@ bucket_name = "beroepenavond-assets"
 
 [vars]
 SITE_NAME = "Beroepenavond Nijmegen"
-SITE_HOST = "inijmegen.com"
+SITE_HOST = "beroepenavond2026.nl"
 ORGANIZATION = "Rotary Club Nijmegen-Stad en Land"
 LOCATION_NAME = "Montessori College Nijmegen"
 EVENT_DATE = "2026-11-20"
