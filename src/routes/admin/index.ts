@@ -150,24 +150,28 @@ adminApp.post('/logout', async (c) => {
 
 adminApp.use('*', requireAuth);
 
-// Rol 'relatiebeheerder': mag alles inzien (GET), maar alleen voorlichters
-// bewerken. Wijzigingen buiten /admin/speakers (+ eigen account/uitloggen)
-// worden geweigerd met een nette melding.
+// Rol 'relatiebeheerder': mag het hele beheer INZIEN (alle GET), en de
+// volledige voorlichter-werkstroom BEWERKEN — aanmeldingen afhandelen
+// (postvak), uitnodigen (nieuw + vorig jaar + herinneringen) en voorlichters
+// beheren — plus het eigen account. Alle andere wijzigingen worden geweigerd
+// met een 403 en een nette in-app-melding. Nieuwe voorlichter-mutatieroute?
+// Zet het pad-prefix in RELATIEBEHEERDER_BEWERKT.
+const RELATIEBEHEERDER_BEWERKT = ['/admin/speakers', '/admin/uitnodigingen', '/admin/inbox', '/admin/account'];
 adminApp.use('*', async (c, next) => {
   const user = c.get('user');
   if (user.role !== 'relatiebeheerder') return next();
   const m = c.req.method.toUpperCase();
-  if (m === 'GET' || m === 'HEAD') return next();
+  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return next();
   const path = new URL(c.req.url).pathname;
   const toegestaan =
-    path.startsWith('/admin/speakers') ||
-    path.startsWith('/admin/account') ||
-    path === '/admin/logout';
+    path === '/admin/logout' ||
+    RELATIEBEHEERDER_BEWERKT.some((p) => path === p || path.startsWith(p + '/'));
   if (toegestaan) return next();
+  c.status(403);
   return renderAdminLayout(c, {
     title: 'Alleen-lezen',
     activeKey: '',
-    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>, maar alleen de <a href="/admin/speakers">voorlichters</a> bewerken. Vraag een beheerder om andere wijzigingen.</p></div>`,
+    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>. Bewerken kan bij de <a href="/admin/speakers">voorlichters</a>, de <a href="/admin/uitnodigingen">uitnodigingen</a> en het <a href="/admin/inbox">postvak</a> (aanmeldingen omzetten naar voorlichter). Vraag een beheerder om andere wijzigingen.</p></div>`,
   });
 });
 

@@ -378,11 +378,17 @@ progressive enhancement (werkt zonder JS).
 **editor** (Redacteur, inhoud + programma) en **relatiebeheerder**
 (Relatiebeheerder). Aanmaken via beheer → Gebruikers (alleen admins), inloggen
 via de e-mailcode-flow (wachtwoord optioneel). Labels via `roleLabel()`.
-- **Relatiebeheerder** = mag het HELE beheer inzien (alle GET), maar alleen
-  **voorlichters bewerken**. Afgedwongen met een middleware in
-  `routes/admin/index.ts` ná `requireAuth`: voor deze rol worden niet-GET-
-  verzoeken buiten `/admin/speakers` (+ `/admin/account`, `/admin/logout`)
-  geweigerd met een nette melding. `/admin/users` blijft admin-only.
+- **Relatiebeheerder** = mag het HELE beheer inzien (alle GET), en de
+  volledige voorlichter-werkstroom bewerken: **postvak** (aanmeldingen
+  afhandelen/omzetten naar voorlichter), **uitnodigingen** (nieuw + vorig
+  jaar + auto-herinnering) en **voorlichters** (CRUD, bevestigen, bulk),
+  plus het eigen account. Afgedwongen met een middleware in
+  `routes/admin/index.ts` ná `requireAuth`: voor deze rol worden alle niet-GET-
+  verzoeken buiten de allowlist `RELATIEBEHEERDER_BEWERKT`
+  (`/admin/speakers`, `/admin/uitnodigingen`, `/admin/inbox`, `/admin/account`
+  + `/admin/logout`) geweigerd met **403** en een in-app-melding. Padmatching
+  is exact (`p` of `p + '/'`), niet losse `startsWith`. `/admin/users` blijft
+  admin-only.
 - Naamkeuze bewust: bij nijmegenduckstad heet de vergelijkbare rol
   "accountmanager" (beheert eigen prijzen); hier "relatiebeheerder" op verzoek.
 - Nieuwe mutatie-route toevoegen die relatiebeheerders óók mogen? Zet het pad
