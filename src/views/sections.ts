@@ -112,14 +112,14 @@ export async function renderVoorlichters(db: D1Database, beroepId?: number): Pro
       <h3>Ben je leerling?</h3>
       <p>Voeg <strong>${esc(ber?.name ?? 'dit beroep')}</strong> toe aan jouw avond, of stel vooraf een vraag aan de voorlichter.</p>
       <div class="reserve-actions" style="justify-content:flex-start">
-        <form method="post" action="/leerling/kies" class="inline-form"><input type="hidden" name="beroep_id" value="${beroepId}"><button class="btn btn--primary" type="submit">+ Voeg toe aan mijn avond</button></form>
+        <form method="post" action="/leerling/kies" class="inline-form"><input type="hidden" name="beroep_id" value="${beroepId}"><button class="btn btn--primary" type="submit">+ Zet in mijn avond</button></form>
       </div>
       <form method="post" action="/leerling/vraag" style="margin-top:14px">
         <input type="hidden" name="beroep_id" value="${beroepId}">
-        <div class="field"><label>Vraag vooraf (optioneel)</label><textarea name="question" rows="2" placeholder="Bijv. welke opleiding heb je gevolgd?"></textarea></div>
+        <div class="field"><label for="sb-vraag-${esc(beroepId)}">Je vraag aan de voorlichter</label><textarea id="sb-vraag-${esc(beroepId)}" name="question" rows="2" required placeholder="Bijv. welke opleiding heb je gevolgd?"></textarea></div>
         <button class="btn btn--ghost btn--sm" type="submit">Vraag versturen</button>
       </form>
-      <p class="muted" style="font-size:.85rem;margin-top:8px">Nog geen account? Je wordt gevraagd in te loggen — gratis, met je e-mail. <a href="/leerling">Mijn avond ↗</a></p>
+      <p class="muted" style="font-size:.85rem;margin-top:8px">Nog geen account? Je wordt gevraagd in te loggen (gratis, met je e-mail). We onthouden je keuze. <a href="/leerling">Mijn avond ↗</a></p>
     </div>`;
     if (!items.length) {
       return `${heading}<div class="callout"><p>Voor dit beroep is nog geen voorlichter bekendgemaakt.</p></div>${studentBox}`;
@@ -228,7 +228,7 @@ export async function renderNieuwsList(db: D1Database): Promise<string> {
   const list = rows.results ?? [];
   if (!list.length) {
     return `<div class="callout"><p>Er is nog geen nieuws. Houd deze pagina in
-      de gaten — of <a href="/nieuwsbrief">meld je aan voor updates</a>.</p></div>`;
+      de gaten, of <a href="/nieuwsbrief">meld je aan voor updates</a>.</p></div>`;
   }
   const cards = list
     .map(
@@ -278,18 +278,20 @@ export function contactFormHtml(settings: SettingsMap, values?: Vals): string {
   return `
     <div class="grid grid--2" style="align-items:start">
       <form class="form card-box" method="post" action="/contact">
+        <p class="form-legend muted">Velden met <span class="req" aria-hidden="true">*</span> zijn verplicht.</p>
         <div class="form__row cols-2">
-          <div class="field"><label>Naam <span class="req">*</span></label>
-            <input type="text" name="name" value="${val(values, 'name')}" required></div>
-          <div class="field"><label>E-mail <span class="req">*</span></label>
-            <input type="email" name="email" value="${val(values, 'email')}" required></div>
+          <div class="field"><label for="ct-name">Naam <span class="req" aria-hidden="true">*</span></label>
+            <input id="ct-name" type="text" name="name" value="${val(values, 'name')}" required autocomplete="name"></div>
+          <div class="field"><label for="ct-email">E-mail <span class="req" aria-hidden="true">*</span></label>
+            <input id="ct-email" type="email" name="email" value="${val(values, 'email')}" required autocomplete="email"></div>
         </div>
-        <div class="field"><label>Onderwerp</label>
-          <input type="text" name="subject" value="${val(values, 'subject')}"></div>
-        <div class="field"><label>Bericht <span class="req">*</span></label>
-          <textarea name="message" required>${val(values, 'message')}</textarea></div>
+        <div class="field"><label for="ct-subject">Onderwerp</label>
+          <input id="ct-subject" type="text" name="subject" value="${val(values, 'subject')}"></div>
+        <div class="field"><label for="ct-message">Bericht <span class="req" aria-hidden="true">*</span></label>
+          <textarea id="ct-message" name="message" required>${val(values, 'message')}</textarea></div>
         <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-        ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : ''}
+        ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        <noscript><p class="notice notice--err">Dit formulier heeft JavaScript nodig (voor de spamcheck). Zet JavaScript aan, of mail ons rechtstreeks op <a href="mailto:${esc(settings['contact_email'] || '')}">${esc(settings['contact_email'] || '')}</a>.</p></noscript>` : ''}
         <div class="form__actions">
           <button type="submit" class="btn btn--primary btn--lg">Versturen</button>
         </div>
@@ -310,27 +312,29 @@ export function contactFormHtml(settings: SettingsMap, values?: Vals): string {
 export function volunteerFormHtml(settings: SettingsMap, values?: Vals): string {
   return `
     <form class="form card-box" method="post" action="/aanmelden">
+      <p class="form-legend muted">Velden met <span class="req" aria-hidden="true">*</span> zijn verplicht.</p>
       <div class="form__row cols-2">
-        <div class="field"><label>Naam <span class="req">*</span></label>
-          <input type="text" name="name" value="${val(values, 'name')}" required></div>
-        <div class="field"><label>E-mail <span class="req">*</span></label>
-          <input type="email" name="email" value="${val(values, 'email')}" required></div>
-        <div class="field"><label>Telefoon</label>
-          <input type="tel" name="phone" value="${val(values, 'phone')}"></div>
-        <div class="field"><label>Organisatie / werkgever</label>
-          <input type="text" name="organization" value="${val(values, 'organization')}"></div>
+        <div class="field"><label for="av-name">Naam <span class="req" aria-hidden="true">*</span></label>
+          <input id="av-name" type="text" name="name" value="${val(values, 'name')}" required autocomplete="name"></div>
+        <div class="field"><label for="av-email">E-mail <span class="req" aria-hidden="true">*</span></label>
+          <input id="av-email" type="email" name="email" value="${val(values, 'email')}" required autocomplete="email"></div>
+        <div class="field"><label for="av-phone">Telefoon</label>
+          <input id="av-phone" type="tel" name="phone" value="${val(values, 'phone')}" autocomplete="tel"></div>
+        <div class="field"><label for="av-org">Organisatie / werkgever</label>
+          <input id="av-org" type="text" name="organization" value="${val(values, 'organization')}" autocomplete="organization"></div>
       </div>
-      <div class="field"><label>Welk beroep wil je presenteren? <span class="req">*</span></label>
-        <input type="text" name="profession" value="${val(values, 'profession')}" required placeholder="bijv. Architect, Verpleegkundige, Piloot…"></div>
-      <div class="field"><label>Toelichting (optioneel)</label>
-        <textarea name="message" placeholder="Vertel kort over jezelf en je vak.">${val(values, 'message')}</textarea></div>
-      <div class="field" id="sponsor"><label style="display:flex;gap:10px;align-items:flex-start;font-weight:500">
-        <input type="checkbox" name="sponsor" value="1" style="width:auto;margin-top:4px"${values?.['sponsor'] ? ' checked' : ''}>
+      <div class="field"><label for="av-prof">Welk beroep wil je presenteren? <span class="req" aria-hidden="true">*</span></label>
+        <input id="av-prof" type="text" name="profession" value="${val(values, 'profession')}" required placeholder="bijv. Architect, Verpleegkundige, Piloot…"></div>
+      <div class="field"><label for="av-msg">Toelichting (optioneel)</label>
+        <textarea id="av-msg" name="message" placeholder="Vertel kort over jezelf en je vak.">${val(values, 'message')}</textarea></div>
+      <div class="field" id="sponsor"><label class="check-row">
+        <input type="checkbox" name="sponsor" value="1"${values?.['sponsor'] ? ' checked' : ''}>
         <span><strong>Ik heb interesse om sponsor te worden.</strong><br>
         <small>Je logo komt op de website en we maken er extra reclame mee. De organisatie neemt contact op over de mogelijkheden.</small></span>
       </label></div>
       <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-      ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : ''}
+      ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+      <noscript><p class="notice notice--err">Aanmelden via dit formulier heeft JavaScript nodig (voor de spamcheck). Zet JavaScript aan, of mail ons rechtstreeks op <a href="mailto:${esc(settings['contact_email'] || '')}">${esc(settings['contact_email'] || '')}</a>.</p></noscript>` : ''}
       <div class="form__actions">
         <button type="submit" class="btn btn--primary btn--lg">Aanmelding versturen</button>
       </div>

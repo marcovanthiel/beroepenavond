@@ -70,7 +70,7 @@ usersApp.get('/new', (c) => {
         ${field({ label: 'Naam', name: 'name', required: true })}
         ${field({ label: 'E-mail', name: 'email', type: 'email', required: true })}
         ${select({ label: 'Rol', name: 'role', value: 'editor', options: ROLES })}
-        ${field({ label: 'Wachtwoord (optioneel — inloggen gaat via e-mailcode)', name: 'password', type: 'password' })}
+        ${field({ label: 'Wachtwoord (optioneel, inloggen gaat via e-mailcode)', name: 'password', type: 'password' })}
       </div>
       ${formActions('Aanmaken', '/admin/users')}
     </form>`;

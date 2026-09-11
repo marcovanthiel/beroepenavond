@@ -40,7 +40,7 @@ export async function buildWerflijstPdf(opts: {
   dateLabel: string;
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  pdf.setTitle('Werflijst — beroepen zonder voorlichter');
+  pdf.setTitle('Werflijst: beroepen zonder voorlichter');
   pdf.setCreator('Beroepenavond Nijmegen');
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -84,7 +84,7 @@ export async function buildWerflijstPdf(opts: {
       ty -= 30;
       text('Werflijst voorlichters', M, ty, 20, bold, LIME);
       ty -= 18;
-      text('Beroepen die nog géén voorlichter hebben — voor gerichte werving', M, ty, 11, font, MUTED);
+      text('Beroepen die nog géén voorlichter hebben, voor gerichte werving', M, ty, 11, font, MUTED);
       ty -= 14;
       text(`${opts.rows.length} openstaand · ${opts.dateLabel}`, M, ty, 10, font, MUTED);
       ty -= 16;
@@ -98,7 +98,7 @@ export async function buildWerflijstPdf(opts: {
   newPage(true);
 
   if (!groups.length) {
-    text('Elk beroep heeft al minstens één voorlichter — niets te werven.', M, y, 12, font, INK);
+    text('Elk beroep heeft al minstens één voorlichter, niets te werven.', M, y, 12, font, INK);
   }
 
   for (const g of groups) {

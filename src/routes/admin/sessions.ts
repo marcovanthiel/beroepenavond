@@ -44,8 +44,8 @@ async function refData(c: any, eventId: string) {
   ]);
   return {
     cats: (cats.results ?? []).map((x: any) => ({ value: x.id, label: x.name })),
-    rooms: (rooms.results ?? []).map((x: any) => ({ value: x.id, label: x.name ? `${x.code} — ${x.name}` : x.code })),
-    rounds: (rounds.results ?? []).map((x: any) => ({ value: x.id, label: `Ronde ${x.round_no} (${x.start_time}–${x.end_time})` })),
+    rooms: (rooms.results ?? []).map((x: any) => ({ value: x.id, label: x.name ? `${x.code} · ${x.name}` : x.code })),
+    rounds: (rounds.results ?? []).map((x: any) => ({ value: x.id, label: `Ronde ${x.round_no} (${x.start_time} tot ${x.end_time})` })),
     speakers: speakers.results ?? [],
     beroepen: beroepen.results ?? [],
   };
@@ -68,7 +68,7 @@ function beroepSelectHtml(beroepen: any[], current: number | null | undefined): 
     )
     .join('');
   return `<label class="fld"><span class="fld__label">Beroep (uit de lijst)</span>
-    <select class="fld__input" name="beroep_id" data-combo data-combo-placeholder="Zoek een beroep…"><option value="">— geen —</option>${opts}</select>
+    <select class="fld__input" name="beroep_id" data-combo data-combo-placeholder="Zoek een beroep…"><option value="">(geen)</option>${opts}</select>
     <span class="fld__help">Koppelt de sessie aan een beroep uit de beroepenlijst.</span></label>`;
 }
 
@@ -96,16 +96,16 @@ sessionsApp.get('/', async (c) => {
     .map(
       (r) => `<tr>
         <td><strong>${esc(r.profession)}</strong>${r.title ? `<br><span class="muted">${esc(r.title)}</span>` : ''}</td>
-        <td>${r.cat_name ? `<span class="swatch" style="background:${esc(r.cat_color ?? '#ccc')}"></span>${esc(r.cat_name)}` : '<span class="muted">—</span>'}</td>
-        <td>${esc(r.room_code ?? '—')}</td>
-        <td>${r.round_no ? `Ronde ${r.round_no}` : '—'}</td>
+        <td>${r.cat_name ? `<span class="swatch" style="background:${esc(r.cat_color ?? '#ccc')}"></span>${esc(r.cat_name)}` : '<span class="muted">-</span>'}</td>
+        <td>${esc(r.room_code ?? '-')}</td>
+        <td>${r.round_no ? `Ronde ${r.round_no}` : '-'}</td>
         <td>${r.n_speakers}</td>
         <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/sessions/${esc(r.id)}">Bewerken</a></td>
       </tr>`
     )
     .join('');
   const body = `
-    ${pageHeader(`Sessies — ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/sessions/new">Nieuwe sessie</a>')}
+    ${pageHeader(`Sessies · ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/sessions/new">Nieuwe sessie</a>')}
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Beroep</th><th>Categorie</th><th>Lokaal</th><th>Ronde</th><th>Sprekers</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="6" class="empty">Nog geen sessies.</td></tr>'}</tbody>
@@ -121,7 +121,7 @@ async function form(c: any, eventId: string, s: Partial<Session>, selectedSpeake
           (sp: any) => `<label class="fld--check fld"><input type="checkbox" name="speaker_ids" value="${esc(sp.id)}" ${selectedSpeakers.has(sp.id) ? 'checked' : ''}><span>${esc(sp.full_name)}</span></label>`
         )
         .join('')
-    : '<p class="muted">Nog geen sprekers — voeg ze toe onder Sprekers.</p>';
+    : '<p class="muted">Nog geen sprekers, voeg ze toe onder Sprekers.</p>';
   return `
     ${pageHeader(isNew ? 'Nieuwe sessie' : esc(s.profession ?? 'Sessie'))}
     <form method="post" action="/admin/sessions/${isNew ? 'new' : esc(s.id!)}" class="card">
@@ -129,9 +129,9 @@ async function form(c: any, eventId: string, s: Partial<Session>, selectedSpeake
         <div class="span-2">${beroepSelectHtml(ref.beroepen, s.beroep_id)}</div>
         <div class="span-2">${field({ label: 'Beroep / kop (vrije tekst)', name: 'profession', value: s.profession ?? '', required: true })}</div>
         <div class="span-2">${field({ label: 'Presentatietitel (optioneel)', name: 'title', value: s.title ?? '' })}</div>
-        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: ref.cats, empty: '— geen —' })}
-        ${select({ label: 'Lokaal', name: 'classroom_id', value: s.classroom_id ?? '', options: ref.rooms, empty: '— geen —' })}
-        ${select({ label: 'Ronde', name: 'round_id', value: s.round_id ?? '', options: ref.rounds, empty: '— geen —' })}
+        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: ref.cats, empty: '(geen)' })}
+        ${select({ label: 'Lokaal', name: 'classroom_id', value: s.classroom_id ?? '', options: ref.rooms, empty: '(geen)' })}
+        ${select({ label: 'Ronde', name: 'round_id', value: s.round_id ?? '', options: ref.rounds, empty: '(geen)' })}
         <div></div>
         <div class="span-2">${textarea({ label: 'Omschrijving (markdown)', name: 'description_md', value: s.description_md ?? '', rows: 4 })}</div>
         <div class="span-2">

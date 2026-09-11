@@ -35,7 +35,7 @@ export async function uploadImage(
 ): Promise<string> {
   if (!env.ASSETS_R2) {
     throw new UploadError(
-      'R2-bucket niet gekoppeld — uploaden kan nog niet (gebruik een externe URL).'
+      'R2-bucket niet gekoppeld, uploaden kan nog niet (gebruik een externe URL).'
     );
   }
   const ext = ALLOWED.get(file.type);

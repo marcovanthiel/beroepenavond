@@ -4,6 +4,7 @@
  * vraag vooraf en agenda-export (.ics).
  */
 import { Hono } from 'hono';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { StudentEnv } from '../lib/studentauth';
 import { requestLogin, verifyToken, getCurrentStudent, logoutStudent, requireStudent } from '../lib/studentauth';
 import { getActiveEvent } from '../lib/db';
@@ -18,6 +19,27 @@ const esc = (s: unknown) =>
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Alleen interne paden toestaan als terugkeer-URL (geen open redirect). */
+const safeNext = (v: unknown) => {
+  const s = str(v);
+  return /^\/[^/]/.test(s) ? s : '';
+};
+
+// Bewaart de bedoeling van een uitgelogde bezoeker (beroep kiezen of een vraag
+// stellen) in een korte cookie, zodat we het na het inloggen alsnog uitvoeren.
+const INTENT_COOKIE = 'ba_intent';
+function setIntent(c: any, data: Record<string, unknown>) {
+  setCookie(c, INTENT_COOKIE, btoa(unescape(encodeURIComponent(JSON.stringify(data)))), {
+    httpOnly: true, secure: true, sameSite: 'Lax', path: '/', maxAge: 1800,
+  });
+}
+function readIntent(c: any): any | null {
+  const raw = getCookie(c, INTENT_COOKIE);
+  if (!raw) return null;
+  try { return JSON.parse(decodeURIComponent(escape(atob(raw)))); } catch { return null; }
+}
+function clearIntent(c: any) { deleteCookie(c, INTENT_COOKIE, { path: '/' }); }
+
 async function page(
   c: any,
   opts: { title: string; eyebrow?: string; lede?: string; body: string; notice?: { type: 'ok' | 'err'; text: string } | null }
@@ -25,7 +47,7 @@ async function page(
   const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
   return c.html(
     renderLayout({
-      title: `${opts.title} — Beroepenavond Nijmegen`,
+      title: `${opts.title} · Beroepenavond Nijmegen`,
       navItems,
       activeSlug: '/leerling',
       canonicalPath: '/leerling',
@@ -41,18 +63,19 @@ async function page(
 // Login / registratie (magic link)
 // ----------------------------------------------------------------------
 
-function loginForm(notice?: string): string {
+function loginForm(next = ''): string {
   return `
     <div class="grid grid--2" style="align-items:start">
       <form class="form card-box" method="post" action="/leerling/login">
         <h3>Inloggen of account aanmaken</h3>
         <p class="muted">Je krijgt een inloglink per e-mail, geen wachtwoord nodig.</p>
-        <div class="field"><label>E-mail <span class="req">*</span></label>
-          <input type="email" name="email" required autocomplete="email"></div>
-        <div class="field"><label>Naam</label><input type="text" name="name" autocomplete="name"></div>
+        ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ''}
+        <div class="field"><label for="lg-email">E-mail <span class="req">*</span></label>
+          <input id="lg-email" type="email" name="email" required autocomplete="email"></div>
+        <div class="field"><label for="lg-name">Naam</label><input id="lg-name" type="text" name="name" autocomplete="name"></div>
         <div class="form__row cols-2">
-          <div class="field"><label>School</label><input type="text" name="school"></div>
-          <div class="field"><label>Profiel / niveau</label><input type="text" name="profiel" placeholder="bv. havo N&amp;T"></div>
+          <div class="field"><label for="lg-school">School</label><input id="lg-school" type="text" name="school" autocomplete="organization"></div>
+          <div class="field"><label for="lg-profiel">Profiel / niveau</label><input id="lg-profiel" type="text" name="profiel" placeholder="bv. havo N&amp;T"></div>
         </div>
         <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
         <div class="form__actions"><button class="btn btn--primary btn--lg" type="submit">Stuur mij een inloglink</button></div>
@@ -63,7 +86,7 @@ function loginForm(notice?: string): string {
           <li>Kies de <strong>beroepen die je wilt volgen</strong> en bewaar ze.</li>
           <li>Krijg <strong>aanbevelingen</strong> op basis van je interesses.</li>
           <li>Stel <strong>vooraf een vraag</strong> aan een voorlichter.</li>
-          <li>Straks: je <strong>persoonlijke rooster</strong> + in je agenda.</li>
+          <li>Zodra de indeling klaar is, zie je hier <strong>jouw rooster</strong> en zet je het in je agenda.</li>
           <li>Schrijf je in voor de <strong>nieuwsbrief</strong>.</li>
         </ul>
       </div>
@@ -74,10 +97,16 @@ studentApp.get('/', async (c) => {
   const student = await getCurrentStudent(c);
   const q = c.req.query();
   if (!student) {
+    const next = safeNext(q.next);
     let notice = null as null | { type: 'ok' | 'err'; text: string };
     if (q.sent) notice = { type: 'ok', text: 'Check je mailbox! We hebben je een inloglink gestuurd (kijk ook in spam).' };
     if (q.error) notice = { type: 'err', text: 'Die inloglink is verlopen of al gebruikt. Vraag een nieuwe aan.' };
-    return page(c, { title: 'Mijn Beroepenavond', eyebrow: 'Voor leerlingen', lede: 'Plan jouw avond: kies beroepen, krijg tips en stel vragen.', body: loginForm(), notice });
+    if (q.mailfail) notice = { type: 'err', text: 'Er ging iets mis met het versturen van de e-mail. Probeer het zo nog eens.' };
+    // Bedoeling onthouden: uitgelogde bezoeker die een beroep koos of een vraag stelde.
+    if (!notice && q.intent === 'pick') notice = { type: 'ok', text: 'We onthouden je keuze. Log in of maak snel een account aan, dan zetten we het beroep meteen in jouw avond.' };
+    if (!notice && q.intent === 'vraag') notice = { type: 'ok', text: 'We onthouden je vraag. Log in of maak snel een account aan, dan sturen we hem meteen door.' };
+    if (!notice && next) notice = { type: 'ok', text: 'Log in of maak een account aan, daarna ga je terug naar de pagina waar je was.' };
+    return page(c, { title: 'Mijn Beroepenavond', eyebrow: 'Voor leerlingen', lede: 'Plan jouw avond: kies beroepen, krijg tips en stel vragen.', body: loginForm(next), notice });
   }
   c.set('student', student);
   return dashboard(c);
@@ -85,18 +114,38 @@ studentApp.get('/', async (c) => {
 
 studentApp.post('/login', async (c) => {
   const b = await c.req.parseBody();
+  const next = safeNext(b.next);
+  const qsNext = next ? '&next=' + encodeURIComponent(next) : '';
   if (str(b.website)) return c.redirect('/leerling?sent=1', 302); // honeypot
   const email = str(b.email);
   if (!EMAIL_RE.test(email)) {
-    return page(c, { title: 'Mijn Beroepenavond', eyebrow: 'Voor leerlingen', body: loginForm(), notice: { type: 'err', text: 'Vul een geldig e-mailadres in.' } });
+    return page(c, { title: 'Mijn Beroepenavond', eyebrow: 'Voor leerlingen', body: loginForm(next), notice: { type: 'err', text: 'Vul een geldig e-mailadres in.' } });
   }
-  await requestLogin(c, { email, name: str(b.name), school: str(b.school), profiel: str(b.profiel) });
-  return c.redirect('/leerling?sent=1', 302);
+  const { mailed } = await requestLogin(c, { email, name: str(b.name), school: str(b.school), profiel: str(b.profiel), next });
+  if (!mailed) return c.redirect('/leerling?mailfail=1' + qsNext, 302);
+  return c.redirect('/leerling?sent=1' + qsNext, 302);
 });
 
 studentApp.get('/verify', async (c) => {
   const student = await verifyToken(c, c.req.query('token') ?? '');
-  return c.redirect(student ? '/leerling' : '/leerling?error=1', 302);
+  if (!student) return c.redirect('/leerling?error=1', 302);
+  c.set('student', student);
+  // Bewaarde bedoeling alsnog uitvoeren (beroep kiezen / vraag stellen).
+  const intent = readIntent(c);
+  if (intent) {
+    clearIntent(c);
+    try {
+      const bid = parseInt(String(intent.b ?? ''), 10);
+      if (intent.t === 'pick' && Number.isFinite(bid)) {
+        await c.env.DB.prepare('INSERT OR IGNORE INTO student_picks (student_id, beroep_id) VALUES (?, ?)').bind(student.id, bid).run();
+      } else if (intent.t === 'vraag' && str(intent.q)) {
+        await c.env.DB.prepare('INSERT INTO student_questions (student_id, beroep_id, question) VALUES (?, ?, ?)')
+          .bind(student.id, Number.isFinite(bid) ? bid : null, String(intent.q).slice(0, 2000)).run();
+      }
+    } catch (e) { console.error('intent-replay faalde:', e); }
+  }
+  const next = safeNext(c.req.query('next'));
+  return c.redirect(next || '/leerling', 302);
 });
 
 studentApp.post('/blokkades', requireStudent, async (c) => {
@@ -168,7 +217,7 @@ async function dashboard(c: any) {
           <span class="muted" style="font-size:.85rem">${r.cat_name ? `<span class="chip__dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(r.cat_color ?? '#88bc1d')};margin-right:5px"></span>${esc(r.cat_name)}` : ''}${r.n_sprekers ? ` · ${r.n_sprekers} voorlichter(s)` : ''}</span></div>
         <div style="display:flex;gap:6px;align-items:center">
           ${r.n_sprekers ? `<a class="btn btn--ghost btn--sm" href="/voorlichters?beroep=${r.id}">Bekijk</a>` : ''}
-          <form method="post" action="/leerling/kies" class="inline-form"><input type="hidden" name="beroep_id" value="${r.id}"><input type="hidden" name="remove" value="1"><button class="btn btn--ghost btn--sm" type="submit" title="Verwijderen">×</button></form>
+          <form method="post" action="/leerling/kies" class="inline-form"><input type="hidden" name="beroep_id" value="${r.id}"><input type="hidden" name="remove" value="1"><button class="btn btn--ghost btn--sm" type="submit" aria-label="${esc(r.name)} verwijderen uit mijn avond" title="Verwijderen">×</button></form>
         </div>
       </div>`
         )
@@ -178,7 +227,7 @@ async function dashboard(c: any) {
   const questionRows = questions.results ?? [];
   const questionsHtml = questionRows.length
     ? `<div class="card-box"><h3>Mijn vragen vooraf</h3><ul>${questionRows
-        .map((r: any) => `<li><strong>${esc(r.beroep ?? 'Algemeen')}:</strong> ${esc(r.question)} <span class="muted">(${r.status === 'new' ? 'verstuurd' : esc(r.status)})</span></li>`)
+        .map((r: any) => `<li><strong>${esc(r.beroep ?? 'Algemeen')}:</strong> ${esc(r.question)} <span class="muted">(${r.status === 'handled' ? 'beantwoord' : 'verstuurd'})</span></li>`)
         .join('')}</ul></div>`
     : '';
 
@@ -212,7 +261,12 @@ async function dashboard(c: any) {
     }
   }
 
-  const notice = q.ok ? { type: 'ok' as const, text: String(q.ok) } : null;
+  const notice = q.ok ? { type: 'ok' as const, text: String(q.ok) } : q.err ? { type: 'err' as const, text: String(q.err) } : null;
+
+  // Nudge voor wie nog geen interesses koos (levert betere aanbevelingen op).
+  const nudgeHtml = interestIds.size === 0
+    ? `<div class="callout"><p><strong>Vertel wat je leuk vindt</strong> en krijg meteen tips voor beroepen die bij je passen. <a href="/leerling/profiel">Kies je interesses →</a></p></div>`
+    : '';
 
   const body = `
     <div class="card-box" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -226,6 +280,7 @@ async function dashboard(c: any) {
     <div class="section-head" style="margin:30px 0 14px"><h2>Mijn gekozen beroepen</h2><p><a href="/leerling/kiezen" class="btn btn--primary">+ Beroepen kiezen</a> ${pickRows.length ? `<a class="btn btn--ghost" href="/leerling/rooster.ics">In mijn agenda (.ics)</a>` : ''}</p></div>
     ${picksHtml}
     ${recHtml}
+    ${nudgeHtml}
 
     <div class="section-head" style="margin:30px 0 14px"><h2>Mijn rooster</h2></div>
     ${roosterHtml}
@@ -316,7 +371,9 @@ studentApp.get('/kiezen', requireStudent, async (c) => {
         var btn=f.querySelector('.pick-btn'), rem=f.querySelector('input[name="remove"]');
         var nowOn=rem.disabled; // was uit → wordt aan (toevoegen), en andersom
         btn.disabled=true;
-        fetch(f.action,{method:'POST',body:new FormData(f),credentials:'same-origin'}).then(function(){
+        fetch(f.action,{method:'POST',body:new FormData(f),credentials:'same-origin'}).then(function(res){
+          // Sessie verlopen? Dan volgt fetch de redirect naar de login; niet vals bevestigen.
+          if(!res.ok||res.redirected) throw new Error('herlaad');
           rem.disabled=!nowOn;
           btn.classList.toggle('btn--secondary',nowOn);
           btn.classList.toggle('btn--ghost',!nowOn);
@@ -330,10 +387,16 @@ studentApp.get('/kiezen', requireStudent, async (c) => {
   return page(c, { title: 'Beroepen kiezen', body });
 });
 
-studentApp.post('/kies', requireStudent, async (c) => {
-  const s = c.get('student');
+studentApp.post('/kies', async (c) => {
   const b = await c.req.parseBody();
   const beroepId = parseInt(str(b.beroep_id), 10);
+  const s = await getCurrentStudent(c);
+  if (!s) {
+    // Uitgelogd: keuze onthouden en na inloggen alsnog toevoegen.
+    if (Number.isFinite(beroepId) && !str(b.remove)) setIntent(c, { t: 'pick', b: beroepId });
+    const ref = safeNext(c.req.header('referer')?.replace(/^https?:\/\/[^/]+/, ''));
+    return c.redirect('/leerling?intent=pick' + (ref ? '&next=' + encodeURIComponent(ref) : ''), 302);
+  }
   if (Number.isFinite(beroepId)) {
     if (str(b.remove)) {
       await c.env.DB.prepare('DELETE FROM student_picks WHERE student_id=? AND beroep_id=?').bind(s.id, beroepId).run();
@@ -356,15 +419,15 @@ studentApp.get('/profiel', requireStudent, async (c) => {
   ]);
   const on = new Set((interests.results ?? []).map((r: any) => r.category_id));
   const checks = (cats.results ?? [])
-    .map((cat: any) => `<label class="field" style="flex-direction:row;align-items:center;gap:9px"><input type="checkbox" name="interest" value="${esc(cat.id)}" ${on.has(cat.id) ? 'checked' : ''}><span>${esc(cat.name)}</span></label>`)
+    .map((cat: any) => `<label class="check-row"><input type="checkbox" name="interest" value="${esc(cat.id)}" ${on.has(cat.id) ? 'checked' : ''}><span>${esc(cat.name)}</span></label>`)
     .join('');
   const body = `<p><a href="/leerling">← Terug naar Mijn avond</a></p>
     <form class="form card-box" method="post" action="/leerling/profiel">
       <div class="form__row cols-2">
-        <div class="field"><label>Naam</label><input type="text" name="name" value="${esc(s.name)}"></div>
-        <div class="field"><label>E-mail</label><input type="email" value="${esc(s.email)}" disabled></div>
-        <div class="field"><label>School</label><input type="text" name="school" value="${esc(s.school)}"></div>
-        <div class="field"><label>Profiel / niveau</label><input type="text" name="profiel" value="${esc(s.profiel)}" placeholder="bv. havo N&amp;T"></div>
+        <div class="field"><label for="pf-name">Naam</label><input id="pf-name" type="text" name="name" value="${esc(s.name)}" autocomplete="name"></div>
+        <div class="field"><label for="pf-email">E-mail</label><input id="pf-email" type="email" value="${esc(s.email)}" disabled></div>
+        <div class="field"><label for="pf-school">School</label><input id="pf-school" type="text" name="school" value="${esc(s.school)}" autocomplete="organization"></div>
+        <div class="field"><label for="pf-profiel">Profiel / niveau</label><input id="pf-profiel" type="text" name="profiel" value="${esc(s.profiel)}" placeholder="bv. havo N&amp;T"></div>
       </div>
       <p class="fld__label" style="margin:6px 0">Mijn interesses (voor aanbevelingen)</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;margin-bottom:14px">${checks}</div>
@@ -391,16 +454,23 @@ studentApp.post('/profiel', requireStudent, async (c) => {
 // Vraag vooraf
 // ----------------------------------------------------------------------
 
-studentApp.post('/vraag', requireStudent, async (c) => {
-  const s = c.get('student');
+studentApp.post('/vraag', async (c) => {
   const b = await c.req.parseBody();
   const beroepId = parseInt(str(b.beroep_id), 10);
   const question = str(b.question);
-  if (question) {
-    await c.env.DB.prepare('INSERT INTO student_questions (student_id, beroep_id, question) VALUES (?, ?, ?)')
-      .bind(s.id, Number.isFinite(beroepId) ? beroepId : null, question)
-      .run();
+  const ref = safeNext(c.req.header('referer')?.replace(/^https?:\/\/[^/]+/, ''));
+  const s = await getCurrentStudent(c);
+  if (!s) {
+    // Uitgelogd: vraag onthouden en na inloggen alsnog versturen.
+    if (question) setIntent(c, { t: 'vraag', b: Number.isFinite(beroepId) ? beroepId : null, q: question.slice(0, 2000) });
+    return c.redirect('/leerling?intent=vraag' + (ref ? '&next=' + encodeURIComponent(ref) : ''), 302);
   }
+  if (!question) {
+    return c.redirect('/leerling?err=' + encodeURIComponent('Je vraag was nog leeg. Typ je vraag en verstuur hem opnieuw.'), 302);
+  }
+  await c.env.DB.prepare('INSERT INTO student_questions (student_id, beroep_id, question) VALUES (?, ?, ?)')
+    .bind(s.id, Number.isFinite(beroepId) ? beroepId : null, question.slice(0, 2000))
+    .run();
   return c.redirect('/leerling?ok=' + encodeURIComponent('Je vraag is verstuurd naar de organisatie.'), 302);
 });
 
@@ -436,9 +506,11 @@ studentApp.get('/rooster.ics', requireStudent, async (c) => {
   const venue = `${settings['venue_name'] || ''}, ${settings['venue_address'] || ''}`.replace(/^,\s*/, '');
   const chosen = (picks.results ?? []).map((p) => p.name).join(', ') || 'Nog geen beroepen gekozen';
   const desc = `Mijn gekozen beroepen: ${chosen}. Bekijk je avond op https://${settings['site_host'] || 'inijmegen.com'}/leerling`.replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
+  const dtstamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Beroepenavond Nijmegen//NL', 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT', `UID:beroepenavond-${s.id}@inijmegen.com`,
+    'BEGIN:VEVENT', `UID:beroepenavond-${s.id}@${settings['site_host'] || 'inijmegen.com'}`,
+    `DTSTAMP:${dtstamp}`,
     `DTSTART;TZID=Europe/Amsterdam:${date}T183000`, `DTEND;TZID=Europe/Amsterdam:${date}T213000`,
     'SUMMARY:Beroepenavond Nijmegen', `LOCATION:${venue.replace(/([,;\\])/g, '\\$1')}`, `DESCRIPTION:${desc}`,
     'END:VEVENT', 'END:VCALENDAR',

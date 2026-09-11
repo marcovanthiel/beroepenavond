@@ -53,7 +53,7 @@ function form(c: any, s: Partial<Sponsor>, isNew: boolean): string {
   const preview = s.logo_url ? `<div style="margin-bottom:8px"><img src="${esc(s.logo_url)}" alt="" style="max-height:60px;background:#eee;padding:6px;border-radius:6px"></div>` : '';
   const upload = r2
     ? `<label class="fld"><span class="fld__label">Logo uploaden</span>${preview}<input class="fld__input" type="file" name="logo_file" accept="image/*"><span class="fld__help">PNG/SVG met transparante achtergrond werkt het mooist.</span></label>`
-    : `<label class="fld"><span class="fld__label">Logo</span>${preview}<span class="fld__help">R2 niet gekoppeld — gebruik de URL hieronder.</span></label>`;
+    : `<label class="fld"><span class="fld__label">Logo</span>${preview}<span class="fld__help">R2 niet gekoppeld, gebruik de URL hieronder.</span></label>`;
   return `
     ${pageHeader(isNew ? 'Nieuwe sponsor' : esc(s.name ?? 'Sponsor'))}
     <form method="post" action="/admin/sponsors/${isNew ? 'new' : esc(s.id!)}" enctype="multipart/form-data" class="card">

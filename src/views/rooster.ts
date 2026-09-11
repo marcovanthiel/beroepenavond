@@ -111,7 +111,7 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
       title: s.title,
       catName: s.catName,
       catColor: s.catColor,
-      round: s.round_no ? `Ronde ${s.round_no}${s.start_time ? ` · ${s.start_time}–${s.end_time}` : ''}` : null,
+      round: s.round_no ? `Ronde ${s.round_no}${s.start_time ? ` · ${s.start_time} tot ${s.end_time}` : ''}` : null,
       speakers: speakersBySession.get(s.id) ?? [],
     };
     const list = byRoom.get(s.classroom_id) ?? [];

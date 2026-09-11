@@ -51,7 +51,7 @@ floorplansApp.get('/', async (c) => {
     )
     .join('');
   const body = `
-    ${pageHeader(`Plattegronden — ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/floorplans/new">Nieuwe plattegrond</a>')}
+    ${pageHeader(`Plattegronden · ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/floorplans/new">Nieuwe plattegrond</a>')}
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Beeld</th><th>Verdieping</th><th>viewBox</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="4" class="empty">Nog geen plattegronden.</td></tr>'}</tbody>
@@ -67,7 +67,7 @@ function form(c: any, r: Partial<Floorplan>, isNew: boolean): string {
         <input class="fld__input" type="file" name="image_file" accept="image/*">
         <span class="fld__help">PNG/JPG/SVG, max 8 MB. Vervangt de huidige afbeelding.</span></label>`
     : `<label class="fld"><span class="fld__label">Afbeelding</span>${preview}
-        <span class="fld__help">R2 nog niet gekoppeld — gebruik het URL-veld.</span></label>`;
+        <span class="fld__help">R2 nog niet gekoppeld, gebruik het URL-veld.</span></label>`;
   return `
     ${pageHeader(isNew ? 'Nieuwe plattegrond' : esc(r.floor_label ?? 'Plattegrond'))}
     <form method="post" action="/admin/floorplans/${isNew ? 'new' : esc(r.id!)}" enctype="multipart/form-data" class="card">

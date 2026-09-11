@@ -166,7 +166,7 @@
         }
         var b = document.createElement('div');
         b.className = 'combo__opt';
-        b.textContent = it.label || '— geen —';
+        b.textContent = it.label || '(geen)';
         if (it.value === select.value) b.classList.add('sel');
         b.addEventListener('mousedown', function (e) { e.preventDefault(); pick(it.value, it.label); });
         menu.appendChild(b);
@@ -207,6 +207,21 @@
     });
   }
   document.querySelectorAll('select[data-combo]').forEach(enhanceCombo);
+
+  // ---- Bevestiging vóór verzenden (data-confirm) ----------------------
+  // Een submit-knop (of formulier) met data-confirm="..." vraagt eerst om
+  // bevestiging. Deze listener staat vóór de spinner-listener, zodat een
+  // geannuleerde bevestiging (e.defaultPrevented) het verzenden stopt.
+  document.addEventListener('submit', function (e) {
+    if (e.defaultPrevented) return;
+    var form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    var src = (e.submitter && e.submitter.hasAttribute('data-confirm')) ? e.submitter
+      : (form.hasAttribute('data-confirm')) ? form
+      : form.querySelector('[data-confirm]');
+    var msg = src && src.getAttribute('data-confirm');
+    if (msg && !window.confirm(msg)) e.preventDefault();
+  });
 
   // ---- Spinner + dubbel-verzenden voorkomen ---------------------------
   document.addEventListener('submit', function (e) {

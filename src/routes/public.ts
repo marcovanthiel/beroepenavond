@@ -206,7 +206,7 @@ publicApp.get('/nieuws/:slug', async (c) => {
   const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
   return c.html(
     renderLayout({
-      title: `${item.title} — Beroepenavond Nijmegen`,
+      title: `${item.title} · Beroepenavond Nijmegen`,
       metaDescription: item.summary,
       navItems,
       activeSlug: '/nieuws',
@@ -236,8 +236,8 @@ publicApp.get('/updates', async (c) => {
       function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
       var HIDE=/^(chore|ci|build|deps|docs|merge|wip|typo|fmt|lint|revert)\\b|^(bump|update dependencies|dependabot)/i;
       fetch('/assets/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(v){
-        document.getElementById('curVersion').textContent=(v&&v.version)?('v'+v.version+(v.commit?' · '+v.commit:'')):'—';
-      }).catch(function(){ document.getElementById('curVersion').textContent='—'; });
+        document.getElementById('curVersion').textContent=(v&&v.version)?('v'+v.version+(v.commit?' · '+v.commit:'')):'-';
+      }).catch(function(){ document.getElementById('curVersion').textContent='-'; });
       fetch('/assets/updates.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
         var box=document.getElementById('updatesList');
         var items=(d&&d.entries||[]).filter(function(e){ return !HIDE.test(e.subject||''); });
@@ -251,7 +251,7 @@ publicApp.get('/updates', async (c) => {
     </script>`;
   return c.html(
     renderLayout({
-      title: 'Updates — Beroepenavond Nijmegen',
+      title: 'Updates · Beroepenavond Nijmegen',
       metaDescription: 'Wat er recent is verbeterd aan de website.',
       navItems,
       activeSlug: '',

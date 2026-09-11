@@ -310,3 +310,10 @@ table.data th.cbcol, table.data td.cbcol { width: 36px; text-align: center; padd
   background: #f3f3f3; color: #6b7280; cursor: not-allowed; opacity: 1;
 }
 .ro-lock .btn:disabled, .ro-lock button:disabled { opacity: .5; cursor: not-allowed; }
+/* Een <fieldset disabled> schakelt alleen echte controls uit, geen <a>-knoppen.
+   Neutraliseer daarom de aanmaak-/actie-ankers ("+ Nieuw", "Verwijderen") op
+   vergrendelde pagina's, zodat de relatiebeheerder niet in een doodlopend
+   bewerk-formulier belandt. Gewone navigatie (ghost, back, tabs) blijft werken. */
+.ro-lock a.btn--primary, .ro-lock a.btn--danger {
+  pointer-events: none; opacity: .45; cursor: not-allowed;
+}

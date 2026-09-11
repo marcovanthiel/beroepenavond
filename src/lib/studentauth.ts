@@ -47,7 +47,7 @@ const norm = (e: string) => e.trim().toLowerCase();
 /** Maakt (zo nodig) een leerling aan en stuurt een magic-link e-mail. */
 export async function requestLogin(
   c: Context<StudentEnv>,
-  data: { email: string; name?: string; school?: string; profiel?: string }
+  data: { email: string; name?: string; school?: string; profiel?: string; next?: string }
 ): Promise<{ ok: boolean; token: string; mailed: boolean }> {
   const email = norm(data.email);
   // Upsert: bestaande leerling hergebruiken, anders nieuw.
@@ -74,13 +74,14 @@ export async function requestLogin(
     const settings = await getSettings(c.env.DB);
     const cfg = mailConfig(c.env, settings);
     const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
-    const link = `${host}/leerling/verify?token=${token}`;
+    const safeNext = data.next && /^\/[^/]/.test(data.next) ? data.next : '';
+    const link = `${host}/leerling/verify?token=${token}${safeNext ? `&next=${encodeURIComponent(safeNext)}` : ''}`;
     const inner = `
       <p>Hoi${data.name ? ' ' + esc(data.name) : ''},</p>
       <p>Klik op de knop om in te loggen bij jouw Beroepenavond-account:</p>
       <p>${emailButton(link, 'Inloggen bij Mijn avond')}</p>
       <p style="color:#8a8a86;font-size:13px">De link is 30 minuten geldig. Niet aangevraagd? Negeer deze mail.</p>`;
-    const res = await sendEmail(cfg, { to: email, subject: 'Jouw inloglink — Beroepenavond Nijmegen', html: emailShell('Inloggen', inner, cfg.brand) });
+    const res = await sendEmail(cfg, { to: email, subject: 'Jouw inloglink · Beroepenavond Nijmegen', html: emailShell('Inloggen', inner, cfg.brand) });
     mailed = !!res.ok;
   } catch (e) {
     console.error('magic-mail faalde:', e);
@@ -142,7 +143,15 @@ export async function logoutStudent(c: Context<StudentEnv>): Promise<void> {
 
 export const requireStudent: MiddlewareHandler<StudentEnv> = async (c, next) => {
   const s = await getCurrentStudent(c);
-  if (!s) return c.redirect('/leerling', 302);
+  if (!s) {
+    // Kom na het inloggen terug op de pagina die de leerling wilde (alleen GET
+    // is een navigeerbaar doel; POST-paden hebben geen GET-variant).
+    let nx = '';
+    if (c.req.method === 'GET') {
+      try { const u = new URL(c.req.url); nx = u.pathname + u.search; } catch { /* leeg */ }
+    }
+    return c.redirect('/leerling' + (nx && /^\/[^/]/.test(nx) ? '?next=' + encodeURIComponent(nx) : ''), 302);
+  }
   c.set('student', s);
   return next();
 };

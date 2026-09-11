@@ -46,14 +46,14 @@ roundsApp.get('/', async (c) => {
     .map(
       (r) => `<tr>
         <td>Ronde ${r.round_no}</td>
-        <td>${esc(r.start_time)} – ${esc(r.end_time)}</td>
+        <td>${esc(r.start_time)} tot ${esc(r.end_time)}</td>
         <td class="muted">${esc(r.notes ?? '')}</td>
         <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/rounds/${esc(r.id)}">Bewerken</a></td>
       </tr>`
     )
     .join('');
   const body = `
-    ${pageHeader(`Rondes — ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/rounds/new">Nieuwe ronde</a>')}
+    ${pageHeader(`Rondes · ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/rounds/new">Nieuwe ronde</a>')}
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Ronde</th><th>Tijd</th><th>Notitie</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="4" class="empty">Nog geen rondes.</td></tr>'}</tbody>

@@ -82,7 +82,7 @@ adminApp.post('/login', async (c) => {
           <p style="color:#8a9099;font-size:13px">De code is 10 minuten geldig. Niet aangevraagd? Negeer deze e-mail.</p>`;
         await sendEmail(cfg, {
           to: email,
-          subject: `Je inlogcode ${code} — Beheer Beroepenavond`,
+          subject: `Je inlogcode ${code}`,
           html: emailShell('Inlogcode', inner, cfg.brand),
           text: `Je inlogcode voor het beheer van de Beroepenavond is: ${code}\n\nDe code is 10 minuten geldig.`,
         });
@@ -168,7 +168,7 @@ adminApp.use('*', async (c, next) => {
   return renderAdminLayout(c, {
     title: 'Alleen-lezen',
     activeKey: '',
-    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>. Bewerken kan bij de <a href="/admin/speakers">voorlichters</a>, de <a href="/admin/uitnodigingen">uitnodigingen</a> en het <a href="/admin/inbox">postvak</a> (aanmeldingen omzetten naar voorlichter). Vraag een beheerder om andere wijzigingen.</p></div>`,
+    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>. Bewerken kan bij de <a href="/admin/speakers">voorlichters</a>, de <a href="/admin/uitnodigingen">uitnodigingen</a>, het <a href="/admin/inbox">postvak</a> (aanmeldingen omzetten naar voorlichter) en je eigen <a href="/admin/account">account</a>. Vraag een beheerder om andere wijzigingen.</p></div>`,
   });
 });
 
@@ -201,6 +201,7 @@ adminApp.get('/', async (c) => {
 
   const published = (settings['voorlichters_published'] ?? '0') === '1';
   const mailOn = (settings['mail_enabled'] ?? '0') === '1';
+  const isRB = c.get('user')?.role === 'relatiebeheerder';
 
   const stat = (n: number, label: string, href: string, accent = false) =>
     `<a class="stat" href="${href}"><div class="stat__n" ${accent && n > 0 ? 'style="color:#d4493f"' : ''}>${n}</div><div class="stat__l">${esc(label)}</div></a>`;
@@ -213,7 +214,7 @@ adminApp.get('/', async (c) => {
     { done: sessions > 0, label: 'Sessies in het rooster', hint: `${sessions} sessie(s)`, href: '/admin/sessions', fix: 'Sessies' },
     { done: mapped > 0, label: 'Lokalen op de plattegrond', hint: `${mapped} lokaal/lokalen ingetekend`, href: '/admin/floorplan-editor', fix: 'Plattegrond' },
     { done: mailOn, label: 'E-mail (bevestigingen) werkt', hint: mailOn ? 'Verzending staat aan' : 'Zet e-mail aan bij Instellingen', href: '/admin/settings', fix: 'Instellingen' },
-    { done: published, label: 'Voorlichters gepubliceerd op de site', hint: published ? 'Zichtbaar voor bezoekers' : 'Nog verborgen — zet publicatie aan', href: '/admin/speakers', fix: 'Publiceren' },
+    { done: published, label: 'Voorlichters gepubliceerd op de site', hint: published ? 'Zichtbaar voor bezoekers' : 'Nog verborgen, zet publicatie aan', href: '/admin/speakers', fix: 'Publiceren' },
   ];
   const doneCount = checks.filter((x) => x.done).length;
   const pct = Math.round((doneCount / checks.length) * 100);
@@ -222,7 +223,7 @@ adminApp.get('/', async (c) => {
       (x) => `<li class="${x.done ? 'done' : ''}">
         <span class="check-ico ${x.done ? 'check-ico--done' : 'check-ico--todo'}" aria-hidden="true">${x.done ? '✓' : '○'}</span>
         <span class="lbl">${esc(x.label)}<small>${esc(x.hint)}</small></span>
-        ${x.done ? '' : `<a class="btn btn--ghost btn--sm fix" href="${x.href}">${esc(x.fix)} →</a>`}
+        ${x.done || (isRB && !relatiebeheerderMagBewerken(x.href)) ? '' : `<a class="btn btn--ghost btn--sm fix" href="${x.href}">${esc(x.fix)} →</a>`}
       </li>`
     )
     .join('');
@@ -237,14 +238,14 @@ adminApp.get('/', async (c) => {
 
   const quickActions = `
     <a class="btn btn--primary btn--sm" href="/admin/speakers/new">+ Spreker</a>
-    <a class="btn btn--ghost btn--sm" href="/admin/nieuws/new">+ Nieuwsbericht</a>
+    ${isRB ? '' : '<a class="btn btn--ghost btn--sm" href="/admin/nieuws/new">+ Nieuwsbericht</a>'}
     <a class="btn btn--ghost btn--sm" href="/admin/inbox">Postvak</a>
     <a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a>`;
 
   const body = `
     <header class="page-head"><h1>Overzicht</h1><div class="page-head__actions">${quickActions}</div></header>
     <div class="card">
-      <p style="margin:0">${ev ? `Actieve editie: <strong>${esc(ev.title)}</strong> — ${esc(ev.date)}` : '⚠️ Geen actieve editie ingesteld. <a href="/admin/events">Stel er een in →</a>'}</p>
+      <p style="margin:0">${ev ? `Actieve editie: <strong>${esc(ev.title)}</strong> (${esc(ev.date)})` : '⚠️ Geen actieve editie ingesteld. <a href="/admin/events">Stel er een in →</a>'}</p>
     </div>
     <div class="card">
       <div class="card__head">
@@ -256,7 +257,7 @@ adminApp.get('/', async (c) => {
     </div>
     <div class="card">
       <div class="card__head"><h2>Materialen</h2></div>
-      <p style="margin:0 0 10px">Kant-en-klare campagneposter voor prikborden, scholen en socials — A3, PDF, met de datum en het jaarfiguur in drie gedaanten.</p>
+      <p style="margin:0 0 10px">Kant-en-klare campagneposter voor prikborden, scholen en socials: A3-PDF, met de datum en het jaarfiguur in drie gedaanten.</p>
       <a class="btn btn--primary btn--sm" href="/assets/campagneposter-beroepenavond-2026.pdf" target="_blank" rel="noopener" download>⬇ Campagneposter A3 (PDF)</a>
     </div>
     <div class="stat-grid">
@@ -344,7 +345,7 @@ adminApp.get('/software', async (c) => {
         <tbody>${rows.map((e) => `<tr style="border-bottom:1px solid #eef1f6">
           <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace">${esc(e.name)}</td>
           <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace;color:#5a6472">${esc(e.current)}</td>
-          <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace;color:#5a6472">${esc(e.latest || '—')}</td>
+          <td style="padding:9px 10px;font-family:ui-monospace,Menlo,monospace;color:#5a6472">${esc(e.latest || '-')}</td>
           <td style="padding:9px 10px">${badge(e.status)}</td></tr>`).join('')}</tbody>
       </table></div></div>`;
   };
@@ -354,9 +355,9 @@ adminApp.get('/software', async (c) => {
     <p style="margin:10px 0"><a class="btn" href="/updates" target="_blank" rel="noopener">🕑 Versiegeschiedenis</a> <a class="btn" href="/admin/software">⟳ Vernieuwen</a></p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0 4px">
       ${card('App-versie', 'v' + esc(vinfo?.version || (pkg as any).version || '0.1.0'), esc(vinfo?.commit || ''))}
-      ${card('Framework', 'Hono ' + esc(hono ? cleanVer(hono.current) : '—'), hono?.latest ? 'laatste ' + esc(hono.latest) : '')}
+      ${card('Framework', 'Hono ' + esc(hono ? cleanVer(hono.current) : '-'), hono?.latest ? 'laatste ' + esc(hono.latest) : '')}
       ${card('Runtime', 'Cloudflare Workers', 'workerd · productie')}
-      ${card('Build', esc(vinfo?.date ? String(vinfo.date).slice(0, 10) : '—'), 'inijmegen.com')}
+      ${card('Build', esc(vinfo?.date ? String(vinfo.date).slice(0, 10) : '-'), 'inijmegen.com')}
     </div>
     ${table('Productie', 'prod')}
     ${table('Ontwikkeling', 'dev')}

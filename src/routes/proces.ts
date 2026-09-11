@@ -33,30 +33,92 @@ async function getInvite(db: Env['DB'], token: string): Promise<InviteRow | null
   return (await db.prepare('SELECT * FROM speaker_invites WHERE token = ?').bind(token).first<InviteRow>()) ?? null;
 }
 
-function veld(label: string, name: string, value: string, opts?: { type?: string; required?: boolean; hint?: string }): string {
-  return `<div class="field"><label for="f-${name}">${esc(label)}${opts?.required ? ' <span class="req">*</span>' : ''}</label>
-    <input id="f-${name}" type="${opts?.type ?? 'text'}" name="${name}" value="${esc(value)}"${opts?.required ? ' required' : ''}>
+function veld(label: string, name: string, value: string, opts?: { type?: string; required?: boolean; hint?: string; autocomplete?: string }): string {
+  return `<div class="field"><label for="f-${name}">${esc(label)}${opts?.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>
+    <input id="f-${name}" type="${opts?.type ?? 'text'}" name="${name}" value="${esc(value)}"${opts?.required ? ' required' : ''}${opts?.autocomplete ? ` autocomplete="${opts.autocomplete}"` : ''}>
     ${opts?.hint ? `<small>${esc(opts.hint)}</small>` : ''}</div>`;
+}
+
+interface UitnodigingVals {
+  name?: string; email?: string; phone?: string; organization?: string; job_title?: string; linkedin?: string; sponsor?: boolean;
+}
+
+/** Bouwt de uitnodigingspagina (gedeeld door GET en de fout-herrender van POST). */
+function uitnodigingPage(
+  c: any, inv: InviteRow, herhaal: boolean, v: UitnodigingVals,
+  settings: Record<string, string>, navItems: any, error?: string
+) {
+  const intro = herhaal
+    ? `Fijn dat je er (hopelijk) weer bij bent! Controleer hieronder of je gegevens nog kloppen, pas aan wat gewijzigd is en bevestig je deelname.`
+    : `Leuk dat je meedoet! Vul hieronder je gegevens in; wij regelen de rest en houden je op de hoogte van je indeling.`;
+  const body = `
+    ${error ? `<div class="notice notice--err" role="alert">${esc(error)}</div>` : ''}
+    <p class="lede">${intro}</p>
+    <form class="form card-box" method="post" action="/voorlichter/uitnodiging?token=${esc(inv.token)}">
+      <p class="form-legend muted">Velden met <span class="req" aria-hidden="true">*</span> zijn verplicht.</p>
+      <div class="form__row cols-2">
+        ${veld('Naam', 'name', v.name ?? '', { required: true, autocomplete: 'name' })}
+        ${veld('E-mail', 'email', v.email ?? '', { type: 'email', required: true, autocomplete: 'email' })}
+        ${veld('Telefoon', 'phone', v.phone ?? '', { autocomplete: 'tel' })}
+        ${veld('Organisatie / werkgever', 'organization', v.organization ?? '', { autocomplete: 'organization' })}
+      </div>
+      ${veld('Beroep dat je presenteert', 'job_title', v.job_title ?? '', { required: true, hint: 'Bijv. architect, IC-verpleegkundige, piloot' })}
+      ${veld('LinkedIn (optioneel)', 'linkedin', v.linkedin ?? '', { hint: 'Wordt bij je naam op de site getoond' })}
+      <div class="field"><label class="check-row">
+        <input type="checkbox" name="sponsor" value="1"${v.sponsor ? ' checked' : ''}>
+        <span><strong>Ik heb interesse om sponsor te worden.</strong><br>
+        <small>Je logo komt dan op de website en we maken er extra reclame mee. De organisatie neemt contact op over de mogelijkheden.</small></span>
+      </label></div>
+      <div class="form__actions">
+        <button type="submit" class="btn btn--primary btn--lg">${herhaal ? 'Bevestig mijn deelname' : 'Meld mij aan als voorlichter'}</button>
+      </div>
+      <p class="form-consent">Je contactgegevens zijn alleen voor de organisatie zichtbaar. Zie ons <a href="/privacy">privacybeleid</a>.</p>
+    </form>`;
+  return c.html(renderLayout({
+    title: `${herhaal ? 'Doe je weer mee?' : 'Word voorlichter'} · Beroepenavond Nijmegen`,
+    metaDescription: null, navItems, activeSlug: '',
+    hero: {
+      eyebrow: settings['event_date_long'] || 'Beroepenavond',
+      title: herhaal ? 'Doe je dit jaar weer mee?' : 'Word voorlichter',
+      compact: true,
+    },
+    bodyHtml: body,
+    settings,
+  }));
 }
 
 // ----------------------------------------------------------------------
 // Uitnodiging (proces 1 + 2 + sponsor-optie 3)
 // ----------------------------------------------------------------------
 
+/** Vriendelijke pagina voor een verlopen/ongeldige uitnodigingslink. */
+function ongeldigeUitnodiging(c: any, settings: Record<string, string>, navItems: any) {
+  const mail = settings['contact_email'] || '';
+  return c.html(renderLayout({
+    title: 'Uitnodiging niet meer geldig · Beroepenavond Nijmegen',
+    metaDescription: null, navItems, activeSlug: '',
+    hero: { eyebrow: 'Voorlichter', title: 'Deze uitnodiging is niet meer geldig', compact: true },
+    bodyHtml: `<p class="lede">De link is verlopen of al gebruikt. Wil je (alsnog) meedoen als voorlichter? Dat kan zo geregeld zijn.</p>
+      <p style="display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn btn--primary btn--lg" href="/aanmelden">Meld je aan als voorlichter</a>
+        ${mail ? `<a class="btn btn--ghost btn--lg" href="mailto:${esc(mail)}">Mail de organisatie</a>` : `<a class="btn btn--ghost btn--lg" href="/contact">Neem contact op</a>`}
+      </p>`,
+    settings,
+  }));
+}
+
 procesApp.get('/voorlichter/uitnodiging', async (c) => {
   const inv = await getInvite(c.env.DB, c.req.query('token') ?? '');
   const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
-  if (!inv) {
-    return renderError(c, 404, 'Deze uitnodigingslink is niet (meer) geldig. Neem contact op met de organisatie.');
-  }
+  if (!inv) return ongeldigeUitnodiging(c, settings, navItems);
 
   if (c.req.query('klaar') || inv.status === 'aangemeld') {
     return c.html(renderLayout({
-      title: 'Aanmelding ontvangen — Beroepenavond Nijmegen',
+      title: 'Aanmelding ontvangen · Beroepenavond Nijmegen',
       metaDescription: null, navItems, activeSlug: '',
       hero: { eyebrow: 'Voorlichter', title: 'Dank, je staat genoteerd!', compact: true },
-      bodyHtml: `<p class="lede">We hebben je gegevens ontvangen en sturen je een bevestiging per e-mail.
-        Richting ${esc(settings['event_date_long'] || 'de avond')} hoor je van ons over je indeling (tijden en lokaal).</p>
+      bodyHtml: `<p class="lede">We hebben je gegevens ontvangen. Richting ${esc(settings['event_date_long'] || 'de avond')}
+        hoor je van ons over je indeling (tijden en lokaal); je krijgt daar bericht van per e-mail.</p>
         <p><a class="btn btn--primary" href="/">Naar de site</a></p>`,
       settings,
     }));
@@ -69,56 +131,29 @@ procesApp.get('/voorlichter/uitnodiging', async (c) => {
       .bind(inv.speaker_id).first()) ?? {};
   }
   const herhaal = inv.kind === 'herhaal';
-  const intro = herhaal
-    ? `Fijn dat je er (hopelijk) weer bij bent! Controleer hieronder of je gegevens nog kloppen, pas aan wat gewijzigd is en bevestig je deelname.`
-    : `Leuk dat je meedoet! Vul hieronder je gegevens in; wij regelen de rest en houden je op de hoogte van je indeling.`;
-
-  const body = `
-    <p class="lede">${intro}</p>
-    <form class="form card-box" method="post" action="/voorlichter/uitnodiging?token=${esc(inv.token)}">
-      <div class="form__row cols-2">
-        ${veld('Naam', 'name', sp.full_name ?? inv.name ?? '', { required: true })}
-        ${veld('E-mail', 'email', sp.email ?? inv.email, { type: 'email', required: true })}
-        ${veld('Telefoon', 'phone', sp.phone ?? '')}
-        ${veld('Organisatie / werkgever', 'organization', sp.organization ?? '')}
-      </div>
-      ${veld('Beroep dat je presenteert', 'job_title', sp.job_title ?? '', { required: true, hint: 'Bijv. architect, IC-verpleegkundige, piloot' })}
-      ${veld('LinkedIn (optioneel)', 'linkedin', sp.linkedin ?? '', { hint: 'Wordt bij je naam op de site getoond' })}
-      <div class="field"><label style="display:flex;gap:10px;align-items:flex-start;font-weight:500">
-        <input type="checkbox" name="sponsor" value="1" style="width:auto;margin-top:4px">
-        <span><strong>Ik heb interesse om sponsor te worden.</strong><br>
-        <small>Je logo komt dan op de website en we maken er extra reclame mee. De organisatie neemt contact op over de mogelijkheden.</small></span>
-      </label></div>
-      <div class="form__actions">
-        <button type="submit" class="btn btn--primary btn--lg">${herhaal ? 'Bevestig mijn deelname' : 'Meld mij aan als voorlichter'}</button>
-      </div>
-      <p class="form-consent">Je contactgegevens zijn alleen voor de organisatie zichtbaar. Zie ons <a href="/privacy">privacybeleid</a>.</p>
-    </form>`;
-
-  return c.html(renderLayout({
-    title: `${herhaal ? 'Doe je weer mee?' : 'Word voorlichter'} — Beroepenavond Nijmegen`,
-    metaDescription: null, navItems, activeSlug: '',
-    hero: {
-      eyebrow: settings['event_date_long'] || 'Beroepenavond',
-      title: herhaal ? 'Doe je dit jaar weer mee?' : 'Word voorlichter',
-      compact: true,
-    },
-    bodyHtml: body,
-    settings,
-  }));
+  return uitnodigingPage(c, inv, herhaal, {
+    name: sp.full_name ?? inv.name ?? '', email: sp.email ?? inv.email, phone: sp.phone ?? '',
+    organization: sp.organization ?? '', job_title: sp.job_title ?? '', linkedin: sp.linkedin ?? '',
+  }, settings, navItems);
 });
 
 procesApp.post('/voorlichter/uitnodiging', async (c) => {
   const inv = await getInvite(c.env.DB, c.req.query('token') ?? '');
-  if (!inv) return renderError(c, 404, 'Deze uitnodigingslink is niet (meer) geldig.');
+  const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
+  if (!inv) return ongeldigeUitnodiging(c, settings, navItems);
+  // Al aangemeld? Niet opnieuw opslaan/mailen (voorkomt dubbele bevestigingsmail).
+  if (inv.status === 'aangemeld') return c.redirect(`/voorlichter/uitnodiging?token=${inv.token}&klaar=1`, 302);
   const b = await c.req.parseBody();
   const name = str(b.name);
   const email = str(b.email).toLowerCase();
   const jobTitle = str(b.job_title);
-  if (!name || !EMAIL_RE.test(email) || !jobTitle) {
-    return c.redirect(`/voorlichter/uitnodiging?token=${inv.token}`, 302);
-  }
   const sponsor = str(b.sponsor) ? 1 : 0;
+  if (!name || !EMAIL_RE.test(email) || !jobTitle) {
+    return uitnodigingPage(c, inv, inv.kind === 'herhaal', {
+      name, email: str(b.email), phone: str(b.phone), organization: str(b.organization),
+      job_title: jobTitle, linkedin: str(b.linkedin), sponsor: !!sponsor,
+    }, settings, navItems, 'Controleer je naam, een geldig e-mailadres en het beroep dat je presenteert.');
+  }
   const now = Math.floor(Date.now() / 1000);
   let speakerId = inv.speaker_id;
   if (speakerId) {
@@ -183,7 +218,7 @@ procesApp.get('/evaluatie', async (c) => {
 
   if (c.req.query('klaar')) {
     return c.html(renderLayout({
-      title: 'Bedankt voor je evaluatie — Beroepenavond Nijmegen',
+      title: 'Bedankt voor je evaluatie · Beroepenavond Nijmegen',
       metaDescription: null, navItems, activeSlug: '',
       hero: { eyebrow: 'Evaluatie', title: 'Bedankt!', compact: true },
       bodyHtml: `<p class="lede">Je evaluatie is opgeslagen. Dank voor je inzet vanavond, we hopen je volgend jaar weer te zien!</p>`,
@@ -221,7 +256,7 @@ procesApp.get('/evaluatie', async (c) => {
     </form>`;
 
   return c.html(renderLayout({
-    title: 'Evaluatie — Beroepenavond Nijmegen',
+    title: 'Evaluatie · Beroepenavond Nijmegen',
     metaDescription: null, navItems, activeSlug: '',
     hero: { eyebrow: 'Voorlichter', title: 'Hoe waren je sessies?', compact: true },
     bodyHtml: body,

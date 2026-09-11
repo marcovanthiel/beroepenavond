@@ -48,15 +48,15 @@ function form(p: Partial<PageRow>, isNew: boolean): string {
     ${pageHeader(isNew ? 'Nieuwe pagina' : `Pagina: ${esc(p.title ?? '')}`)}
     <form method="post" action="${action}" class="card">
       <div class="form-grid cols-2">
-        ${field({ label: 'Slug (bijv. /tijdschema)', name: 'slug', value: p.slug, required: true, help: isNew ? 'Met / ervoor. Niet meer te wijzigen na aanmaken.' : 'Niet wijzigen — dit is de URL.' })}
+        ${field({ label: 'Slug (bijv. /tijdschema)', name: 'slug', value: p.slug, required: true, help: isNew ? 'Met / ervoor. Niet meer te wijzigen na aanmaken.' : 'Niet wijzigen: dit is de URL.' })}
         ${field({ label: 'Titel', name: 'title', value: p.title, required: true })}
         ${field({ label: 'Menu-label (optioneel)', name: 'nav_label', value: p.nav_label ?? '' })}
         ${field({ label: 'Menu-volgorde', name: 'nav_order', value: p.nav_order ?? 100, type: 'number' })}
         <div class="span-2">${field({ label: 'Meta-omschrijving (SEO)', name: 'meta_description', value: p.meta_description ?? '' })}</div>
-        ${field({ label: 'Hero — eyebrow', name: 'hero_eyebrow', value: p.hero_eyebrow ?? '' })}
-        ${field({ label: 'Hero — titel', name: 'hero_title', value: p.hero_title ?? '' })}
-        <div class="span-2">${field({ label: 'Hero — lede', name: 'hero_lede', value: p.hero_lede ?? '' })}</div>
-        <div class="span-2">${field({ label: 'Hero — afbeelding (URL)', name: 'hero_image', value: p.hero_image ?? '' })}</div>
+        ${field({ label: 'Hero: eyebrow', name: 'hero_eyebrow', value: p.hero_eyebrow ?? '' })}
+        ${field({ label: 'Hero: titel', name: 'hero_title', value: p.hero_title ?? '' })}
+        <div class="span-2">${field({ label: 'Hero: lede', name: 'hero_lede', value: p.hero_lede ?? '' })}</div>
+        <div class="span-2">${field({ label: 'Hero: afbeelding (URL)', name: 'hero_image', value: p.hero_image ?? '' })}</div>
         <div class="span-2">${textarea({ label: 'Inhoud (markdown)', name: 'body_md', value: p.body_md ?? '', rows: 16, mono: true, help: 'Ondersteunt ## koppen, lijsten, tabellen, **vet**, [links](/x). {{sleutel}} = instelling.' })}</div>
         <div class="span-2">${checkbox({ label: 'Gepubliceerd (zichtbaar op site)', name: 'is_published', checked: p.is_published !== 0 })}</div>
       </div>

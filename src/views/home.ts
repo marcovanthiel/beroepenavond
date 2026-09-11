@@ -172,14 +172,14 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Beroepenavond ${eventYear} — Nijmegen</title>
+<title>Beroepenavond ${eventYear} · Nijmegen</title>
 <meta name="description" content="${eventDateLong}: Beroepenavond Nijmegen. ${totBeroepen} beroepen, ${totSprekers} professionals, één avond in ${venue}. Gratis voor scholieren.">
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="stylesheet" href="/assets/css/style.css?v=7">
-<meta property="og:title" content="Beroepenavond ${eventYear} — Nijmegen">
+<link rel="stylesheet" href="/assets/css/style.css?v=8">
+<meta property="og:title" content="Beroepenavond ${eventYear} · Nijmegen">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://${c.env.SITE_HOST}/assets/img/og.png">
 <link rel="canonical" href="https://${c.env.SITE_HOST}/">

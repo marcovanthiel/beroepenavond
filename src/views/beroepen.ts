@@ -92,7 +92,7 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
 
   return c.html(
     renderLayout({
-      title: 'Alle beroepen — Beroepenavond Nijmegen',
+      title: 'Alle beroepen · Beroepenavond Nijmegen',
       metaDescription: `Alle beroepen op de Beroepenavond, verdeeld over ${(cats.results ?? []).length} vakgebieden. Klik door naar de voorlichters per beroep.`,
       navItems,
       activeSlug: '/beroepen',
@@ -220,14 +220,14 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
           </form>
           <span class="tip" role="tooltip" id="tip-avond"><b>Wat gebeurt er?</b><br>${esc(uitleg)}</span>
         </span>
-        <a class="btn btn--ghost btn--lg" href="#vraag">Stel je vraag vast</a>
+        <a class="btn btn--ghost btn--lg" href="#vraag">Stel alvast een vraag</a>
       </div>
       <p class="cta-uitleg">${esc(uitleg)}</p>
-      <p class="muted" style="font-size:.85rem;margin-top:14px">Nog geen account? Je logt zo in met alleen je e-mailadres via <a href="/leerling">Mijn avond</a>.</p>
+      <p class="muted" style="font-size:.85rem;margin-top:14px">Nog geen account? Je logt zo in met alleen je e-mailadres via <a href="/leerling">Mijn avond</a>. We onthouden je keuze en vraag.</p>
       <form method="post" action="/leerling/vraag" id="vraag" style="margin-top:26px;max-width:560px">
         <input type="hidden" name="beroep_id" value="${beroep.id}">
         <div class="field"><label for="vraag-tekst">Je vraag aan de voorlichter</label>
-          <textarea id="vraag-tekst" name="question" rows="3" placeholder="Bijv. welke opleiding heb je gevolgd? Wat verdien je?"></textarea></div>
+          <textarea id="vraag-tekst" name="question" rows="3" required placeholder="Bijv. welke opleiding heb je gevolgd? Wat verdien je?"></textarea></div>
         <button class="btn btn--ghost" type="submit">Vraag versturen</button>
       </form>
     </div>
@@ -243,7 +243,7 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
 
   return c.html(
     renderLayout({
-      title: `${beroep.name} — Beroepenavond Nijmegen`,
+      title: `${beroep.name} · Beroepenavond Nijmegen`,
       metaDescription: beroep.description_md || `${beroep.name} op de Beroepenavond Nijmegen: ontmoet de professionals en stel je vragen.`,
       navItems,
       activeSlug: '/beroepen',

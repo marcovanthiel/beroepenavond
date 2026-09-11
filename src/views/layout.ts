@@ -134,7 +134,7 @@ ${canonical ? raw(`<meta property="og:url" content="${attr(canonical)}">`) : ''}
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="/assets/img/favicon.png">
 <link rel="manifest" href="/assets/site.webmanifest">
-<link rel="stylesheet" href="/assets/css/style.css?v=7">
+<link rel="stylesheet" href="/assets/css/style.css?v=8">
 ${raw(jsonLdHtml)}
 </head>
 <body>
@@ -170,10 +170,10 @@ ${opts.hero
 ${raw(crumbsHtml)}
 
 ${opts.bare
-  ? raw(`<main id="main">${opts.notice ? `<div class="wrap"><div class="notice notice--${opts.notice.type}">${attr(opts.notice.text)}</div></div>` : ''}${opts.bodyHtml}</main>`)
+  ? raw(`<main id="main">${opts.notice ? `<div class="wrap"><div class="notice notice--${opts.notice.type}" role="${opts.notice.type === 'err' ? 'alert' : 'status'}">${attr(opts.notice.text)}</div></div>` : ''}${opts.bodyHtml}</main>`)
   : html`<main class="section" id="main">
   <div class="wrap">
-${opts.notice ? raw(`<div class="notice notice--${opts.notice.type}">${attr(opts.notice.text)}</div>`) : ''}
+${opts.notice ? raw(`<div class="notice notice--${opts.notice.type}" role="${opts.notice.type === 'err' ? 'alert' : 'status'}">${attr(opts.notice.text)}</div>`) : ''}
 ${raw(opts.bodyHtml)}
   </div>
 </main>`}

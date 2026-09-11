@@ -59,13 +59,13 @@ classroomsApp.get('/', async (c) => {
         <td><strong>${esc(r.code)}</strong></td>
         <td>${esc(r.name ?? '')}</td>
         <td>${esc(r.floor ?? '')}</td>
-        <td>${r.map_shape ? '<span class="badge badge--on">Op kaart</span>' : '<span class="badge badge--off">—</span>'}</td>
+        <td>${r.map_shape ? '<span class="badge badge--on">Op kaart</span>' : '<span class="badge badge--off">-</span>'}</td>
         <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/classrooms/${esc(r.id)}">Bewerken</a></td>
       </tr>`
     )
     .join('');
   const body = `
-    ${pageHeader(`Lokalen — ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/classrooms/new">Nieuw lokaal</a>')}
+    ${pageHeader(`Lokalen · ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/classrooms/new">Nieuw lokaal</a>')}
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Code</th><th>Naam</th><th>Verdieping</th><th>Kaart</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen lokalen.</td></tr>'}</tbody>
@@ -84,7 +84,7 @@ async function form(c: any, eventId: string, r: Partial<Classroom>, isNew: boole
         ${field({ label: 'Naam (optioneel)', name: 'name', value: r.name ?? '' })}
         ${field({ label: 'Verdieping (label)', name: 'floor', value: r.floor ?? '' })}
         ${field({ label: 'Capaciteit', name: 'capacity', value: r.capacity ?? '', type: 'number' })}
-        ${floors.length ? select({ label: 'Plattegrond-verdieping', name: 'map_floor', value: r.map_floor ?? '', options: floors, empty: '— geen —' }) : field({ label: 'Plattegrond-verdieping (slug)', name: 'map_floor', value: r.map_floor ?? '' })}
+        ${floors.length ? select({ label: 'Plattegrond-verdieping', name: 'map_floor', value: r.map_floor ?? '', options: floors, empty: '(geen)' }) : field({ label: 'Plattegrond-verdieping (slug)', name: 'map_floor', value: r.map_floor ?? '' })}
         <div></div>
         <div class="span-2">${textarea({ label: 'map_shape (JSON, meestal via editor)', name: 'map_shape', value: r.map_shape ?? '', rows: 3, mono: true, help: 'Bijv. {"shape":"polygon","points":"10,20 30,40 50,60"}' })}</div>
         <div class="span-2">${textarea({ label: 'Notitie', name: 'notes', value: r.notes ?? '', rows: 2 })}</div>

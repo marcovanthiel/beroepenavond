@@ -18,7 +18,7 @@
   function openRoom(id) {
     var room = ROOMS[id];
     if (!room) return;
-    title.textContent = room.name ? room.code + ' — ' + room.name : 'Lokaal ' + room.code;
+    title.textContent = room.name ? room.code + ' · ' + room.name : 'Lokaal ' + room.code;
     if (!room.sessions || room.sessions.length === 0) {
       body.innerHTML = '<p style="color:#667">Voor dit lokaal is nog geen sessie ingepland.</p>';
     } else {

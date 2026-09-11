@@ -126,12 +126,29 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
   // een banner die uitlegt wat wél kan.
   const path = (() => { try { return new URL(c.req.url).pathname; } catch { return ''; } })();
   const isRB = user?.role === 'relatiebeheerder';
-  const roLock = isRB && !relatiebeheerderMagBewerken(path);
-  const rbBanner = isRB
-    ? `<div class="rb-banner">${roLock
-        ? '<strong>Alleen-lezen.</strong> Je bekijkt deze pagina als relatiebeheerder. Bewerken kan bij <a href="/admin/speakers">Voorlichters</a>, <a href="/admin/uitnodigingen">Uitnodigingen</a> en het <a href="/admin/inbox">Postvak</a>.'
-        : '<strong>Relatiebeheerder.</strong> Je kunt hier voorlichters beheren. Het overige beheer kun je wel inzien, maar niet wijzigen.'}</div>`
-    : '';
+  // Het dashboard is een puur overzicht (niemands bewerk-oppervlak): niet
+  // vergrendelen en geen "alleen-lezen"-alarm, wel de zachte rol-banner.
+  const isOverview = path === '/admin' || path === '/admin/';
+  const roLock = isRB && !relatiebeheerderMagBewerken(path) && !isOverview;
+  let rbBanner = '';
+  if (isRB) {
+    const domein = 'bij <a href="/admin/speakers">Voorlichters</a>, <a href="/admin/uitnodigingen">Uitnodigingen</a>, het <a href="/admin/inbox">Postvak</a> en je eigen <a href="/admin/account">account</a>';
+    let txt: string;
+    if (roLock) {
+      txt = `<strong>Alleen-lezen.</strong> Je bekijkt deze pagina als relatiebeheerder. Bewerken kan ${domein}.`;
+    } else if (path.startsWith('/admin/account')) {
+      txt = '<strong>Je eigen account.</strong> Hier wijzig je je eigen naam.';
+    } else if (path.startsWith('/admin/speakers')) {
+      txt = '<strong>Voorlichters.</strong> Hier voeg je voorlichters toe, bewerk je ze en bevestig je hun deelname.';
+    } else if (path.startsWith('/admin/uitnodigingen')) {
+      txt = '<strong>Uitnodigingen.</strong> Hier nodig je voorlichters uit en verstuur je herinneringen.';
+    } else if (path.startsWith('/admin/inbox')) {
+      txt = '<strong>Postvak.</strong> Hier handel je aanmeldingen af en maak je er voorlichters van.';
+    } else {
+      txt = `<strong>Relatiebeheerder.</strong> Je kunt alles inzien; bewerken kan ${domein}.`;
+    }
+    rbBanner = `<div class="rb-banner" role="note" id="rb-note">${txt}</div>`;
+  }
 
   return c.html(html`<!DOCTYPE html>
 <html lang="nl">
@@ -139,7 +156,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>${opts.title} — Beheer Beroepenavond</title>
+<title>${opts.title} · Beheer Beroepenavond</title>
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/admin.css">
@@ -176,7 +193,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
     ${err ? raw(`<div class="flash flash--err">${esc(err)}</div>`) : ''}
     ${raw(rbBanner)}
     ${roLock
-      ? raw(`<fieldset class="ro-lock" disabled>${opts.body}</fieldset>`)
+      ? raw(`<fieldset class="ro-lock" disabled aria-describedby="rb-note">${opts.body}</fieldset>`)
       : raw(opts.body)}
   </main>
 </div>
@@ -328,7 +345,7 @@ export function filterBar(o: {
       <input type="search" placeholder="${esc(o.placeholder)}" aria-label="${esc(o.placeholder)}"
         autocomplete="off" data-filter-target="#${esc(o.targetId)}" data-filter-count="#${esc(o.targetId)}-count">
     </div>
-    <span class="list-count" id="${esc(o.targetId)}-count">Totaal: ${o.total} ${esc(noun)}</span>
+    <span class="list-count" id="${esc(o.targetId)}-count" role="status" aria-live="polite">Totaal: ${o.total} ${esc(noun)}</span>
     ${o.actionsHtml ? `<span style="margin-left:auto">${o.actionsHtml}</span>` : ''}
   </div>`;
 }

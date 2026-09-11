@@ -24,7 +24,7 @@ leerlingenApp.get('/', async (c) => {
   const list = all
     .map(
       (r) => `<tr>
-        <td><strong>${esc(r.name ?? '—')}</strong><br><span class="muted">${esc(r.email)}</span></td>
+        <td><strong>${esc(r.name ?? '-')}</strong><br><span class="muted">${esc(r.email)}</span></td>
         <td>${esc(r.school ?? '')}${r.profiel ? `<br><span class="muted">${esc(r.profiel)}</span>` : ''}</td>
         <td>${r.n_picks}</td>
         <td>${r.newsletter ? '<span class="badge badge--on">Ja</span>' : '<span class="badge badge--off">Nee</span>'}</td>

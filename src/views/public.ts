@@ -88,7 +88,7 @@ export async function renderError(
   c.status(status as 404 | 500);
   return c.html(
     renderLayout({
-      title: `${status} — ${c.env.SITE_NAME}`,
+      title: `${status} · ${c.env.SITE_NAME}`,
       navItems,
       activeSlug: '',
       hero: {

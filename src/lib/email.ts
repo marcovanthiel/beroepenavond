@@ -189,34 +189,56 @@ export async function notifySubmission(
         .map(
           ([k, v]) =>
             `<tr><td style="padding:6px 8px;color:#667;vertical-align:top;width:110px">${esc(k)}</td>
-             <td style="padding:6px 8px;white-space:pre-wrap">${esc(v) || '—'}</td></tr>`
+             <td style="padding:6px 8px;white-space:pre-wrap">${esc(v) || '-'}</td></tr>`
         )
         .join('')}
     </table>
     <p style="margin-top:18px">${emailButton(adminUrl, 'Bekijk in beheer')}</p>`;
   await sendEmail(cfg, {
     to: cfg.to,
-    subject: `${title}${s.name ? ` — ${s.name}` : ''}`,
+    subject: `${title}${s.name ? `: ${s.name}` : ''}`,
     html: emailShell(title, inner, cfg.brand),
+    text: `${title}\n${rows.map(([k, v]) => `${k}: ${String(v ?? '-')}`).join('\n')}\n\nBekijk in beheer: ${adminUrl}`,
     replyTo: s.email || undefined,
   });
 }
 
-/** Bevestigingsmail naar de inzender (best effort). */
+/** Bevestigingsmail naar de inzender (best effort). Voorlichters krijgen een
+ *  warmere, dankbare tekst dan een gewoon contactbericht. */
 export async function confirmToSender(
   cfg: MailConfig,
   s: SubmissionLike
 ): Promise<void> {
   if (!s.email) return;
+  const naam = esc(s.name) || 'bezoeker';
+  if (s.type === 'volunteer') {
+    const inner = `
+      <p>Beste ${naam},</p>
+      <p>Wat leuk dat je je aanmeldt als voorlichter voor de <strong>Beroepenavond Nijmegen</strong>${
+        s.profession ? ` met het beroep <strong>${esc(s.profession)}</strong>` : ''
+      }! We hebben je aanmelding goed ontvangen.</p>
+      <p>We nemen contact met je op over de praktische details voor de avond
+      (tijden, lokaal en hoe de avond verloopt). Heb je tussentijds een vraag?
+      Mail gerust naar ${esc(cfg.to)}.</p>
+      <p>Hartelijke groet,<br>Organisatie Beroepenavond Nijmegen</p>`;
+    await sendEmail(cfg, {
+      to: s.email,
+      subject: 'Bedankt voor je aanmelding als voorlichter',
+      html: emailShell('Bedankt voor je aanmelding', inner, cfg.brand),
+      text: `Beste ${s.name || 'bezoeker'},\n\nWat leuk dat je je aanmeldt als voorlichter voor de Beroepenavond Nijmegen${s.profession ? ` met het beroep ${s.profession}` : ''}! We hebben je aanmelding goed ontvangen en nemen contact met je op over de praktische details. Vragen? Mail ${cfg.to}.\n\nHartelijke groet,\nOrganisatie Beroepenavond Nijmegen`,
+    });
+    return;
+  }
   const inner = `
-    <p>Beste ${esc(s.name) || 'bezoeker'},</p>
+    <p>Beste ${naam},</p>
     <p>Bedankt voor je bericht aan de Beroepenavond Nijmegen. We hebben het
     in goede orde ontvangen en nemen indien nodig contact met je op.</p>
     <p>Met vriendelijke groet,<br>Organisatie Beroepenavond Nijmegen</p>`;
   await sendEmail(cfg, {
     to: s.email,
-    subject: 'Bedankt voor je bericht — Beroepenavond Nijmegen',
+    subject: 'Bedankt voor je bericht',
     html: emailShell('Bevestiging', inner, cfg.brand),
+    text: `Beste ${s.name || 'bezoeker'},\n\nBedankt voor je bericht aan de Beroepenavond Nijmegen. We hebben het in goede orde ontvangen en nemen indien nodig contact met je op.\n\nMet vriendelijke groet,\nOrganisatie Beroepenavond Nijmegen`,
   });
 }
 
@@ -242,6 +264,7 @@ export async function speakerConfirmedMail(
     to: speaker.email,
     subject: 'Je deelname aan de Beroepenavond is bevestigd',
     html: emailShell('Bevestiging deelname', inner, cfg.brand),
+    text: `Beste ${speaker.full_name},\n\nWat leuk dat je meedoet aan de Beroepenavond Nijmegen${datum ? ` op ${datum}` : ''}! Je deelname${speaker.job_title ? ` als ${speaker.job_title}` : ''} is bevestigd en je komt op de website te staan zodra we het voorlichters-overzicht publiceren. We nemen tijdig contact op met de praktische details. Vragen? Mail ${cfg.to}.\n\nHartelijke groet,\nOrganisatie Beroepenavond Nijmegen`,
   });
 }
 
@@ -258,7 +281,8 @@ export async function newsletterConfirm(
     <p style="color:#8a8a86;font-size:13px">Heb je je niet aangemeld? Dan kun je deze mail negeren.</p>`;
   await sendEmail(cfg, {
     to: email,
-    subject: 'Bevestig je aanmelding — Beroepenavond Nijmegen',
+    subject: 'Bevestig je aanmelding voor de nieuwsbrief',
     html: emailShell('Nieuwsbrief', inner, cfg.brand),
+    text: `Bevestig je aanmelding voor updates over de Beroepenavond Nijmegen via deze link: ${confirmUrl}\n\nHeb je je niet aangemeld? Dan kun je deze mail negeren.`,
   });
 }

@@ -47,7 +47,7 @@ inboxApp.get('/', async (c) => {
     .map(
       (r) => `<tr style="${r.status === 'new' ? 'font-weight:500' : ''}">
         <td>${r.type === 'volunteer' ? '🙋 Voorlichter' : '✉️ Contact'}</td>
-        <td><strong>${esc(r.name ?? '—')}</strong><br><span class="muted">${esc(r.email ?? '')}</span></td>
+        <td><strong>${esc(r.name ?? '-')}</strong><br><span class="muted">${esc(r.email ?? '')}</span></td>
         <td>${esc(r.type === 'volunteer' ? r.profession ?? '' : (r.message ?? '').slice(0, 50))}</td>
         <td>${STATUS_BADGE[r.status] ?? r.status}</td>
         <td class="muted">${dateNL(r.created_at)}</td>

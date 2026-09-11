@@ -69,7 +69,7 @@ function form(c: any, n: Partial<News>, isNew: boolean): string {
   const preview = n.cover_url ? `<div style="margin-bottom:8px"><img src="${esc(n.cover_url)}" alt="" style="max-width:280px;border-radius:8px"></div>` : '';
   const upload = r2
     ? `<label class="fld"><span class="fld__label">Cover uploaden</span>${preview}<input class="fld__input" type="file" name="cover_file" accept="image/*"></label>`
-    : `<label class="fld"><span class="fld__label">Cover</span>${preview}<span class="fld__help">R2 nog niet gekoppeld — gebruik URL-veld.</span></label>`;
+    : `<label class="fld"><span class="fld__label">Cover</span>${preview}<span class="fld__help">R2 nog niet gekoppeld, gebruik URL-veld.</span></label>`;
   return `
     ${pageHeader(isNew ? 'Nieuw bericht' : esc(n.title ?? 'Bericht'))}
     <form method="post" action="/admin/nieuws/${isNew ? 'new' : esc(n.id!)}" enctype="multipart/form-data" class="card">

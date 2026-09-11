@@ -53,7 +53,7 @@ beroepenApp.get('/', async (c) => {
   const list = showing
     .map(
       (r) => `<tr>
-        <td><span class="swatch" style="background:${esc(r.cat_color ?? '#ccc')}"></span>${esc(r.cat_name ?? '—')}</td>
+        <td><span class="swatch" style="background:${esc(r.cat_color ?? '#ccc')}"></span>${esc(r.cat_name ?? '-')}</td>
         <td><strong>${esc(r.name)}</strong></td>
         <td>${r.n_speakers > 0 ? `<span class="badge badge--on">${r.n_speakers}</span>` : '<span class="badge badge--off">0</span>'}</td>
         <td>${r.sort_order}</td>
@@ -71,12 +71,12 @@ beroepenApp.get('/', async (c) => {
 
   const intro =
     filter === 'zonder'
-      ? '<p class="muted">Deze beroepen hebben nog <strong>géén voorlichter</strong> — werf hier gericht. Klik <strong>+ Voorlichter</strong> om meteen een spreker aan dit beroep te koppelen.</p>'
+      ? '<p class="muted">Deze beroepen hebben nog <strong>géén voorlichter</strong>, werf hier gericht. Klik <strong>+ Voorlichter</strong> om meteen een spreker aan dit beroep te koppelen.</p>'
       : '<p class="muted">De kolom <strong>Sprekers</strong> toont hoeveel voorlichters aan een beroep hangen. Filter op <strong>Zonder spreker</strong> om te zien waar nog geworven moet worden.</p>';
 
   const empty =
     filter === 'zonder'
-      ? emptyState({ colspan: 5, title: '🎉 Elk beroep heeft minstens één voorlichter — niets meer te werven.' })
+      ? emptyState({ colspan: 5, title: '🎉 Elk beroep heeft minstens één voorlichter, niets meer te werven.' })
       : emptyState({ colspan: 5, title: 'Nog geen beroepen.', cta: { href: '/admin/beroepen/new', label: 'Eerste beroep toevoegen' } });
 
   const headerActions = `${
@@ -153,7 +153,7 @@ async function form(c: any, b: Partial<Beroep>, isNew: boolean): Promise<string>
     <form method="post" action="/admin/beroepen/${isNew ? 'new' : b.id}" class="card">
       <div class="form-grid cols-2">
         <div class="span-2">${field({ label: 'Naam', name: 'name', value: b.name ?? '', required: true })}</div>
-        ${select({ label: 'Categorie', name: 'category_id', value: b.category_id ?? '', options, empty: '— kies —' })}
+        ${select({ label: 'Categorie', name: 'category_id', value: b.category_id ?? '', options, empty: '(kies)' })}
         ${field({ label: 'Volgorde', name: 'sort_order', value: b.sort_order ?? 0, type: 'number' })}
         <div class="span-2">${field({ label: 'Slug / anker (optioneel)', name: 'slug', value: b.slug ?? '' })}</div>
         <div class="span-2">${textarea({ label: 'Omschrijving (markdown, optioneel)', name: 'description_md', value: b.description_md ?? '', rows: 5 })}</div>
@@ -187,7 +187,7 @@ beroepenApp.get('/:id', async (c) => {
                 `<li><a href="/admin/speakers/${esc(s.id)}">${esc(s.full_name)}</a>${s.organization ? ` <span class="muted">· ${esc(s.organization)}</span>` : ''}${s.is_public ? '' : ' <span class="badge badge--off">verborgen</span>'}</li>`
             )
             .join('')}</ul>`
-        : '<p class="muted">Nog geen spreker gekoppeld aan dit beroep — dat mag. Koppel een spreker via <a href="/admin/speakers">Sprekers</a> (kies dit beroep in de treklijst).</p>'
+        : '<p class="muted">Nog geen spreker gekoppeld aan dit beroep, dat mag. Koppel een spreker via <a href="/admin/speakers">Sprekers</a> (kies dit beroep in de treklijst).</p>'
     }
   </div>`;
   return renderAdminLayout(c, { title: 'Beroep bewerken', activeKey: 'beroepen', body: (await form(c, b, false)) + speakerCard });

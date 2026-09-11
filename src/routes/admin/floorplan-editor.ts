@@ -105,7 +105,7 @@ editorApp.get('/', async (c) => {
         </div>
         <div>
           <p class="fld__label">Lokalen</p>
-          <ul class="editor-list" id="roomList">${roomList || '<li class="muted">Geen lokalen — voeg ze toe onder Lokalen.</li>'}</ul>
+          <ul class="editor-list" id="roomList">${roomList || '<li class="muted">Geen lokalen, voeg ze toe onder Lokalen.</li>'}</ul>
         </div>
       </div>
     </div>

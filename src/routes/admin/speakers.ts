@@ -192,7 +192,7 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
   const beroepSelect = `<label class="fld">
     <span class="fld__label">Beroep</span>
     <select class="fld__input" name="beroep_id" data-combo data-combo-placeholder="Zoek een beroep…">
-      <option value="">— nog geen beroep —</option>
+      <option value="">(nog geen beroep)</option>
       ${[...groups]
         .map(
           ([g, items]) =>
@@ -215,7 +215,7 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
         ${portrait}<input class="fld__input" type="file" name="portrait_file" accept="image/*">
         <span class="fld__help">JPG/PNG/WEBP, max 8 MB. Vervangt de huidige foto.</span></label>`
     : `<label class="fld"><span class="fld__label">Portretfoto</span>${portrait}
-        <span class="fld__help">R2-bucket nog niet gekoppeld — gebruik het URL-veld hieronder.</span></label>`;
+        <span class="fld__help">R2-bucket nog niet gekoppeld, gebruik het URL-veld hieronder.</span></label>`;
   return `
     ${backLink('/admin/speakers', 'Terug naar sprekers')}
     ${pageHeader(isNew ? 'Nieuwe spreker' : esc(s.full_name ?? 'Spreker'))}
@@ -224,7 +224,7 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
         <div class="span-2">${field({ label: 'Volledige naam', name: 'full_name', value: s.full_name ?? '', required: true })}</div>
         <div class="span-2">${beroepSelect}</div>
         ${field({ label: 'Functietitel (optioneel)', name: 'job_title', value: s.job_title ?? '', help: 'Specifieke titel op de kaart; leeg = de beroepsnaam' })}
-        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: catOptions, empty: '— geen —', help: 'Wordt overschreven door het gekozen beroep' })}
+        ${select({ label: 'Categorie', name: 'category_id', value: s.category_id ?? '', options: catOptions, empty: '(geen)', help: 'Wordt overschreven door het gekozen beroep' })}
         ${field({ label: 'Organisatie / werkgever', name: 'organization', value: s.organization ?? '' })}
         ${field({ label: 'E-mail', name: 'email', value: s.email ?? '', type: 'email' })}
         ${field({ label: 'Telefoon', name: 'phone', value: s.phone ?? '' })}
