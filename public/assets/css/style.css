@@ -653,3 +653,10 @@ body.cat-open .bn-strip { position: relative; z-index: 95; }
 @media (prefers-reduced-motion: reduce) {
   .cat-drawer, .cat-scrim { transition: none; }
 }
+
+/* Nette checkbox-rij (voorkomt dat .field-inputs op 100% breedte stretchen). */
+.check-row { display: flex; align-items: flex-start; gap: 10px; font-weight: 500; }
+.check-row input[type=checkbox] { width: auto; flex: 0 0 auto; margin-top: 3px; }
+/* Beroepen kiezen: zoek + teller */
+.kies-tools { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin: 6px 0 22px; }
+.kies-teller { font-weight: 700; }

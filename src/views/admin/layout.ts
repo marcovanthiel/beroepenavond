@@ -4,6 +4,7 @@
  * codebase en houdt de Worker-bundle klein.
  */
 import type { Context } from 'hono';
+import { relatiebeheerderMagBewerken } from '../../lib/perms';
 import { html, raw } from 'hono/html';
 import type { AdminEnv } from '../../lib/auth';
 
@@ -120,6 +121,18 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
   const ok = opts.flash?.ok;
   const err = opts.flash?.err;
 
+  // Relatiebeheerder: alles inzien, alleen voorlichters/uitnodigingen/postvak
+  // bewerken. Read-only pagina's zichtbaar vergrendelen (fieldset disabled) +
+  // een banner die uitlegt wat wél kan.
+  const path = (() => { try { return new URL(c.req.url).pathname; } catch { return ''; } })();
+  const isRB = user?.role === 'relatiebeheerder';
+  const roLock = isRB && !relatiebeheerderMagBewerken(path);
+  const rbBanner = isRB
+    ? `<div class="rb-banner">${roLock
+        ? '<strong>Alleen-lezen.</strong> Je bekijkt deze pagina als relatiebeheerder. Bewerken kan bij <a href="/admin/speakers">Voorlichters</a>, <a href="/admin/uitnodigingen">Uitnodigingen</a> en het <a href="/admin/inbox">Postvak</a>.'
+        : '<strong>Relatiebeheerder.</strong> Je kunt hier voorlichters beheren. Het overige beheer kun je wel inzien, maar niet wijzigen.'}</div>`
+    : '';
+
   return c.html(html`<!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -161,7 +174,10 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
   <main class="content">
     ${ok ? raw(`<div class="flash flash--ok">${esc(ok)}</div>`) : ''}
     ${err ? raw(`<div class="flash flash--err">${esc(err)}</div>`) : ''}
-    ${raw(opts.body)}
+    ${raw(rbBanner)}
+    ${roLock
+      ? raw(`<fieldset class="ro-lock" disabled>${opts.body}</fieldset>`)
+      : raw(opts.body)}
   </main>
 </div>
 <script src="/assets/js/admin.js" defer></script>

@@ -46,7 +46,7 @@ function loginForm(notice?: string): string {
     <div class="grid grid--2" style="align-items:start">
       <form class="form card-box" method="post" action="/leerling/login">
         <h3>Inloggen of account aanmaken</h3>
-        <p class="muted">Je krijgt een inloglink per e-mail — geen wachtwoord nodig.</p>
+        <p class="muted">Je krijgt een inloglink per e-mail, geen wachtwoord nodig.</p>
         <div class="field"><label>E-mail <span class="req">*</span></label>
           <input type="email" name="email" required autocomplete="email"></div>
         <div class="field"><label>Naam</label><input type="text" name="name" autocomplete="name"></div>
@@ -204,8 +204,8 @@ async function dashboard(c: any) {
       blokkadeHtml = `<div class="card-box" style="margin-top:22px"><h3>Kun je niet de hele avond?</h3>
         <p class="muted" style="font-size:.9rem">Vink de rondes aan waarop je <strong>niet</strong> kunt; daar houden we bij de indeling rekening mee.</p>
         <form method="post" action="/leerling/blokkades">
-          ${rondes.map((r) => `<label class="field" style="flex-direction:row;align-items:center;gap:10px;margin-bottom:8px">
-            <input type="checkbox" name="rounds" value="${esc(r.id)}"${blocked.has(r.id) ? ' checked' : ''} style="width:auto">
+          ${rondes.map((r) => `<label class="check-row" style="margin-bottom:8px">
+            <input type="checkbox" name="rounds" value="${esc(r.id)}"${blocked.has(r.id) ? ' checked' : ''}>
             <span>Ronde ${r.round_no} (${esc(r.start_time)} tot ${esc(r.end_time)})</span></label>`).join('')}
           <button class="btn btn--ghost btn--sm" type="submit">Opslaan</button>
         </form></div>`;
@@ -236,10 +236,11 @@ async function dashboard(c: any) {
     <div class="card-box" style="margin-top:22px">
       <h3>Nieuwsbrief</h3>
       <form method="post" action="/leerling/nieuwsbrief">
-        <label class="field" style="flex-direction:row;align-items:center;gap:10px">
+        <label class="check-row">
           <input type="checkbox" name="newsletter" value="1" ${s.newsletter ? 'checked' : ''} onchange="this.form.submit()">
           <span>Houd mij per e-mail op de hoogte van de Beroepenavond</span>
         </label>
+        <noscript><button class="btn btn--ghost btn--sm" type="submit" style="margin-top:8px">Opslaan</button></noscript>
       </form>
     </div>`;
 
@@ -269,9 +270,10 @@ studentApp.get('/kiezen', requireStudent, async (c) => {
         <div class="beroep-grid">${items
           .map((b: any) => {
             const on = picked.has(b.id);
-            return `<div class="beroep"><form method="post" action="/leerling/kies?to=kiezen" class="inline-form">
-              <input type="hidden" name="beroep_id" value="${b.id}">${on ? '<input type="hidden" name="remove" value="1">' : ''}
-              <button class="btn ${on ? 'btn--secondary' : 'btn--ghost'} btn--sm" type="submit">${on ? '✓ ' : '+ '}${esc(b.name)}</button>
+            return `<div class="beroep" data-name="${esc((b.name || '').toLowerCase())}"><form method="post" action="/leerling/kies?to=kiezen" class="pick-form inline-form">
+              <input type="hidden" name="beroep_id" value="${b.id}">
+              <input type="hidden" name="remove" value="1"${on ? '' : ' disabled'}>
+              <button class="btn ${on ? 'btn--secondary' : 'btn--ghost'} btn--sm pick-btn" type="submit" aria-pressed="${on ? 'true' : 'false'}" data-name="${esc(b.name)}">${on ? '✓ ' : '+ '}${esc(b.name)}</button>
             </form></div>`;
           })
           .join('')}</div>
@@ -279,7 +281,52 @@ studentApp.get('/kiezen', requireStudent, async (c) => {
     })
     .join('');
   const body = `<p><a href="/leerling">← Terug naar Mijn avond</a></p>
-    <p class="prose-lead">Klik een beroep aan om het aan je avond toe te voegen. Je keuze wordt meteen bewaard.</p>${sections}`;
+    <p class="prose-lead">Klik een beroep aan om het aan je avond toe te voegen. Je keuze wordt meteen bewaard. Kies er zoveel je wilt, wij delen ze in over de rondes.</p>
+    <div class="kies-tools">
+      <input type="search" id="kiesZoek" class="catalog-search" placeholder="Zoek een beroep…" aria-label="Zoek een beroep">
+      <span class="kies-teller" id="kiesTeller" role="status" aria-live="polite"></span>
+    </div>
+    ${sections}
+    <p class="catalog-empty" id="kiesLeeg">Geen beroep gevonden voor je zoekopdracht.</p>
+    <script>
+    (function(){
+      var zoek=document.getElementById('kiesZoek'),teller=document.getElementById('kiesTeller'),leeg=document.getElementById('kiesLeeg');
+      var secties=[].slice.call(document.querySelectorAll('.cat-section'));
+      function updTeller(){
+        var n=document.querySelectorAll('.pick-btn.btn--secondary').length;
+        teller.textContent = n===0 ? 'Nog geen beroepen gekozen' : (n+' beroep'+(n===1?'':'en')+' gekozen');
+      }
+      updTeller();
+      if(zoek) zoek.addEventListener('input',function(){
+        var qv=(zoek.value||'').trim().toLowerCase(),any=false;
+        secties.forEach(function(sec){
+          var vis=0;
+          [].slice.call(sec.querySelectorAll('.beroep')).forEach(function(it){
+            var m=!qv||it.getAttribute('data-name').indexOf(qv)>-1;
+            it.style.display=m?'':'none'; if(m)vis++;
+          });
+          sec.style.display=vis>0?'':'none'; if(vis>0)any=true;
+        });
+        if(leeg) leeg.style.display=any?'none':'block';
+      });
+      // Toevoegen/verwijderen zonder paginaherlaad (blijft werken zonder JS).
+      document.addEventListener('submit',function(e){
+        var f=e.target.closest && e.target.closest('.pick-form'); if(!f)return;
+        e.preventDefault();
+        var btn=f.querySelector('.pick-btn'), rem=f.querySelector('input[name="remove"]');
+        var nowOn=rem.disabled; // was uit → wordt aan (toevoegen), en andersom
+        btn.disabled=true;
+        fetch(f.action,{method:'POST',body:new FormData(f),credentials:'same-origin'}).then(function(){
+          rem.disabled=!nowOn;
+          btn.classList.toggle('btn--secondary',nowOn);
+          btn.classList.toggle('btn--ghost',!nowOn);
+          btn.setAttribute('aria-pressed',String(nowOn));
+          btn.textContent=(nowOn?'✓ ':'+ ')+btn.getAttribute('data-name');
+          btn.disabled=false; updTeller();
+        }).catch(function(){ btn.disabled=false; f.submit(); });
+      });
+    })();
+    </script>`;
   return page(c, { title: 'Beroepen kiezen', body });
 });
 

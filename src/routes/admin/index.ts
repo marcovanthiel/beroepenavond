@@ -21,6 +21,7 @@ import {
 } from '../../lib/auth';
 import { renderLogin, renderSetup, renderCodeForm } from '../../views/admin/login';
 import { renderAdminLayout, esc, pageHeader } from '../../views/admin/layout';
+import { relatiebeheerderMagBewerken } from '../../lib/perms';
 import { str, redirectErr } from '../../lib/forms';
 import { getSettings } from '../../lib/db';
 import { mailConfig, sendEmail, emailShell } from '../../lib/email';
@@ -156,17 +157,13 @@ adminApp.use('*', requireAuth);
 // beheren — plus het eigen account. Alle andere wijzigingen worden geweigerd
 // met een 403 en een nette in-app-melding. Nieuwe voorlichter-mutatieroute?
 // Zet het pad-prefix in RELATIEBEHEERDER_BEWERKT.
-const RELATIEBEHEERDER_BEWERKT = ['/admin/speakers', '/admin/uitnodigingen', '/admin/inbox', '/admin/account'];
 adminApp.use('*', async (c, next) => {
   const user = c.get('user');
   if (user.role !== 'relatiebeheerder') return next();
   const m = c.req.method.toUpperCase();
   if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return next();
   const path = new URL(c.req.url).pathname;
-  const toegestaan =
-    path === '/admin/logout' ||
-    RELATIEBEHEERDER_BEWERKT.some((p) => path === p || path.startsWith(p + '/'));
-  if (toegestaan) return next();
+  if (relatiebeheerderMagBewerken(path)) return next();
   c.status(403);
   return renderAdminLayout(c, {
     title: 'Alleen-lezen',

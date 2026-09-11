@@ -298,3 +298,15 @@ table.data th.cbcol, table.data td.cbcol { width: 36px; text-align: center; padd
   .table-wrap { overflow-x: auto; }
   table.data { min-width: 540px; }
 }
+
+/* Relatiebeheerder: banner + zichtbaar vergrendelde read-only pagina's. */
+.rb-banner {
+  background: #fff8e1; border: 1px solid #f2d98a; color: #6b5300;
+  padding: 10px 14px; border-radius: 8px; margin: 0 0 16px; font-size: .9rem;
+}
+.rb-banner a { color: #6b5300; text-decoration: underline; }
+.ro-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
+.ro-lock input:disabled, .ro-lock select:disabled, .ro-lock textarea:disabled {
+  background: #f3f3f3; color: #6b7280; cursor: not-allowed; opacity: 1;
+}
+.ro-lock .btn:disabled, .ro-lock button:disabled { opacity: .5; cursor: not-allowed; }
