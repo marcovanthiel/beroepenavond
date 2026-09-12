@@ -837,15 +837,28 @@ variant maken.
 Geen terugwerkende reeks 2023–2025; de jaarfiguur-laag wordt pas vanaf 2026
 opgebouwd. Geen codewijziging nodig (huidige gedrag).
 
-### Inkomende mail op beroepenavond2026.nl — WACHT OP TOKEN
-Marco wil inbound mail aan (catch-all → Worker) op de nieuwe zone. De
-API-token in `~/.cf-token` mist **Email Routing: Edit** (GET
-`/zones/{id}/email/routing` → auth error). Marco voegt die permissie toe;
-daarna: Email Routing enablen + catch-all-rule → Worker `beroepenavond`, en
-settings `contact_email` + `mail_reply_to` = `info@beroepenavond2026.nl`
-zetten. Zone-id beroepenavond2026.nl = `629f76653401f79fd5f072e5080d46b2`.
-Zolang inbound uit staat blijft `mail_to`/reply op `marco@marcovanthiel.nl`
-(werkt, bouncet niet).
+### Inkomende mail op beroepenavond2026.nl — WACHT OP DASHBOARD-ENABLE
+Marco wil inbound mail aan (catch-all → Worker) op de nieuwe zone. Stand
+12-9-2026: het token in `~/.cf-token` kreeg **Email Routing Rules** (zone) →
+de **regels** kunnen nu via de API (`/email/routing/rules/catch_all` lezen/
+zetten), MAAR het **aanzetten** van de functie zelf blijft geweigerd — het
+settings-endpoint `/email/routing` (GET status, `POST …/enable`, `POST …/dns`)
+geeft `Authentication error`. Aanzetten is dus een **dashboard-stap** (zone
+beroepenavond2026.nl → Email → Email Routing → **Enable**; dit zet de MX+SPF
+automatisch). Zolang er **geen MX-records** op de zone staan, staat het uit.
+Zodra Marco het aanzet, doet Claude via de API: catch-all-rule → Worker
+`beroepenavond`, plus settings `contact_email` + `mail_reply_to` =
+`info@beroepenavond2026.nl`. LET OP: het contactadres staat op **twee** plekken
+— de D1-setting `contact_email` (de footer/contactpagina leest deze) én de
+**wrangler.toml-var `CONTACT_EMAIL`** (nu nog het oude, bouncende
+`info@beroepenavondnijmegen.nl`); werk beide bij. `mail_to` blijft op
+`marco@marcovanthiel.nl` (notificaties in zijn eigen inbox; bouncet niet).
+Zone-id = `629f76653401f79fd5f072e5080d46b2`.
+
+### Onderhoud 12-9-2026
+Hono-securitybump `4.12.34 → 4.13.7` (Dependabot: parseBody-DoS + query/SSG-
+CVE's; `npm audit fix`, binnen major 4). Typecheck + `wrangler deploy
+--dry-run` groen; alleen `package-lock.json` gewijzigd. `npm audit` = 0.
 
 ## UX-verbeterronde 2 (36 bevindingen, LIVE 11-9-2026, ?v=8)
 
