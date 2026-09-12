@@ -35,7 +35,7 @@ ORGANIZATION = "Rotary Club Nijmegen-Stad en Land"
 LOCATION_NAME = "Montessori College Nijmegen"
 EVENT_DATE = "2026-11-12"
 EVENT_TITLE = "Beroepenavond 2026"
-CONTACT_EMAIL = "info@beroepenavondnijmegen.nl"
+CONTACT_EMAIL = "info@beroepenavond2026.nl"
 
 # Cron: outbox-verzending (9:30-mails), herinneringen, event-dag-mails.
 [triggers]

@@ -31,7 +31,7 @@ export function mailConfig(env: Env, settings: SettingsMap): MailConfig {
   return {
     apiKey: env.RESEND_API_KEY,
     from: settings['mail_from'] || 'Beroepenavond Nijmegen <noreply@inijmegen.com>',
-    to: settings['mail_to'] || 'info@beroepenavondnijmegen.nl',
+    to: settings['mail_to'] || 'marco@marcovanthiel.nl',
     replyTo: settings['mail_reply_to'] || undefined,
     enabled: (settings['mail_enabled'] ?? '1') === '1',
     brand: {
