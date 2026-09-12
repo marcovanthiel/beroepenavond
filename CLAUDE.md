@@ -837,23 +837,28 @@ variant maken.
 Geen terugwerkende reeks 2023–2025; de jaarfiguur-laag wordt pas vanaf 2026
 opgebouwd. Geen codewijziging nodig (huidige gedrag).
 
-### Inkomende mail op beroepenavond2026.nl — WACHT OP DASHBOARD-ENABLE
-Marco wil inbound mail aan (catch-all → Worker) op de nieuwe zone. Stand
-12-9-2026: het token in `~/.cf-token` kreeg **Email Routing Rules** (zone) →
-de **regels** kunnen nu via de API (`/email/routing/rules/catch_all` lezen/
-zetten), MAAR het **aanzetten** van de functie zelf blijft geweigerd — het
-settings-endpoint `/email/routing` (GET status, `POST …/enable`, `POST …/dns`)
-geeft `Authentication error`. Aanzetten is dus een **dashboard-stap** (zone
-beroepenavond2026.nl → Email → Email Routing → **Enable**; dit zet de MX+SPF
-automatisch). Zolang er **geen MX-records** op de zone staan, staat het uit.
-Zodra Marco het aanzet, doet Claude via de API: catch-all-rule → Worker
-`beroepenavond`, plus settings `contact_email` + `mail_reply_to` =
-`info@beroepenavond2026.nl`. LET OP: het contactadres staat op **twee** plekken
-— de D1-setting `contact_email` (de footer/contactpagina leest deze) én de
-**wrangler.toml-var `CONTACT_EMAIL`** (nu nog het oude, bouncende
-`info@beroepenavondnijmegen.nl`); werk beide bij. `mail_to` blijft op
-`marco@marcovanthiel.nl` (notificaties in zijn eigen inbox; bouncet niet).
-Zone-id = `629f76653401f79fd5f072e5080d46b2`.
+### Inkomende mail op beroepenavond2026.nl — LIVE (12-9-2026)
+Email Routing staat aan (Marco, dashboard → 3 MX-records naar
+`route[1-3].mx.cloudflare.net`). De **catch-all** is via de API gezet op
+**AAN → Worker `beroepenavond`** (het token heeft **Email Routing Rules**, dus
+regels mogen via de API; het settings-endpoint `/email/routing` enable/dns
+blijft een dashboard-stap — die deed Marco). Elke mail aan een
+`@beroepenavond2026.nl`-adres komt binnen bij de Worker-`email()`-handler
+(`src/index.ts` → `src/lib/mailbox.ts`) en landt in `mail_inbox` (admin →
+Mailbox), met loop-guard + optionele auto-reply.
+- **Contactadres omgezet naar `info@beroepenavond2026.nl`** op ALLE plekken:
+  D1-settings `contact_email` + `mail_reply_to` (footer/contactpagina lezen
+  deze live) én de wrangler.toml-var `CONTACT_EMAIL` (bleek overigens nergens
+  in code gebruikt, alleen type in env.ts — toch gelijkgetrokken). `mail_to`
+  blijft `marco@marcovanthiel.nl` (nieuwe-aanmelding-notificaties in Marco's
+  eigen inbox; wil je alles centraal in de Mailbox, zet mail_to dan ook op
+  info@). Laatste bouncende fallback in `email.ts` (`|| info@beroepenavond-
+  nijmegen.nl`) vervangen door een veilig adres.
+- **Nog te doen (Marco, 20 sec):** één echte testmail naar
+  `info@beroepenavond2026.nl` sturen en checken dat hij in de Mailbox
+  verschijnt. Claude kon dit niet zelf triggeren (M365-connector mist
+  `Mail.Send`; geen lokale Resend-key). Plumbing is verder op elke laag
+  geverifieerd. Zone-id = `629f76653401f79fd5f072e5080d46b2`.
 
 ### Onderhoud 12-9-2026
 Hono-securitybump `4.12.34 → 4.13.7` (Dependabot: parseBody-DoS + query/SSG-
