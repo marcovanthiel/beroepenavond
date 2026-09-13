@@ -43,3 +43,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Pin wrangler: past _headers / asset-caching (CSP + immutable) toe voor Workers-assets.
+          wranglerVersion: '4.107.0'
