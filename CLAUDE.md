@@ -854,11 +854,27 @@ Mailbox), met loop-guard + optionele auto-reply.
   eigen inbox; wil je alles centraal in de Mailbox, zet mail_to dan ook op
   info@). Laatste bouncende fallback in `email.ts` (`|| info@beroepenavond-
   nijmegen.nl`) vervangen door een veilig adres.
-- **Nog te doen (Marco, 20 sec):** één echte testmail naar
-  `info@beroepenavond2026.nl` sturen en checken dat hij in de Mailbox
-  verschijnt. Claude kon dit niet zelf triggeren (M365-connector mist
-  `Mail.Send`; geen lokale Resend-key). Plumbing is verder op elke laag
-  geverifieerd. Zone-id = `629f76653401f79fd5f072e5080d46b2`.
+- **VALKUIL gevonden 13-9-2026: specifieke adresregel schaduwt de catch-all.**
+  Eerste testmail (marco@ -> info@) kwam NIET in de Mailbox omdat er naast de
+  catch-all-naar-Worker ook een **specifieke regel `info@beroepenavond2026.nl
+  -> forward naar marco@marcovanthiel.nl`** stond. In Cloudflare Email Routing
+  wint een literal-adresregel altijd van de catch-all, dus info@ werd naar
+  Marco's eigen inbox geforward en bereikte de Worker nooit (mail_inbox én
+  mail_inbox_log bleven leeg = handler nooit aangeroepen; dat log is de snelste
+  diagnose). Fix (via API, token heeft Email Routing Rules): die regel omgezet
+  naar **actie worker -> `beroepenavond`** (regel-tag
+  `f880c6ecea7a4609bcb90b459e1e0922`). Beide regels wijzen nu naar de Worker.
+  Een persoonlijke kopie blijft komen: de handler forwardt sowieso naar
+  `mail_forward_to || mail_to` (`mailbox.ts` r.121); `mail_forward_to` is
+  expliciet op `marco@marcovanthiel.nl` gezet (adres is al geverifieerd als
+  Email-Routing-bestemming). LES: bij "inbound in de Mailbox gewenst" mag er
+  géén literal-forwardregel voor dat adres staan; gebruik de Worker-vangnet
+  (`mail_forward_to`) voor een persoonlijke kopie, niet een aparte forwardregel.
+- **Nog te doen (Marco, 20 sec):** één nieuwe testmail naar
+  `info@beroepenavond2026.nl` sturen (de vorige is al verbruikt) en checken dat
+  hij nu in beheer -> Mailbox verschijnt én als kopie in je eigen inbox. Claude
+  kan dit niet zelf triggeren (M365-connector mist `Mail.Send`; geen lokale
+  Resend-key). Zone-id = `629f76653401f79fd5f072e5080d46b2`.
 
 ### Onderhoud 12-9-2026
 Hono-securitybump `4.12.34 → 4.13.7` (Dependabot: parseBody-DoS + query/SSG-
