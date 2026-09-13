@@ -59,13 +59,14 @@ inboxApp.get('/', async (c) => {
     `<a class="btn ${type === t ? 'btn--primary' : 'btn--ghost'} btn--sm" href="/admin/inbox${t ? `?type=${t}` : ''}">${label}</a>`;
   const total = (rows.results ?? []).length;
   const body = `
-    ${pageHeader('Postvak', `${tab('', 'Alles')} ${tab('contact', 'Contact')} ${tab('volunteer', 'Voorlichters')}`)}
+    ${pageHeader('Formulieren', `${tab('', 'Alles')} ${tab('contact', 'Contact')} ${tab('volunteer', 'Voorlichters')}`)}
+    <p class="muted" style="margin:-8px 0 16px">Berichten die via de contact- en aanmeldformulieren op de site zijn ingestuurd. Losse e-mails aan info@ staan onder <a href="/admin/mailbox">Inkomende e-mail</a>.</p>
     ${filterBar({ targetId: 'tbl-inbox', placeholder: 'Zoek op naam, e-mail of onderwerp…', total, noun: 'berichten' })}
     <div class="table-wrap"><table class="data" id="tbl-inbox">
       <thead><tr><th>Type</th><th>Van</th><th>Onderwerp</th><th>Status</th><th>Datum</th><th></th></tr></thead>
       <tbody>${list ? list + filterEmptyRow(6) : emptyState({ colspan: 6, title: 'Geen berichten.' })}</tbody>
     </table></div>`;
-  return renderAdminLayout(c, { title: 'Postvak', activeKey: 'inbox', body, flash: flashFromQuery(c) });
+  return renderAdminLayout(c, { title: 'Formulieren', activeKey: 'inbox', body, flash: flashFromQuery(c) });
 });
 
 inboxApp.get('/:id', async (c) => {

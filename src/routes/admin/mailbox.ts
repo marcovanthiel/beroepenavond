@@ -46,15 +46,16 @@ mailboxApp.get('/', async (c) => {
     })
     .join('');
   const body = `
-    ${pageHeader('Mailbox (inkomende e-mail)')}
-    <p class="muted">Alle mail aan de site-adressen komt hier binnen. De afzender krijgt automatisch een
-    ontvangstbevestiging; gevaarlijke bijlagen worden geweigerd en gemeld.</p>
+    ${pageHeader('Inkomende e-mail')}
+    <p class="muted">Echte e-mails aan de site-adressen (zoals info@) komen hier binnen. De afzender krijgt automatisch
+    een ontvangstbevestiging; gevaarlijke bijlagen worden geweigerd en gemeld. Berichten uit de contact- en
+    aanmeldformulieren staan onder <a href="/admin/inbox">Formulieren</a>.</p>
     ${filterBar({ targetId: 'mail-tabel', placeholder: 'Zoek op afzender of onderwerp…', total: (rows.results ?? []).length, noun: 'mails' })}
     <div class="table-wrap"><table class="data" id="mail-tabel">
       <thead><tr><th>Onderwerp</th><th>Van</th><th>Aan</th><th>Status</th><th>Ontvangen</th></tr></thead>
       <tbody>${list || '<tr><td colspan="5" class="empty">Nog geen inkomende mail.</td></tr>'}${filterEmptyRow(5)}</tbody>
     </table></div>`;
-  return renderAdminLayout(c, { title: 'Mailbox', activeKey: 'mailbox', body, flash: flashFromQuery(c) });
+  return renderAdminLayout(c, { title: 'Inkomende e-mail', activeKey: 'mailbox', body, flash: flashFromQuery(c) });
 });
 
 mailboxApp.get('/:id{[0-9]+}', async (c) => {

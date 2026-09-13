@@ -185,7 +185,7 @@ adminApp.use('*', async (c, next) => {
   return renderAdminLayout(c, {
     title: 'Alleen-lezen',
     activeKey: '',
-    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>. Bewerken kan bij de <a href="/admin/speakers">voorlichters</a>, de <a href="/admin/uitnodigingen">uitnodigingen</a>, het <a href="/admin/inbox">postvak</a> (aanmeldingen omzetten naar voorlichter) en je eigen <a href="/admin/account">account</a>. Vraag een beheerder om andere wijzigingen.</p></div>`,
+    body: `${pageHeader('Je kunt hier niet bewerken')}<div class="card"><p>Als <strong>relatiebeheerder</strong> kun je het hele beheer <strong>inzien</strong>. Bewerken kan bij de <a href="/admin/speakers">voorlichters</a>, de <a href="/admin/uitnodigingen">uitnodigingen</a>, de <a href="/admin/inbox">formulieren</a> (aanmeldingen omzetten naar voorlichter) en je eigen <a href="/admin/account">account</a>. Vraag een beheerder om andere wijzigingen.</p></div>`,
   });
 });
 
@@ -197,7 +197,7 @@ adminApp.get('/', async (c) => {
   const db = c.env.DB;
   const q = (sql: string) =>
     db.prepare(sql).first<{ n: number }>().then((r) => r?.n ?? 0);
-  const [beroepen, beroepenZonder, speakers, confirmedSpeakers, sessions, mapped, rounds, newMsgs, subs, news, settings, ev, recent] =
+  const [beroepen, beroepenZonder, speakers, confirmedSpeakers, sessions, mapped, rounds, newMsgs, subs, news, settings, ev, recent, newMail] =
     await Promise.all([
       q('SELECT COUNT(*) n FROM beroepen'),
       q('SELECT COUNT(*) n FROM beroepen b WHERE NOT EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id)'),
@@ -214,6 +214,7 @@ adminApp.get('/', async (c) => {
       db
         .prepare('SELECT id, type, name, email, created_at FROM submissions ORDER BY created_at DESC LIMIT 6')
         .all<{ id: number; type: string; name: string | null; email: string | null; created_at: number }>(),
+      q("SELECT COUNT(*) n FROM mail_inbox WHERE status='nieuw'"),
     ]);
 
   const published = (settings['voorlichters_published'] ?? '0') === '1';
@@ -256,7 +257,7 @@ adminApp.get('/', async (c) => {
   const quickActions = `
     <a class="btn btn--primary btn--sm" href="/admin/speakers/new">+ Spreker</a>
     ${isRB ? '' : '<a class="btn btn--ghost btn--sm" href="/admin/nieuws/new">+ Nieuwsbericht</a>'}
-    <a class="btn btn--ghost btn--sm" href="/admin/inbox">Postvak</a>
+    <a class="btn btn--ghost btn--sm" href="/admin/inbox">Formulieren</a>
     <a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a>`;
 
   const body = `
@@ -278,7 +279,8 @@ adminApp.get('/', async (c) => {
       <a class="btn btn--primary btn--sm" href="/assets/campagneposter-beroepenavond-2026.pdf" target="_blank" rel="noopener" download>⬇ Campagneposter A3 (PDF)</a>
     </div>
     <div class="stat-grid">
-      ${stat(newMsgs, 'Openstaande berichten', '/admin/inbox', true)}
+      ${stat(newMsgs, 'Nieuwe formulierberichten', '/admin/inbox', true)}
+      ${stat(newMail, 'Nieuwe e-mails', '/admin/mailbox', true)}
       ${stat(beroepenZonder, 'Beroepen zonder spreker', '/admin/beroepen?filter=zonder', true)}
       ${stat(subs, 'Nieuwsbrief-abonnees', '/admin/subscribers')}
       ${stat(beroepen, 'Beroepen', '/admin/beroepen')}

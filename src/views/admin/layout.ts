@@ -69,14 +69,14 @@ const NAV: NavGroup[] = [
   {
     title: 'Communicatie',
     items: [
-      { href: '/admin/inbox', label: 'Postvak', key: 'inbox', icon: '📥' },
-      { href: '/admin/leerlingen', label: 'Leerlingen', key: 'leerlingen', icon: '🎓' },
+      { href: '/admin/inbox', label: 'Formulieren', key: 'inbox', icon: '📝' },
+      { href: '/admin/mailbox', label: 'Inkomende e-mail', key: 'mailbox', icon: '📥' },
+      { href: '/admin/mails', label: 'Uitgaande mail', key: 'mails', icon: '📤' },
+      { href: '/admin/uitnodigingen', label: 'Uitnodigingen', key: 'uitnodigingen', icon: '✉️' },
       { href: '/admin/subscribers', label: 'Nieuwsbrief', key: 'subscribers', icon: '📧' },
+      { href: '/admin/leerlingen', label: 'Leerlingen', key: 'leerlingen', icon: '🎓' },
       { href: '/admin/nieuws', label: 'Nieuws', key: 'announcements', icon: '📣' },
       { href: '/admin/sponsors', label: 'Sponsoren', key: 'sponsors', icon: '🤝' },
-      { href: '/admin/uitnodigingen', label: 'Uitnodigingen', key: 'uitnodigingen', icon: '✉️' },
-      { href: '/admin/mailbox', label: 'Mailbox', key: 'mailbox', icon: '📨' },
-      { href: '/admin/mails', label: 'Mails', key: 'mails', icon: '📬' },
       { href: '/admin/evaluaties', label: 'Evaluaties', key: 'evaluaties', icon: '📊' },
     ],
   },
@@ -132,7 +132,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
   const roLock = isRB && !relatiebeheerderMagBewerken(path) && !isOverview;
   let rbBanner = '';
   if (isRB) {
-    const domein = 'bij <a href="/admin/speakers">Voorlichters</a>, <a href="/admin/uitnodigingen">Uitnodigingen</a>, het <a href="/admin/inbox">Postvak</a> en je eigen <a href="/admin/account">account</a>';
+    const domein = 'bij <a href="/admin/speakers">Voorlichters</a>, <a href="/admin/uitnodigingen">Uitnodigingen</a>, de <a href="/admin/inbox">Formulieren</a> en je eigen <a href="/admin/account">account</a>';
     let txt: string;
     if (roLock) {
       txt = `<strong>Alleen-lezen.</strong> Je bekijkt deze pagina als relatiebeheerder. Bewerken kan ${domein}.`;
@@ -143,7 +143,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
     } else if (path.startsWith('/admin/uitnodigingen')) {
       txt = '<strong>Uitnodigingen.</strong> Hier nodig je voorlichters uit en verstuur je herinneringen.';
     } else if (path.startsWith('/admin/inbox')) {
-      txt = '<strong>Postvak.</strong> Hier handel je aanmeldingen af en maak je er voorlichters van.';
+      txt = '<strong>Formulieren.</strong> Hier handel je aanmeldingen en contactberichten af en maak je er voorlichters van.';
     } else {
       txt = `<strong>Relatiebeheerder.</strong> Je kunt alles inzien; bewerken kan ${domein}.`;
     }

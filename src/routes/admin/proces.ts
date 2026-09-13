@@ -180,7 +180,8 @@ mailsApp.get('/', async (c) => {
       <td class="actions">${r.status === 'pending' ? `<form method="post" action="/admin/mails/outbox/${r.id}/annuleer" class="inline-form"><button class="btn btn--ghost btn--sm" type="submit">Annuleer</button></form>` : ''}</td></tr>`;
 
   const body = `
-    ${pageHeader('Mails & verzendingen')}
+    ${pageHeader('Uitgaande mail')}
+    <p class="muted" style="margin:-8px 0 16px">De teksten van alle uitgaande e-mails (sjablonen) plus wat gepland, verzonden of mislukt is. Inkomende e-mail staat onder <a href="/admin/mailbox">Inkomende e-mail</a>.</p>
     <div class="card" style="margin-bottom:18px">
       <h3 style="margin-top:0">Acties</h3>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -203,7 +204,7 @@ mailsApp.get('/', async (c) => {
     <h3>Recent verzonden</h3>
     <div class="table-wrap"><table class="data"><thead><tr><th>Aan</th><th>Mail</th><th>Moment</th><th>Status</th><th></th></tr></thead>
     <tbody>${(recent.results ?? []).map(outRow).join('') || '<tr><td colspan="5" class="empty">Nog niets verzonden.</td></tr>'}</tbody></table></div>`;
-  return renderAdminLayout(c, { title: 'Mails', activeKey: 'mails', body, flash: flashFromQuery(c) });
+  return renderAdminLayout(c, { title: 'Uitgaande mail', activeKey: 'mails', body, flash: flashFromQuery(c) });
 });
 
 mailsApp.get('/template/:key', async (c) => {
