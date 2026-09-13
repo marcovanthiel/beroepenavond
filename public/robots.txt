@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /leerling/
 
-Sitemap: https://inijmegen.com/sitemap.xml
+Sitemap: https://beroepenavond2026.nl/sitemap.xml

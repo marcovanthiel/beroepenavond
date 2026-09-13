@@ -93,6 +93,8 @@ const serveAsset = (c: { env: Env; req: { url: string } }) =>
   c.env.ASSETS.fetch(new Request(c.req.url));
 app.get('/assets/*', serveAsset);
 app.get('/robots.txt', serveAsset);
+// IndexNow-sleutelbestand (Bing/Yandex): platte tekst met alleen de sleutel.
+app.get('/8185f0f562b8b9fe678eb129048b65c3.txt', serveAsset);
 app.get('/favicon.ico', serveAsset);
 app.get('/favicon.svg', serveAsset);
 // /sitemap.xml wordt dynamisch gegenereerd (zie hieronder), niet als asset.
