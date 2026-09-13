@@ -13,7 +13,7 @@ de **decanen van de middelbare scholen in Nijmegen e.o.**, gehost op
 het **Montessori College Nijmegen** (Kwakkenbergweg 27; gecorrigeerd
 11-9-2026, stond eerder onterecht als Canisius College).
 
-- **Datum 2026**: donderdag 20 november 2026, 18:30 – 21:30
+- **Datum 2026**: donderdag 12 november 2026, 18:30 tot 21:30 (gecorrigeerd 11-9-2026; was foutief 20 nov)
 - **Live**: `https://beroepenavond2026.nl/` (sinds 11-9-2026; oude domein
   inijmegen.com redirect 301 met padbehoud en blijft van ons)
 - **Repo**: `marcovanthiel/beroepenavond` (public)
@@ -454,6 +454,11 @@ DB-wijziging uitrollen:
 npx wrangler d1 execute beroepenavond --remote --file=schema/00X_xxx.sql
 ```
 
+Remote D1 vanaf de terminal (wrangler is non-interactief en eist een
+token in de omgeving): Mac mini → `export CLOUDFLARE_API_TOKEN=$(cat
+~/.cf-token)`; MacBook → `source ~/Developer/dandanshop/.mailconfig.env`
+(die token heeft D1-rechten op het account). Altijd met Node 22 in PATH.
+
 ## Bron-CSS gearchiveerd
 
 Bij volgende sessie tot de bron nodig is: download opnieuw met
@@ -732,7 +737,7 @@ of schema. Bij een domeinwissel:
 6. Oude zone: 301-redirect naar het nieuwe domein laten staan.
 
 ### Geplande taak (december 2026): verzending naar Cloudflare Email Sending
-Na de editie van 20 november de uitgaande mail migreren van Resend naar
+Na de editie van 12 november de uitgaande mail migreren van Resend naar
 Cloudflare Email Service (Workers Paid, $5/mnd, 3.000 mails inbegrepen,
 daarna $0,35/1.000; binding `send_email` → geen API-key meer). LET OP:
 nieuwe verzendaccounts hebben een opwarmend dagquotum — ruim vóór de
