@@ -20,6 +20,26 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Zet een plat adres ("Straat 27, 6523 MJ Nijmegen") om naar een
+ * schema.org PostalAddress. Valt terug op een streetAddress-only object
+ * als het patroon niet herkend wordt, zodat het schema altijd valide blijft.
+ */
+function postalAddress(addr: string) {
+  const base: Record<string, string> = { '@type': 'PostalAddress', addressCountry: 'NL' };
+  const parts = addr.split(',').map((p) => p.trim()).filter(Boolean);
+  base.streetAddress = parts[0] || addr;
+  const rest = parts.slice(1).join(', ');
+  const m = /^(\d{4}\s?[A-Za-z]{2})\s+(.+)$/.exec(rest);
+  if (m) {
+    base.postalCode = m[1];
+    base.addressLocality = m[2];
+  } else if (rest) {
+    base.addressLocality = rest;
+  }
+  return base;
+}
+
 export async function renderHome(c: Context<{ Bindings: Env }>) {
   const db = c.env.DB;
   const [settings, event, navItems, catsFull, beroepCount, rondeRow, sponsorRows] = await Promise.all([
@@ -160,9 +180,16 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
     location: {
       '@type': 'Place',
       name: venue,
-      address: settings['venue_address'] || 'Kwakkenbergweg 27, 6523 MJ Nijmegen',
+      address: postalAddress(settings['venue_address'] || 'Kwakkenbergweg 27, 6523 MJ Nijmegen'),
     },
     organizer: { '@type': 'Organization', name: organisatie, url: `https://${c.env.SITE_HOST}` },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'EUR',
+      availability: 'https://schema.org/InStock',
+      url: `https://${c.env.SITE_HOST}/`,
+    },
     image: `https://${c.env.SITE_HOST}/assets/img/og.png`,
     url: `https://${c.env.SITE_HOST}/`,
   };

@@ -30,6 +30,8 @@ export interface LayoutOpts {
   jsonLd?: unknown;
   ogImage?: string | null;
   canonicalPath?: string | null;
+  /** true = <meta name="robots" content="noindex,nofollow"> (portalen, dunne pagina's). */
+  noindex?: boolean;
   /** true = bodyHtml wordt zonder .section/.wrap gerenderd (full-bleed pagina's). */
   bare?: boolean;
 }
@@ -40,7 +42,7 @@ function attr(s: unknown): string {
 
 export function renderLayout(opts: LayoutOpts) {
   const s = opts.settings;
-  const host = `https://${s['site_host'] || 'inijmegen.com'}`;
+  const host = `https://${s['site_host'] || 'beroepenavond2026.nl'}`;
   const ogImage = opts.ogImage || s['seo_og_image'] || '/assets/img/og.png';
   const canonical = opts.canonicalPath ? host + opts.canonicalPath : null;
 
@@ -120,6 +122,7 @@ export function renderLayout(opts: LayoutOpts) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${opts.title}</title>
+${opts.noindex ? raw('<meta name="robots" content="noindex,nofollow">') : ''}
 ${opts.metaDescription ? raw(`<meta name="description" content="${attr(opts.metaDescription)}">`) : ''}
 ${canonical ? raw(`<link rel="canonical" href="${attr(canonical)}">`) : ''}
 <meta property="og:title" content="${attr(opts.title)}">

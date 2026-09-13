@@ -232,7 +232,7 @@ export async function plannerTick(env: Env): Promise<void> {
   const db = env.DB;
   const [settings, event] = await Promise.all([getSettings(db), getActiveEvent(db)]);
   if (!event) return;
-  const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+  const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
   const std = stdPayload(settings);
   const vandaag = amsterdamDatum(now);
 

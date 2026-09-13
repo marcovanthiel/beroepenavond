@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /leerling/
+Disallow: /admin
+Disallow: /leerling
 
 Sitemap: https://beroepenavond2026.nl/sitemap.xml

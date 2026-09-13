@@ -51,6 +51,7 @@ async function page(
       navItems,
       activeSlug: '/leerling',
       canonicalPath: '/leerling',
+      noindex: true,
       notice: opts.notice ?? null,
       hero: { eyebrow: opts.eyebrow ?? 'Mijn avond', title: opts.title, lede: opts.lede ?? null, compact: true },
       bodyHtml: opts.body,
@@ -505,11 +506,11 @@ studentApp.get('/rooster.ics', requireStudent, async (c) => {
   const date = (settings['event_date'] || c.env.EVENT_DATE || '2026-11-12').replace(/-/g, '');
   const venue = `${settings['venue_name'] || ''}, ${settings['venue_address'] || ''}`.replace(/^,\s*/, '');
   const chosen = (picks.results ?? []).map((p) => p.name).join(', ') || 'Nog geen beroepen gekozen';
-  const desc = `Mijn gekozen beroepen: ${chosen}. Bekijk je avond op https://${settings['site_host'] || 'inijmegen.com'}/leerling`.replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
+  const desc = `Mijn gekozen beroepen: ${chosen}. Bekijk je avond op https://${settings['site_host'] || 'beroepenavond2026.nl'}/leerling`.replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
   const dtstamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Beroepenavond Nijmegen//NL', 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT', `UID:beroepenavond-${s.id}@${settings['site_host'] || 'inijmegen.com'}`,
+    'BEGIN:VEVENT', `UID:beroepenavond-${s.id}@${settings['site_host'] || 'beroepenavond2026.nl'}`,
     `DTSTAMP:${dtstamp}`,
     `DTSTART;TZID=Europe/Amsterdam:${date}T183000`, `DTEND;TZID=Europe/Amsterdam:${date}T213000`,
     'SUMMARY:Beroepenavond Nijmegen', `LOCATION:${venue.replace(/([,;\\])/g, '\\$1')}`, `DESCRIPTION:${desc}`,

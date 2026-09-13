@@ -54,12 +54,32 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
   ]);
   const published = (settings['voorlichters_published'] ?? '0') === '1';
   const counts = published ? await speakerCounts(db) : new Map<number, number>();
+  const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
+  const alle = beroepen.results ?? [];
 
   const byCat = new Map<string, BeroepRow[]>();
-  for (const b of beroepen.results ?? []) {
+  for (const b of alle) {
     const k = b.category_id ?? '_none';
     (byCat.get(k) ?? byCat.set(k, []).get(k)!).push(b);
   }
+
+  // CollectionPage + ItemList: helpt rich results en AI-begrip van de collectie.
+  const collectionLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Alle beroepen op de Beroepenavond Nijmegen',
+    url: `${host}/beroepen`,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: alle.length,
+      itemListElement: alle.map((b, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${host}/beroepen/${b.id}`,
+        name: b.name,
+      })),
+    },
+  };
 
   const accs = (cats.results ?? [])
     .map((cat) => {
@@ -101,6 +121,7 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
       hero: { eyebrow: 'Ontdek je toekomst', title: 'Alle beroepen', compact: true },
       bodyHtml: body,
       settings,
+      jsonLd: collectionLd,
     })
   );
 }
@@ -137,6 +158,14 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
   const cat = (cats.results ?? []).find((x) => x.id === beroep.category_id) ?? null;
   const kleur = cat?.color || '#0d0d0d';
   const opKleur = tekstOp(kleur);
+
+  // Heeft dit beroep een publieke voorlichter toegewezen? (los van de
+  // publicatie-schakelaar). Zo niet, dan is de pagina dun -> noindex.
+  const toegewezen = await db
+    .prepare(`SELECT COUNT(*) AS n FROM speakers WHERE ${await publiekSprekerFilter(db)} AND beroep_id = ?`)
+    .bind(beroepId)
+    .first<{ n: number }>();
+  const heeftVoorlichter = (toegewezen?.n ?? 0) > 0;
 
   const sprekers = published
     ? (await db
@@ -241,10 +270,21 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
   </div>
 </div></div>`;
 
+  // Unieke meta-description per beroep, opgebouwd uit de data (vakgebied +
+  // waar mogelijk de werkgevers van de voorlichters) i.p.v. één sjabloon.
+  const orgs = [...new Set(sprekers.map((s) => s.organization).filter(Boolean) as string[])].slice(0, 3);
+  const vak = cat?.name ?? 'beroepen';
+  const metaDescription =
+    beroep.description_md ||
+    (orgs.length
+      ? `Ontmoet ${beroep.name.toLowerCase()}-voorlichters van ${orgs.join(', ')} op de Beroepenavond Nijmegen. Vakgebied ${vak}. Stel vooraf je vragen over dit beroep.`
+      : `${beroep.name} in het vakgebied ${vak} op de Beroepenavond Nijmegen. Ontdek wat dit beroep inhoudt en ontmoet professionals die erover vertellen.`);
+
   return c.html(
     renderLayout({
       title: `${beroep.name} · Beroepenavond Nijmegen`,
-      metaDescription: beroep.description_md || `${beroep.name} op de Beroepenavond Nijmegen: ontmoet de professionals en stel je vragen.`,
+      metaDescription,
+      noindex: !heeftVoorlichter,
       navItems,
       activeSlug: '/beroepen',
       canonicalPath: `/beroepen/${beroep.id}`,

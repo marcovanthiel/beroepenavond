@@ -39,7 +39,7 @@ export function mailConfig(env: Env, settings: SettingsMap): MailConfig {
       slogan: settings['mail_slogan'] || '169 professionals. Eén missie.',
       datum: (settings['event_date_long'] || 'Donderdag 12 november 2026') +
         ' · ' + (settings['venue_name'] || 'Montessori College Nijmegen'),
-      host: settings['site_host'] || 'inijmegen.com',
+      host: settings['site_host'] || 'beroepenavond2026.nl',
     },
   };
 }
@@ -114,7 +114,7 @@ export function emailShell(title: string, inner: string, brand?: MailBrand): str
   // Jaarfiguur wisselt per dag van gedaante (man/vrouw/X), net als op de site.
   const dag = Math.floor(Date.now() / 86400000);
   const gedaante = (['man', 'vrouw', 'x'] as const)[dag % 3];
-  const host = brand?.host || 'inijmegen.com';
+  const host = brand?.host || 'beroepenavond2026.nl';
   const merkblok = brand
     ? `<tr><td style="background:#0d0d0d;padding:0">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>

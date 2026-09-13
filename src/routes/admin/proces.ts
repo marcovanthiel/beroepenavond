@@ -96,7 +96,7 @@ uitnodigingenApp.get('/', async (c) => {
 uitnodigingenApp.post('/new', async (c) => {
   const b = await c.req.parseBody();
   const settings = await getSettings(c.env.DB);
-  const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+  const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
   const std = stdPayload(settings);
   const regels = str(b.emails).split('\n').map((r) => r.trim()).filter(Boolean);
   let aantal = 0;
@@ -122,7 +122,7 @@ uitnodigingenApp.post('/new', async (c) => {
 
 uitnodigingenApp.post('/herhaal-alle', async (c) => {
   const settings = await getSettings(c.env.DB);
-  const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+  const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
   const std = stdPayload(settings);
   const sprekers = await c.env.DB.prepare(
     `SELECT id, full_name, email FROM speakers WHERE email IS NOT NULL AND email != ''
@@ -282,7 +282,7 @@ mailsApp.post('/indeling-leerlingen', async (c) => {
   const [settings, event] = await Promise.all([getSettings(c.env.DB), getActiveEvent(c.env.DB)]);
   if (!event) return redirectErr(c, '/admin/mails', 'Geen actieve editie.');
   const std = stdPayload(settings);
-  const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+  const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
   const lln = await c.env.DB.prepare(
     'SELECT DISTINCT s.id, s.email, s.name FROM students s JOIN student_schedule ss ON ss.student_id = s.id AND ss.event_id = ?'
   ).bind(event.id).all<{ id: string; email: string; name: string | null }>();

@@ -180,7 +180,7 @@ procesApp.post('/voorlichter/uitnodiging', async (c) => {
     await sendEmail(cfg, {
       to: cfg.to,
       subject: `Voorlichter ${inv.kind === 'herhaal' ? 'opnieuw bevestigd' : 'aangemeld'} via uitnodiging: ${name}`,
-      html: emailShell('Uitnodiging beantwoord', `<p><strong>${esc(name)}</strong> (${esc(jobTitle)}, ${esc(email)}) heeft de uitnodiging geaccepteerd.</p>${sponsorRegel}<p><a href="https://${esc(settings['site_host'] || 'inijmegen.com')}/admin/speakers">Bekijk in beheer</a></p>`, cfg.brand),
+      html: emailShell('Uitnodiging beantwoord', `<p><strong>${esc(name)}</strong> (${esc(jobTitle)}, ${esc(email)}) heeft de uitnodiging geaccepteerd.</p>${sponsorRegel}<p><a href="https://${esc(settings['site_host'] || 'beroepenavond2026.nl')}/admin/speakers">Bekijk in beheer</a></p>`, cfg.brand),
     });
   } catch (e) {
     console.error('uitnodiging-mails faalden:', e);

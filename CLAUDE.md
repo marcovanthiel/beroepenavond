@@ -993,3 +993,50 @@ dashboard kreeg een tegel **Nieuwe e-mails** (→ Inkomende e-mail) naast
 **Nieuwe formulierberichten** (de Mailbox was voorheen slecht vindbaar). In
 oudere changelog-regels hierboven verwijzen "Postvak"/"Mailbox"/"Mails" dus naar
 respectievelijk Formulieren / Inkomende e-mail / Uitgaande mail.
+
+## SEO-fixes canonical + /leerling + schema (13-9-2026)
+
+Naar aanleiding van een SEO-audit (Track A + kleine strategische fixes):
+
+- **CRITICAL opgelost: canonical/og:url/BreadcrumbList wezen op alle
+  subpagina's naar het OUDE domein inijmegen.com.** Oorzaak: subpagina's
+  bouwen hun host uit de D1-setting `site_host`, en die rij ONTBRAK in de
+  settings-tabel (de migratie-doc claimde ten onrechte dat hij gezet was),
+  dus viel de code terug op de hardcoded default `'inijmegen.com'`. De
+  homepage was goed omdat die `c.env.SITE_HOST` (wrangler.toml) gebruikt.
+  Tweeledige fix: (1) D1-setting `site_host` gezet op `beroepenavond2026.nl`
+  (corrigeert meteen ook maillinks/footer die deze setting live lezen), en
+  (2) ALLE code-fallbacks `|| 'inijmegen.com'` voor de linkhost omgezet naar
+  `|| 'beroepenavond2026.nl'` (layout.ts, public.ts, student.ts, outbox.ts,
+  proces.ts, admin/proces.ts, studentauth.ts, email.ts brand.host) zodat een
+  ontbrekende setting nooit meer naar het dode domein terugvalt. LET OP: de
+  mail-afzender `mail_from` blijft bewust `noreply@inijmegen.com` (Resend-
+  domein beroepenavond2026.nl nog niet geverifieerd; zie eerdere sectie).
+- **/leerling lekte in de index.** `renderLayout` heeft nu een optie
+  `noindex` → `<meta name="robots" content="noindex,nofollow">`. Het hele
+  leerling-portaal rendert via één `page()`-helper in `routes/student.ts`;
+  daar staat `noindex: true` (login + dashboard). `public/robots.txt`-regel
+  gecorrigeerd van `Disallow: /leerling/` (trailing slash matcht de root
+  niet) naar `Disallow: /leerling` (dekt /leerling én /leerling/...), idem
+  `Disallow: /admin`.
+- **Beroeppagina's**: unieke meta-description per beroep (uit vakgebied +
+  waar beschikbaar de werkgevers van de voorlichters, i.p.v. één sjabloon);
+  beroepen ZONDER toegewezen publieke voorlichter staan nu op **noindex**
+  (dunne content). Signaal = COUNT publieke speakers met dat `beroep_id`,
+  los van de publicatieschakelaar.
+- **Schema**: `/beroepen` heeft nu naast Organization + BreadcrumbList ook
+  een **CollectionPage + ItemList** (alle beroepen met naam + absolute URL).
+  Event-JSON-LD op de home: `location.address` is nu een **PostalAddress**
+  (parse-helper `postalAddress()` in home.ts) en er is een gratis **Offer**
+  (price 0, EUR, InStock) toegevoegd.
+- **Trailing slash**: `/beroepen/` gaf 200 met de OUDE "Uitleg per beroep"-
+  pagina (via de catch-all), terwijl `/beroepen` de treklijsten toont. Nu
+  301't `/beroepen/` naar `/beroepen` (expliciete route vóór de catch-all).
+- **Sitemap**: `/beroepen/N`-entries krijgen een `<lastmod>` = laatste
+  `speakers.updated_at` voor dat beroep (LEFT JOIN, MAX).
+- **robots.txt-kanttekening**: de tweede `User-agent: *`-groep in de LIVE
+  robots.txt (het Cloudflare-managed content-signal-blok met de
+  AI-crawler-Disallows) wordt door Cloudflare aan de edge vóór ons
+  `public/robots.txt` geïnjecteerd; die is NIET vanuit de repo te mergen.
+  Ons eigen blok is één schone groep. Samenvoegen/AI-crawlerbeleid (audit
+  M1) is een dashboard-keuze, geen codewijziging.

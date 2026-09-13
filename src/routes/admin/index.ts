@@ -376,7 +376,7 @@ adminApp.get('/software', async (c) => {
       ${card('App-versie', 'v' + esc(vinfo?.version || (pkg as any).version || '0.1.0'), esc(vinfo?.commit || ''))}
       ${card('Framework', 'Hono ' + esc(hono ? cleanVer(hono.current) : '-'), hono?.latest ? 'laatste ' + esc(hono.latest) : '')}
       ${card('Runtime', 'Cloudflare Workers', 'workerd · productie')}
-      ${card('Build', esc(vinfo?.date ? String(vinfo.date).slice(0, 10) : '-'), 'inijmegen.com')}
+      ${card('Build', esc(vinfo?.date ? String(vinfo.date).slice(0, 10) : '-'), 'beroepenavond2026.nl')}
     </div>
     ${table('Productie', 'prod')}
     ${table('Ontwikkeling', 'dev')}

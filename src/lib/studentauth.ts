@@ -73,7 +73,7 @@ export async function requestLogin(
   try {
     const settings = await getSettings(c.env.DB);
     const cfg = mailConfig(c.env, settings);
-    const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+    const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
     const safeNext = data.next && /^\/[^/]/.test(data.next) ? data.next : '';
     const link = `${host}/leerling/verify?token=${token}${safeNext ? `&next=${encodeURIComponent(safeNext)}` : ''}`;
     const inner = `

@@ -61,7 +61,7 @@ async function emailForSubmission(c: any, data: any) {
   try {
     const settings = await getSettings(c.env.DB);
     const cfg = mailConfig(c.env, settings);
-    const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+    const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
     await notifySubmission(cfg, data, `${host}/admin/inbox`);
     await confirmToSender(cfg, data);
   } catch (e) {
@@ -172,7 +172,7 @@ publicApp.post('/nieuwsbrief', async (c) => {
   try {
     const settings = await getSettings(c.env.DB);
     const cfg = mailConfig(c.env, settings);
-    const host = `https://${settings['site_host'] || 'inijmegen.com'}`;
+    const host = `https://${settings['site_host'] || 'beroepenavond2026.nl'}`;
     await newsletterConfirm(cfg, email, `${host}/nieuwsbrief/bevestigen?token=${token}`);
   } catch (e) {
     console.error('newsletter confirm mail faalde:', e);
@@ -272,6 +272,10 @@ publicApp.route('/', procesApp);
 // ----------------------------------------------------------------------
 
 publicApp.get('/beroepen', (c) => renderBeroepenPagina(c));
+
+// Trailing slash: één canonieke vorm zonder slash. 301 voorkomt een
+// duplicate-URL (en dat /beroepen/ via de catch-all de oude pagina toont).
+publicApp.get('/beroepen/', (c) => c.redirect('/beroepen', 301));
 
 publicApp.get('/beroepen/:id', async (c) => {
   const id = parseInt(c.req.param('id'), 10);
