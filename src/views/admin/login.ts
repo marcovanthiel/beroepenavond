@@ -16,7 +16,6 @@ function shell(title: string, inner: string) {
 <meta name="robots" content="noindex, nofollow">
 <title>${title} · Beheer Beroepenavond</title>
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/admin.css">
 </head>
 <body class="auth-body">

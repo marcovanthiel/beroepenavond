@@ -158,7 +158,6 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
 <meta name="robots" content="noindex, nofollow">
 <title>${opts.title} · Beheer Beroepenavond</title>
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/admin.css">
 </head>
 <body>

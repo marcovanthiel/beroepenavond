@@ -1,7 +1,17 @@
 /* ==========================================================================
    Beheer-paneel Beroepenavond — eigen stylesheet (los van publieke site).
    Huisstijl: DM Sans + lime #88BC1D op een rustige grijze admin-chrome.
+   DM Sans is self-hosted (variabel, latin-subset) — geen Google Fonts, zodat
+   de strikte CSP niets blokkeert en er geen externe call/privacylek is.
    ========================================================================== */
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/assets/fonts/dmsans-var.woff2') format('woff2');
+}
 
 :root {
   --lime: #88bc1d;
