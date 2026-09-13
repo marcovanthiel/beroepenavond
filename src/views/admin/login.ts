@@ -50,25 +50,30 @@ export function renderLogin(
 /** Stap 2: 6-cijferige code invoeren. */
 export function renderCodeForm(
   c: Context<AdminEnv>,
-  opts: { email: string; next?: string; error?: string | null }
+  opts: { email: string; next?: string; error?: string | null; code?: string; autoSubmit?: boolean }
 ) {
+  // Als de gebruiker via de "Log direct in"-knop uit de mail komt, is de code
+  // al ingevuld en verzendt het formulier zichzelf. De verificatie blijft op de
+  // POST — een linkscanner (bv. M365 Safe Links) die alleen de GET ophaalt,
+  // verbruikt de code dus niet.
   const inner = `
     <h1 class="auth-title">Voer je inlogcode in</h1>
     <p class="auth-sub">Als <strong>${esc(opts.email)}</strong> een beheerdersaccount is,
       staat er een 6-cijferige code in je mailbox. De code is 10 minuten geldig.</p>
     ${opts.error ? `<div class="flash flash--err">${esc(opts.error)}</div>` : ''}
-    <form method="post" action="/admin/code" class="auth-form">
+    <form method="post" action="/admin/code" class="auth-form" id="codeForm">
       <input type="hidden" name="next" value="${esc(opts.next ?? '/admin')}">
       <input type="hidden" name="email" value="${esc(opts.email)}">
       <label class="fld">
         <span class="fld__label">Inlogcode</span>
         <input class="fld__input" type="text" name="code" inputmode="numeric" pattern="[0-9]*"
-          maxlength="6" required autofocus autocomplete="one-time-code"
+          maxlength="6" required autofocus autocomplete="one-time-code" value="${esc(opts.code ?? '')}"
           style="letter-spacing:.4em;font-size:1.4em;text-align:center">
       </label>
       <button type="submit" class="btn btn--primary btn--block">Inloggen</button>
     </form>
-    <p style="text-align:center;margin-top:14px"><a href="/admin/login">&larr; Ander e-mailadres</a></p>`;
+    <p style="text-align:center;margin-top:14px"><a href="/admin/login">&larr; Ander e-mailadres</a></p>
+    ${opts.autoSubmit ? `<script>document.addEventListener('DOMContentLoaded',function(){var f=document.getElementById('codeForm');if(f){(f.requestSubmit?f.requestSubmit():f.submit());}});</script>` : ''}`;
   return c.html(shell('Code invoeren', inner));
 }
 

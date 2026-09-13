@@ -75,16 +75,20 @@ adminApp.post('/login', async (c) => {
       try {
         const settings = await getSettings(c.env.DB);
         const cfg = mailConfig(c.env, settings);
+        const base = 'https://' + (settings['site_host'] || c.env.SITE_HOST || 'beroepenavond2026.nl');
+        const loginUrl = `${base}/admin/code?email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`;
         const inner = `
           <p>Hoi${user.name ? ' ' + esc(user.name) : ''},</p>
-          <p>Gebruik deze code om in te loggen op het beheer van de Beroepenavond:</p>
-          <p style="text-align:center;margin:22px 0"><span style="display:inline-block;background:#ffffff;border:3px solid #0d0d0d;padding:14px 26px;font-size:30px;font-weight:bold;letter-spacing:8px;color:#0d0d0d">${code}</span></p>
+          <p>Log met één klik in op het beheer van de Beroepenavond:</p>
+          <p style="text-align:center;margin:22px 0"><a href="${loginUrl}" style="display:inline-block;background:#0d0d0d;color:#ffffff;text-decoration:none;padding:14px 30px;font-size:16px;font-weight:bold">Log direct in &rarr;</a></p>
+          <p style="text-align:center;color:#8a9099;font-size:13px;margin:0 0 6px">Werkt de knop niet? Vul dan deze code in:</p>
+          <p style="text-align:center;margin:0 0 22px"><span style="display:inline-block;background:#ffffff;border:3px solid #0d0d0d;padding:12px 22px;font-size:28px;font-weight:bold;letter-spacing:8px;color:#0d0d0d">${code}</span></p>
           <p style="color:#8a9099;font-size:13px">De code is 10 minuten geldig. Niet aangevraagd? Negeer deze e-mail.</p>`;
         await sendEmail(cfg, {
           to: email,
           subject: `Je inlogcode ${code}`,
           html: emailShell('Inlogcode', inner, cfg.brand),
-          text: `Je inlogcode voor het beheer van de Beroepenavond is: ${code}\n\nDe code is 10 minuten geldig.`,
+          text: `Log in op het beheer van de Beroepenavond via deze link:\n${loginUrl}\n\nOf vul deze code in: ${code}\nDe code is 10 minuten geldig.`,
         });
       } catch (e) {
         console.error('inlogcode mailen faalde:', e);
@@ -110,6 +114,19 @@ adminApp.post('/code', async (c) => {
   await createSession(c, user.id);
   await logAudit(c, 'login', 'user', user.id);
   return c.redirect(next.startsWith('/admin') ? next : '/admin', 302);
+});
+
+// GET /code — landingspagina voor de "Log direct in"-knop uit de code-mail.
+// Vult de code voor en laat het formulier zichzelf posten; de verificatie
+// blijft op de POST, zodat een linkscanner (M365 Safe Links e.d.) die alleen
+// de GET ophaalt de eenmalige code niet verbruikt.
+adminApp.get('/code', async (c) => {
+  if (await getCurrentUser(c)) return c.redirect('/admin', 302);
+  const email = str(c.req.query('email')).trim().toLowerCase();
+  const code = str(c.req.query('code')).trim();
+  const next = str(c.req.query('next')) || '/admin';
+  if (!email || !code) return c.redirect('/admin/login', 302);
+  return renderCodeForm(c, { email, next, code, autoSubmit: true });
 });
 
 adminApp.get('/setup', async (c) => {
