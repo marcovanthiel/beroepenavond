@@ -628,7 +628,7 @@ Volledige werkstromen voor voorlichters en leerlingen, gebouwd op een
 **mail-outbox met cron** (elke 5 min; `schema/023`, `src/lib/outbox.ts`,
 `scheduled()` in index.ts). Principe: procesmails worden klaargezet en om
 **9:30 (Europa/Amsterdam)** verstuurd; bevestigingsmails gaan direct.
-Alle teksten zijn bewerkbaar in **beheer → Mails** (placeholders:
+Alle teksten zijn bewerkbaar in **beheer → Uitgaande mail** (placeholders:
 {{naam}} {{voornaam}} {{datum}} {{locatie}} {{rooster}} {{stats}} {{knop}}).
 
 ### Voorlichters
@@ -642,7 +642,7 @@ Alle teksten zijn bewerkbaar in **beheer → Mails** (placeholders:
 3. **Sponsor**: checkbox op uitnodigings- én aanmeldformulier →
    `sponsor_interest`-vlag + melding in de notificatiemail; logo's beheert
    admin → Sponsoren; sponsorstrook staat op de home.
-4. **Indelingsmail** (knop op beheer → Mails): rooster + lokaal +
+4. **Indelingsmail** (knop op beheer → Uitgaande mail): rooster + lokaal +
    instructies (aanmeldbalie/badge, lerarenkamer/koffie, enquête-
    aankondiging).
 5. **Eventdag-ochtendmail**: automatisch om 9:30 op de dag zelf.
@@ -657,7 +657,7 @@ Alle teksten zijn bewerkbaar in **beheer → Mails** (placeholders:
 ### Leerlingen
 - Minimale data (naam/e-mail); voorkeuren = bestaande picks; NIEUW:
   **tijdblok-blokkades** op het dashboard ("ik kan niet bij ronde X").
-- **Automatische indeling** (knop beheer → Mails): greedy matching van
+- **Automatische indeling** (knop beheer → Uitgaande mail): greedy matching van
   voorkeuren naar sessies per ronde, met blokkades en lokaalcapaciteit
   (default 30; `classrooms.capacity`); herdraaibaar; stats in de flash.
   Daarna knop **indelingsmails leerlingen** (verzending volgende ochtend
@@ -669,7 +669,7 @@ Leerlingen stellen op een beroeppagina "Je vraag aan de voorlichter"
 (`student_questions`, per beroep). Twee mailmomenten, via de planner:
 - **2 dagen voor de avond, 9:30**: elke bevestigde voorlichter met e-mail
   krijgt de tot dan ingestuurde vragen voor zijn beroep (mailtekst
-  `vl_vragen`, bewerkbaar in beheer → Mails). Ontdubbeld; **AI-samenvatting
+  `vl_vragen`, bewerkbaar in beheer → Uitgaande mail). Ontdubbeld; **AI-samenvatting
   bij >10 vragen** als `ANTHROPIC_API_KEY` gezet is (haiku), anders een nette
   opsomming (graceful fallback). Voorlichters zonder vragen worden overgeslagen.
 - **Ochtend van de avond**: de vragen die ná die mail nog binnenkwamen gaan
@@ -681,7 +681,7 @@ Lege mailblokken (bv. `{{vragen}}` zonder vragen) worden in `renderTemplate`
 overgeslagen. AAN TE ZETTEN voor AI: `wrangler secret put ANTHROPIC_API_KEY`.
 
 ### Beheer & gotchas
-- **Outbox**: beheer → Mails toont gepland/verzonden/mislukt + annuleren.
+- **Outbox**: beheer → Uitgaande mail toont gepland/verzonden/mislukt + annuleren.
   Dedup-keys maken alle planners idempotent (cron mag altijd draaien).
 - Cron-config in wrangler.toml (`[triggers] crons`); lokaal testen met
   `wrangler dev --test-scheduled` + `GET /__scheduled?cron=*/5+*+*+*+*`.
@@ -704,7 +704,7 @@ uitvoerbare/actieve bestanden; inline handtekening-plaatjes overgeslagen),
 de afzender automatisch aan een voorlichter koppelt, een
 ontvangstbevestiging stuurt (met mail-loop-guard) en een audit-regel
 schrijft (`mail_inbox_log`; Workers Logs staan aan via [observability]).
-Beheer → **Mailbox**: lezen, bijlagen downloaden (altijd als download),
+Beheer → **Inkomende e-mail**: lezen, bijlagen downloaden (altijd als download),
 beantwoorden in huisstijl (In-Reply-To voor threading), afhandelen,
 verwijderen (incl. R2-opruiming).
 
@@ -717,7 +717,7 @@ verwijderen (incl. R2-opruiming).
    verifiëren en desgewenst setting `mail_forward_to` zetten; dan wordt
    elke mail óók doorgestuurd. Zonder dit werkt het postvak gewoon.
 4. Daarna evt. setting `mail_reply_to` op info@<domein> zetten zodat
-   antwoorden op procesmails in de Mailbox binnenkomen.
+   antwoorden op procesmails bij Inkomende e-mail binnenkomen.
 
 ### Domeinwissel-checklist (afgesproken: niets domeinvast)
 Alle code gebruikt settings (`site_host`, `mail_from`, `mail_to`) en het
@@ -789,7 +789,7 @@ screenshots) op de lokale dev-server.
 - `renderAdminLayout` toont nu een **`.rb-banner`**: op bewerkbare pagina's
   "Relatiebeheerder"-uitleg, op alleen-lees-pagina's een gele
   **"Alleen-lezen"**-balk met snelkoppelingen naar zijn wél-domein
-  (Voorlichters, Uitnodigingen, Postvak). De pagina-body wordt daar in een
+  (Voorlichters, Uitnodigingen, Formulieren). De pagina-body wordt daar in een
   **`<fieldset class="ro-lock" disabled>`** gewikkeld → alle velden grijs en
   niet-interactief. CSS in `admin.css` (`.rb-banner`, `.ro-lock`).
   - GOTCHA (test): een input in `<fieldset disabled>` is functioneel
@@ -936,7 +936,7 @@ via drie parallelle audit-agents; alle bevindingen doorgevoerd en met Playwright
   rol-banner i.p.v. gele "Alleen-lezen"-balk + disabled fieldset.
 - **Rolbewuste** snelacties (geen "+ Nieuwsbericht") en checklist-fixknoppen (alleen
   links binnen zijn bewerkdomein). **Contextbewuste banner** per pad (Voorlichters /
-  Uitnodigingen / Postvak / Je eigen account), als `role="note"` met
+  Uitnodigingen / Formulieren / Je eigen account), als `role="note"` met
   `aria-describedby` vanuit het vergrendelde fieldset. Account: e-mailveld `readonly`,
   wachtwoord-doodlopend vervangen door uitleg "inloggen gaat via e-mailcode",
   `roleLabel()` gebruikt. 403-pagina + banner noemen nu ook het eigen account.
@@ -974,3 +974,22 @@ via drie parallelle audit-agents; alle bevindingen doorgevoerd en met Playwright
   CSP-fouten, font laadt van eigen domein, `document.fonts` heeft 'DM Sans'.
   LES: laad in deze projecten **nooit** Google Fonts (CSP blokkeert + privacy);
   self-host altijd.
+
+## Naamgeving beheer-menu verduidelijkt (13-9-2026)
+
+De "mail-cluster" in het beheermenu had verwarrende namen (Postvak én Mailbox
+lazen allebei als "inbox"). Hernoemd naar ondubbelzinnige, distincte labels
+(routes/keys ONGEWIJZIGD, alleen labels + koppen + iconen):
+
+| Route | Oud label | Nieuw label | Inhoud |
+|---|---|---|---|
+| `/admin/inbox` | Postvak (📥) | **Formulieren** (📝) | inzendingen contact-/aanmeldformulieren |
+| `/admin/mailbox` | Mailbox (📨) | **Inkomende e-mail** (📥) | echte e-mail aan info@ (mail_inbox) |
+| `/admin/mails` | Mails (📬) | **Uitgaande mail** (📤) | sjablonen + outbox/verzendingen |
+
+De twee inkomende bakken staan nu bovenaan de Communicatie-groep gegroepeerd,
+elke pagina heeft een uitleg-regel met een kruislink naar de andere, en het
+dashboard kreeg een tegel **Nieuwe e-mails** (→ Inkomende e-mail) naast
+**Nieuwe formulierberichten** (de Mailbox was voorheen slecht vindbaar). In
+oudere changelog-regels hierboven verwijzen "Postvak"/"Mailbox"/"Mails" dus naar
+respectievelijk Formulieren / Inkomende e-mail / Uitgaande mail.
