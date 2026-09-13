@@ -876,11 +876,13 @@ Mailbox), met loop-guard + optionele auto-reply.
   Email-Routing-bestemming). LES: bij "inbound in de Mailbox gewenst" mag er
   géén literal-forwardregel voor dat adres staan; gebruik de Worker-vangnet
   (`mail_forward_to`) voor een persoonlijke kopie, niet een aparte forwardregel.
-- **Nog te doen (Marco, 20 sec):** één nieuwe testmail naar
-  `info@beroepenavond2026.nl` sturen (de vorige is al verbruikt) en checken dat
-  hij nu in beheer -> Mailbox verschijnt én als kopie in je eigen inbox. Claude
-  kan dit niet zelf triggeren (M365-connector mist `Mail.Send`; geen lokale
-  Resend-key). Zone-id = `629f76653401f79fd5f072e5080d46b2`.
+- **GEVERIFIEERD WERKEND 13-9-2026:** na de regelwijziging kwamen twee
+  testmails naar `info@beroepenavond2026.nl` correct binnen bij de Worker en
+  staan in `mail_inbox` (status `nieuw`, `mail_inbox_log.outcome='opgenomen'`),
+  zichtbaar in beheer -> Mailbox. Inbound-keten is dus end-to-end rond. De
+  leegte in `mail_inbox_log` was de sluitende diagnose: leeg = handler nooit
+  aangeroepen (dus upstream/routing), een `fout`-regel = handler draaide maar
+  faalde. Zone-id = `629f76653401f79fd5f072e5080d46b2`.
 
 ### Onderhoud 12-9-2026
 Hono-securitybump `4.12.34 → 4.13.7` (Dependabot: parseBody-DoS + query/SSG-
