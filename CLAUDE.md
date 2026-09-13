@@ -137,8 +137,14 @@ naar apex via de Worker-middleware. Geen verdere DNS-actie nodig.
   `/nieuws` + `/nieuws/:slug`, `/faq`, `/privacy` (AVG), `/contact`,
   `/aanmelden` (voorlichter), `/nieuwsbrief`. Dynamische content via
   `src/views/sections.ts`; gerouteerd in `routes/public.ts`.
-- **SEO**: dynamische `/sitemap.xml` (uit pages + nieuws), JSON-LD Event
-  op home, OG/canonical overal.
+- **SEO**: dynamische `/sitemap.xml` (uit pages + nieuws + beroepen), JSON-LD
+  Event op home, OG/canonical overal. `robots.txt` verwijst naar de canonieke
+  `https://beroepenavond2026.nl/sitemap.xml` (was foutief inijmegen.com, dat
+  301't) en disallowt `/admin/` + `/leerling/`. IndexNow (Bing/Yandex): sleutel
+  `8185f0f562b8b9fe678eb129048b65c3`, sleutelbestand op
+  `/8185f0f562b8b9fe678eb129048b65c3.txt` (route in `index.ts`, bestand in
+  `public/`); submit met host+keyLocation op beroepenavond2026.nl, NIET
+  inijmegen.com (dat is een 301-redirectdomein).
 
 ### Backend / formulieren
 - 3 formulieren met honeypot-spam-bescherming → opslaan in `submissions`
