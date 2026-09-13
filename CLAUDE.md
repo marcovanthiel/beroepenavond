@@ -946,3 +946,29 @@ via drie parallelle audit-agents; alle bevindingen doorgevoerd en met Playwright
   regex in `home.ts` bewust ongemoeid; resterende dashes staan alleen in code-comments.
 - Publieke flash-notices krijgen `role="status"`/`role="alert"`; admin-zoekteller
   `aria-live="polite"`.
+
+## Admin-login: "Log direct in"-knop + DM Sans self-hosted (12-9-2026)
+
+- **Eén-klik-login vanuit de code-mail.** De inlogcode-mail bevat naast de
+  6-cijferige code een **"Log direct in"-knop** naar `GET /admin/code?email=…
+  &code=…&next=…`. Die GET **verifieert niet**: hij rendert het codeformulier
+  met de code al ingevuld en laat het zichzelf **posten** (inline autosubmit-
+  script; de site-CSP staat `script-src 'unsafe-inline'` toe). De verificatie
+  blijft dus op `POST /admin/code`. Reden: linkscanners die vooraf de link
+  ophalen (o.a. **M365 Safe Links**, en Marco's meld-adres zit op M365) doen
+  alleen een GET → die mag de eenmalige code niet verbruiken. Het codeveld had
+  al `autocomplete="one-time-code"` (telefoon-autofill); de knop dekt ook
+  desktop-Chrome, waar e-mailcode-autofill niet bestaat. Code blijft zichtbaar
+  als terugval. GET zonder params → 302 naar `/admin/login`; al ingelogd → 302
+  naar `/admin`. Playwright-geverifieerd (autosubmit + POST + foutpad).
+- **DM Sans is nu self-hosted.** De admin (login-`shell()` én
+  `views/admin/layout.ts`) laadde DM Sans van `fonts.googleapis.com`, wat de
+  strikte CSP (`style-src 'self' 'unsafe-inline'`, geen googleapis) **blokkeerde**
+  → de admin viel al terug op systeemfont, met een geblokkeerde request +
+  privacylek naar Google op élke adminpagina. Opgelost: `dmsans-var.woff2`
+  (variabel, latin-subset met alle NL-accenttekens; OFL) in
+  `public/assets/fonts/` + `@font-face` in `admin.css`, en beide Google-Fonts-
+  links verwijderd. `font-src 'self'` dekt het. Playwright bevestigt: geen
+  CSP-fouten, font laadt van eigen domein, `document.fonts` heeft 'DM Sans'.
+  LES: laad in deze projecten **nooit** Google Fonts (CSP blokkeert + privacy);
+  self-host altijd.
