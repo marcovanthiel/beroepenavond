@@ -1045,3 +1045,20 @@ Naar aanleiding van een SEO-audit (Track A + kleine strategische fixes):
   `public/robots.txt` geïnjecteerd; die is NIET vanuit de repo te mergen.
   Ons eigen blok is één schone groep. Samenvoegen/AI-crawlerbeleid (audit
   M1) is een dashboard-keuze, geen codewijziging.
+
+## Search Console: Event-rich-result compleet (14-9-2026)
+
+Google Search Console meldde "Missing field 'offers'" en "Missing field
+'performer'" op de Event-JSON-LD van de home (`src/views/home.ts`,
+`jsonLd`). `offers` stond er sinds 13-9 al (oudere crawl); `performer`
+is toegevoegd als `PerformingGroup` ("N voorlichters uit de
+beroepspraktijk", url /voorlichters) en de Offer kreeg `validFrom`.
+Daarmee zijn alle door Google aanbevolen Event-velden aanwezig: name,
+startDate, endDate, eventStatus, eventAttendanceMode, image,
+location.address (PostalAddress), organizer, performer, offers (price,
+priceCurrency, availability, validFrom, url), description, url.
+Bewust géén 169 losse `Person`-performers: onnodig zwaar en privacy-
+gevoeliger; de groep volstaat voor de rich result. Na zo'n fix: in
+Search Console bij het probleem "Validate fix" klikken of de home via
+URL-inspectie opnieuw laten indexeren; de edge-cache (s-maxage=300) op
+de home betekent dat een live-check tot 5 minuten oud kan zijn.
