@@ -183,11 +183,20 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
       address: postalAddress(settings['venue_address'] || 'Kwakkenbergweg 27, 6523 MJ Nijmegen'),
     },
     organizer: { '@type': 'Organization', name: organisatie, url: `https://${c.env.SITE_HOST}` },
+    // Google beveelt performer + offers aan voor Event-rich-results (Search
+    // Console meldt ze anders als "missing field"). De voorlichters zijn
+    // samen de uitvoerenden; als groep, niet 169 losse Persons in de HTML.
+    performer: {
+      '@type': 'PerformingGroup',
+      name: totSprekers > 0 ? `${totSprekers} voorlichters uit de beroepspraktijk` : 'Voorlichters uit de beroepspraktijk',
+      url: `https://${c.env.SITE_HOST}/voorlichters`,
+    },
     offers: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'EUR',
       availability: 'https://schema.org/InStock',
+      validFrom: `${eventYear}-01-01T00:00:00+01:00`,
       url: `https://${c.env.SITE_HOST}/`,
     },
     image: `https://${c.env.SITE_HOST}/assets/img/og.png`,
