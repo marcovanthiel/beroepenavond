@@ -1,0 +1,87 @@
+bouwlaag,slug,code,naam,m2,soort,x,y,w,h
+Bouwlaag 0,bouwlaag-0,015,Theorielokaal,60,les,28,25,102,110
+Bouwlaag 0,bouwlaag-0,014,Theorielokaal,56,les,136,25,95,110
+Bouwlaag 0,bouwlaag-0,013,Theorielokaal,56,les,238,25,95,109
+Bouwlaag 0,bouwlaag-0,012,Theorielokaal,60,les,340,25,101,110
+Bouwlaag 0,bouwlaag-0,011,Theorielokaal,73,les,448,25,89,153
+Bouwlaag 0,bouwlaag-0,005,Theorielokaal,74,les,544,24,92,154
+Bouwlaag 0,bouwlaag-0,004,Theorielokaal,59,les,642,24,100,112
+Bouwlaag 0,bouwlaag-0,003,Theorielokaal,56,les,748,23,96,110
+Bouwlaag 0,bouwlaag-0,002,Theorielokaal,64,les,851,22,110,110
+Bouwlaag 0,bouwlaag-0,010,Studeerkamer,30,open,270,142,110,58
+Bouwlaag 0,bouwlaag-0,001,Studeerkamer,26,open,710,140,100,52
+Bouwlaag 0,bouwlaag-0,016,Kernteam,21,dienst,57,216,40,46
+Bouwlaag 0,bouwlaag-0,009,Keuken,30,dienst,432,180,52,74
+Bouwlaag 0,bouwlaag-0,006,Kernteam,17,dienst,639,199,50,62
+Bouwlaag 0,bouwlaag-0,007,Receptie,33,dienst,745,199,62,57
+Bouwlaag 0,bouwlaag-0,038,Schoolmaatschappelijk werk,10,dienst,17,268,50,40
+Bouwlaag 0,bouwlaag-0,037,Stagecoordinator,10,dienst,67,268,42,40
+Bouwlaag 0,bouwlaag-0,036,Centrale kopie,19,dienst,116,270,81,40
+Bouwlaag 0,bouwlaag-0,035,Werkkast,18,dienst,272,268,60,40
+Bouwlaag 0,bouwlaag-0,008,Berging aula,18,dienst,647,268,45,42
+Bouwlaag 0,bouwlaag-0,033,Personeelsruimte locatieondersteuning,16,dienst,16,372,88,40
+Bouwlaag 0,bouwlaag-0,031,Personeelsruimte zorgcoordinator,21,dienst,20,417,81,47
+Bouwlaag 0,bouwlaag-0,030,Personeelsruimte remediatie,24,dienst,19,469,82,53
+Bouwlaag 0,bouwlaag-0,029,Personeelsruimte locatieadministratie,41,dienst,16,524,112,77
+Bouwlaag 0,bouwlaag-0,028,Personeelsruimte coach,18,dienst,133,527,45,74
+Bouwlaag 0,bouwlaag-0,027,Personeelsruimte roosterkamer,18,dienst,184,524,50,77
+Bouwlaag 0,bouwlaag-0,025,Personeelsruimte directie onderbouw,28,dienst,235,524,74,77
+Bouwlaag 0,bouwlaag-0,034,EHBO en artsenkamer,11,dienst,137,370,44,55
+Bouwlaag 0,bouwlaag-0,032,Archief,,dienst,137,427,44,24
+Bouwlaag 0,bouwlaag-0,023,Conciergeloge,22,dienst,182,370,103,45
+Bouwlaag 0,bouwlaag-0,026,Spreekkamer,12,dienst,182,450,50,50
+Bouwlaag 0,bouwlaag-0,024,Spreekkamer,12,dienst,233,450,52,50
+Bouwlaag 0,bouwlaag-0,022,Presentatiezaal,132,bijz,309,376,120,225
+Bouwlaag 0,bouwlaag-0,021,Praktijklokaal muziek,69,les,444,407,90,190
+Bouwlaag 0,bouwlaag-0,018,Technische ruimte,5,dienst,436,376,42,26
+Bouwlaag 0,bouwlaag-0,017,Berging,2,dienst,508,376,36,26
+Bouwlaag 0,bouwlaag-0,019,Spreekkamer,13,dienst,592,372,42,32
+Bouwlaag 0,bouwlaag-0,020,Praktijklokaal expressie,67,les,540,472,107,125
+Bouwlaag 0,bouwlaag-0,000,Aula en kantine,,bijz,652,374,305,222
+Bouwlaag 1,bouwlaag-1,114,Theorielokaal onderbouw,59,les,25,35,100,108
+Bouwlaag 1,bouwlaag-1,113,Theorielokaal onderbouw,56,les,132,35,94,112
+Bouwlaag 1,bouwlaag-1,112,Theorielokaal onderbouw,60,les,234,34,102,108
+Bouwlaag 1,bouwlaag-1,111,Theorielokaal onderbouw,67,les,343,32,91,142
+Bouwlaag 1,bouwlaag-1,105,Theorielokaal onderbouw,68,les,437,33,89,140
+Bouwlaag 1,bouwlaag-1,104,Theorielokaal onderbouw,60,les,533,18,101,109
+Bouwlaag 1,bouwlaag-1,103,Theorielokaal onderbouw,56,les,640,17,96,108
+Bouwlaag 1,bouwlaag-1,102,Theorielokaal onderbouw,64,les,743,16,111,109
+Bouwlaag 1,bouwlaag-1,110,Studeerkamer,24,open,161,137,110,58
+Bouwlaag 1,bouwlaag-1,101,Studeerkamer,16,open,593,133,100,50
+Bouwlaag 1,bouwlaag-1,115,Kernteam,15,dienst,146,203,50,52
+Bouwlaag 1,bouwlaag-1,100,Repro,5,dienst,567,183,32,28
+Bouwlaag 1,bouwlaag-1,106,Kernteam,20,dienst,661,187,46,48
+Bouwlaag 2,bouwlaag-2,208,Praktijklokaal tekenen,63,les,16,58,85,142
+Bouwlaag 2,bouwlaag-2,207,Praktijklokaal tekenen,75,les,148,58,86,142
+Bouwlaag 2,bouwlaag-2,206,Praktijklokaal CKV,77,les,281,58,118,142
+Bouwlaag 2,bouwlaag-2,205,Praktijklokaal handvaardigheid grof,75,les,399,58,82,142
+Bouwlaag 2,bouwlaag-2,204,Praktijklokaal handvaardigheid fijn,62,les,534,58,102,142
+Bouwlaag 2,bouwlaag-2,202,Serverruimte,26,dienst,738,56,68,74
+Bouwlaag 2,bouwlaag-2,201,Medewerkers ICT,25,dienst,806,56,60,74
+Bouwlaag 2,bouwlaag-2,203,Personeelskamer,171,bijz,636,140,230,158
+Bouwlaag 3,bouwlaag-3,314,Theorielokaal bovenbouw,59,les,25,34,100,109
+Bouwlaag 3,bouwlaag-3,313,Theorielokaal bovenbouw,56,les,132,34,95,109
+Bouwlaag 3,bouwlaag-3,312,Theorielokaal bovenbouw,60,les,234,34,102,109
+Bouwlaag 3,bouwlaag-3,311,Theorielokaal bovenbouw,67,les,343,33,87,141
+Bouwlaag 3,bouwlaag-3,305,Theorielokaal bovenbouw,67,les,438,33,87,140
+Bouwlaag 3,bouwlaag-3,304,Theorielokaal bovenbouw,60,les,532,17,102,111
+Bouwlaag 3,bouwlaag-3,303,Theorielokaal bovenbouw,56,les,640,17,95,110
+Bouwlaag 3,bouwlaag-3,302,Theorielokaal bovenbouw,63,les,743,16,110,109
+Bouwlaag 3,bouwlaag-3,310,Studeerkamer,21,open,164,138,110,58
+Bouwlaag 3,bouwlaag-3,301,Studeerkamer,22,open,594,132,100,50
+Bouwlaag 3,bouwlaag-3,315,Kernteam,21,dienst,148,208,90,43
+Bouwlaag 3,bouwlaag-3,300,Repro,,dienst,566,188,32,28
+Bouwlaag 3,bouwlaag-3,307,Serverruimte,5,dienst,634,186,32,28
+Bouwlaag 3,bouwlaag-3,308,Berging binas,13,dienst,624,228,58,30
+Bouwlaag 3,bouwlaag-3,306,Kernteam,14,dienst,698,212,48,34
+Bouwlaag 4,bouwlaag-4,411,Praktijklokaal biologie,69,les,16,60,108,143
+Bouwlaag 4,bouwlaag-4,410,Praktijklokaal biologie,81,les,124,60,130,143
+Bouwlaag 4,bouwlaag-4,409,Praktijklokaal scheikunde,81,les,254,60,122,143
+Bouwlaag 4,bouwlaag-4,408,Praktijklokaal TOA,30,dienst,401,108,55,95
+Bouwlaag 4,bouwlaag-4,407,Chemicalienopslag,11,dienst,401,63,48,43
+Bouwlaag 4,bouwlaag-4,406,Praktijklokaal leerlingenlab,49,les,471,63,66,140
+Bouwlaag 4,bouwlaag-4,405,Praktijklokaal natuurkunde,69,les,546,63,95,140
+Bouwlaag 4,bouwlaag-4,404,Kernteam,14,dienst,651,63,55,45
+Bouwlaag 4,bouwlaag-4,403,Praktijklokaal biologie,69,les,638,144,101,157
+Bouwlaag 4,bouwlaag-4,401,Praktijklokaal nask,38,les,769,60,100,78
+Bouwlaag 4,bouwlaag-4,402,Praktijklokaal natuurkunde,84,les,761,148,105,155

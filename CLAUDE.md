@@ -1062,3 +1062,66 @@ gevoeliger; de groep volstaat voor de rich result. Na zo'n fix: in
 Search Console bij het probleem "Validate fix" klikken of de home via
 URL-inspectie opnieuw laten indexeren; de edge-cache (s-maxage=300) op
 de home betekent dat een live-check tot 5 minuten oud kan zijn.
+
+## Plattegronden gedigitaliseerd (14-9-2026)
+
+Bron: de scan "Beuk nummering ruimtes definitief" (clipL2R
+interieurarchitecten, tek. B100 t/m B105, update 30 oktober 2013), vijf
+A3-bladen met de handgeschreven, definitieve ruimtenummering. Bouwlaag 0
+tot en met 4 is verwerkt; bouwlaag 5 en 6 en de parkeergarage (P01 t/m
+P05) bewust niet, daar vinden geen sessies plaats.
+
+**Bestanden**
+
+- `public/assets/plattegrond/bouwlaag-N.svg` - vereenvoudigd nagetekende
+  vectorplattegrond per bouwlaag, zonder lokaalnummers. Die worden door
+  `/rooster` zelf over de klikvlakken getekend, dus dubbel zetten zou
+  rommelig worden.
+- `public/assets/plattegrond/bouwlaag-N-genummerd.svg` - dezelfde
+  tekening met nummer, functie en oppervlakte, voor print en voor de
+  bewegwijzering op de avond zelf.
+- `public/assets/plattegrond/plattegronden-montessori-college.pdf` - alle
+  vijf bouwlagen achter elkaar.
+- `docs/lokalen-montessori-college.csv` - het volledige lokalenregister.
+
+**Bron van waarheid**
+
+`scripts/plattegrond/rooms.py` bevat het register met coordinaten,
+`scripts/plattegrond/gen.py` genereert daaruit de SVG's, de migratie en de
+CSV. Een lokaal verplaatsen of hernoemen doe je in `rooms.py`, daarna
+`python3 scripts/plattegrond/gen.py` en de bestanden uit `out/` kopieren.
+Handmatig in de SVG's knippen loopt bij de volgende generatie vast.
+
+**Data**
+
+`schema/027_plattegronden.sql` zet 5 floorplans en 86 classrooms. De
+migratie is idempotent (begint met DELETE op de prefixen `fp_mcn_` en
+`cr_mcn_`) en hangt zichzelf aan het actieve event via een subquery, dus
+geen hardgecodeerd `ev_2026`.
+
+Elke bouwlaag heeft een eigen viewBox die bij `0 0` begint; de rects in
+`classrooms.map_shape` staan in datzelfde stelsel. Achtergrond en
+klikvlakken vallen daardoor exact over elkaar, ook op mobiel.
+
+Alleen les-, leerplein- en bijzondere ruimten (49 stuks) hebben een
+`map_shape`. Kantoren, bergingen en techniek (37 stuks) staan wel in
+`classrooms` maar zonder vlak, anders wordt de publieke kaart een lappendeken
+van grijze blokjes. Is er toch een vlak nodig: natekenen in
+`/admin/floorplan-editor`.
+
+**Toepassen**
+
+De lokale D1 is in deze sessie al bijgewerkt. Remote nog doen:
+`npx wrangler d1 execute beroepenavond --remote --file=schema/027_plattegronden.sql`
+
+Let op: `node_modules` op de Mac is darwin-arm64, dus wrangler draait niet
+in de Linux-VM van de Cowork-bridge ("You installed workerd on another
+platform"). Wrangler-commando's altijd in een echte terminal op de Mac.
+
+**Twee onzekerheden uit de scan**
+
+- De ingang-markering op bouwlaag 0 staat bij de receptie (007). De
+  tekening benoemt zelf geen hoofdingang; controleren voor de avond.
+- De handgeschreven nummers 017 (berging, 2 m2) en 018 (technische
+  ruimte, 5 m2) zijn slecht leesbaar. Staan ze omgekeerd, wissel dan de
+  codes in `rooms.py` en genereer opnieuw.
