@@ -1125,3 +1125,19 @@ platform"). Wrangler-commando's altijd in een echte terminal op de Mac.
 - De handgeschreven nummers 017 (berging, 2 m2) en 018 (technische
   ruimte, 5 m2) zijn slecht leesbaar. Staan ze omgekeerd, wissel dan de
   codes in `rooms.py` en genereer opnieuw.
+
+### Auto-deploy hersteld (14-9-2026)
+
+Runs #121 en #122 faalden, niet op het R2-token maar op de versiepin zelf.
+`cloudflare/wrangler-action` doet in de stap "Installing Wrangler" een
+`npm i wrangler@<wranglerVersion>`, en `wrangler@4.107.0` vraagt
+peerOptional `@cloudflare/workers-types@^4`, terwijl deze repo op `^5`
+zit. Resultaat: `npm error code ERESOLVE`, exitcode 1, deploy weg.
+
+Opgelost door `wranglerVersion` in `deploy.yml` op `4.131.0` te zetten,
+de versie uit package.json en package-lock. Run #123 is groen (31s).
+De pin blijft dus staan, maar hij moet meebewegen met package.json: zet
+je wrangler daar op een nieuwe versie, pas dan ook de workflow aan.
+
+Let op: de bekende R2-token-kwestie uit juni speelt hier niet meer; de
+deploys #107 tot en met #120 waren allemaal groen.
