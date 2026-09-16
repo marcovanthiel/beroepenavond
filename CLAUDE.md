@@ -1173,3 +1173,49 @@ verfraaiing (live teller + alles-aan/uit).
 - LET OP bij regeneratie plattegrond: `027` doet DELETE+INSERT van de
   `cr_mcn_`-lokalen en zet `in_use` daarmee terug op de default; draai `028`
   daarna opnieuw (idempotent) of neem de keuze over.
+
+### Lokalen: smartboard, sorteren/filteren, gedimde plattegrond (16-9-2026)
+
+Vervolg op de aanvinklijst, in één ronde:
+
+- **Smartboard-kolom** (`schema/030_smartboard.sql`: `classrooms.smartboard`
+  INTEGER NOT NULL DEFAULT 0). Ja/nee-vinkvak per rij in de lijst (naast
+  Gebruikt) en op het bewerk-/nieuw-formulier. Opslaan loopt via dezelfde
+  `POST /admin/classrooms/gebruik`: die verwerkt nu twee checkbox-sets
+  (`use` + `sb`), elk met het patroon "alles op 0, aangevinkte op 1". Er zijn
+  vier bulkknoppen (gebruikt ja/nee, smartboard ja/nee) die alleen de door de
+  filter zichtbare rijen aanpassen.
+- **Sorteren + filteren op alle koppen.** De lijst is `<table data-sortfilter>`
+  met twee koprijen: `tr.sf-head` (klikbare `<th data-sort="text|num|bool">`)
+  en `tr.sf-filter` (per kolom een `data-sf-filter="<index>"`-control:
+  ja/nee-select voor Gebruikt/Smartboard, select voor Soort/Verdieping,
+  zoekveld voor Code/Naam/Cap.). Een los `data-sf-search="lok"` zoekt in alle
+  kolommen. Generieke module in `admin.js` (`table[data-sortfilter]`):
+  kolomindex = celindex; cellen dragen `data-sf` met de sorteer-/filterwaarde
+  (checkbox-cellen "1"/"0", cap = getal), dat wordt bij toggelen bijgewerkt zodat
+  sorteren klopt. Werkt zonder JS (dan gewoon de volledige lijst). De oude
+  losse `filterBar` is voor deze lijst vervangen door deze module. De kolom
+  "Kaart" is weg (na 029 heeft elk lokaal een vlak, dus altijd gelijk).
+- **Plattegrond toont niet-gebruikte ruimten gedimd.** `schema/029_lokaal_shapes.sql`
+  geeft de 37 dienstruimten alsnog een `map_shape` (gegenereerd door
+  `scripts/plattegrond/gen029.py` uit dezelfde framing als 027; idempotent,
+  raakt `in_use` niet). `src/views/rooster.ts` selecteert nu `in_use`: ruimten
+  met `in_use = 0` worden als niet-klikbaar, gedimd vlak (`.map-room-off`,
+  gestreepte grijze rand, grijs label) getekend en staan NIET in de modal-data;
+  legenda kreeg "Niet in gebruik". Zo blijft elke ruimte zichtbaar terwijl
+  alleen de gebruikte klikbaar/gekleurd zijn.
+  - VALKUIL/drift: de gecommitte `027` heeft 49 shapes, maar `gen.py` genereert
+    er inmiddels 86. Regenereren + 027 opnieuw toepassen zou dus alle shapes
+    zetten EN `in_use`/028 in de war schoppen (028's default hangt aan
+    "map_shape IS NULL"). Daarom NIET 027 opnieuw uitrollen; de live-stand is
+    027(49) + 028 + 029(37) + 030. Bij een echte nieuwe editie: 027 -> 028 ->
+    029 -> 030 in die volgorde (028 draait vóór 029, dus de default klopt nog).
+
+### Admin-zijbalk: menugroepen in-/uitklapbaar (16-9-2026)
+
+Elke navigatiegroep in de zijbalk is nu een `<details class="nav-group"
+data-group="...">` met `<summary class="nav-group__title">` (chevron ▸ die
+draait). Native, werkt zonder JS en toetsenbord-toegankelijk. `admin.js`
+onthoudt de open/dicht-stand per groep in `localStorage` (`ba_nav_groups`);
+de groep met de actieve pagina staat altijd open (overschrijft de opgeslagen
+stand). CSS in `admin.css` (`.nav-group__title`, chevron via `::before`).

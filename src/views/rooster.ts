@@ -69,9 +69,9 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
     db.prepare('SELECT id, floor_slug, floor_label, image_url, viewbox FROM floorplans WHERE event_id = ? ORDER BY sort_order')
       .bind(ev.id)
       .all<{ id: string; floor_slug: string; floor_label: string; image_url: string; viewbox: string }>(),
-    db.prepare("SELECT id, code, name, map_shape, map_floor FROM classrooms WHERE event_id = ? AND map_shape IS NOT NULL AND map_shape <> ''")
+    db.prepare("SELECT id, code, name, map_shape, map_floor, in_use FROM classrooms WHERE event_id = ? AND map_shape IS NOT NULL AND map_shape <> ''")
       .bind(ev.id)
-      .all<{ id: string; code: string; name: string | null; map_shape: string; map_floor: string | null }>(),
+      .all<{ id: string; code: string; name: string | null; map_shape: string; map_floor: string | null; in_use: number }>(),
     db.prepare(
       `SELECT s.id, s.profession, s.title, s.classroom_id,
               cat.name AS catName, cat.color AS catColor,
@@ -120,9 +120,10 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
     if (s.catName) legend.set(s.catName, s.catColor ?? '#88bc1d');
   }
 
-  // JSON voor de modal (client)
+  // JSON voor de modal (client). Alleen gebruikte lokalen zijn klikbaar.
   const roomData: Record<string, { code: string; name: string | null; sessions: SessionInfo[] }> = {};
   for (const r of roomRows) {
+    if (!r.in_use) continue;
     roomData[r.id] = { code: r.code, name: r.name, sessions: byRoom.get(r.id) ?? [] };
   }
 
@@ -133,10 +134,17 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
         .map((r) => {
           const pts = parseShape(r.map_shape);
           if (!pts || pts.length < 3) return '';
-          const hasSessions = (byRoom.get(r.id) ?? []).length > 0;
-          const color = (byRoom.get(r.id) ?? [])[0]?.catColor ?? '#88bc1d';
           const c = centroid(pts);
           const pointsAttr = pts.map((p) => `${p.x},${p.y}`).join(' ');
+          // Niet-gebruikte ruimten: wel zichtbaar, maar gedimd en niet klikbaar.
+          if (!r.in_use) {
+            return `<g class="map-room-off" aria-hidden="true">
+            <polygon points="${pointsAttr}"></polygon>
+            <text x="${c.x}" y="${c.y}" text-anchor="middle" dominant-baseline="middle">${esc(r.code)}</text>
+          </g>`;
+          }
+          const hasSessions = (byRoom.get(r.id) ?? []).length > 0;
+          const color = (byRoom.get(r.id) ?? [])[0]?.catColor ?? '#88bc1d';
           return `<g class="map-room ${hasSessions ? '' : 'map-room--empty'}" data-room-id="${esc(r.id)}" tabindex="0" role="button" aria-label="Lokaal ${esc(r.code)}">
             <polygon points="${pointsAttr}" style="--room-color:${esc(color)}"></polygon>
             <text x="${c.x}" y="${c.y}" text-anchor="middle" dominant-baseline="middle">${esc(r.code)}</text>
@@ -159,11 +167,16 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
           .join('')}</div>`
       : '';
 
-  const legendHtml = legend.size
-    ? `<div class="map-legend">${Array.from(legend.entries())
-        .map(([name, color]) => `<span class="map-legend__item"><span class="map-legend__dot" style="background:${esc(color)}"></span>${esc(name)}</span>`)
-        .join('')}</div>`
+  const hasOff = roomRows.some((r) => !r.in_use);
+  const offLegend = hasOff
+    ? `<span class="map-legend__item map-legend__item--off"><span class="map-legend__dot map-legend__dot--off"></span>Niet in gebruik</span>`
     : '';
+  const legendHtml =
+    legend.size || hasOff
+      ? `<div class="map-legend">${Array.from(legend.entries())
+          .map(([name, color]) => `<span class="map-legend__item"><span class="map-legend__dot" style="background:${esc(color)}"></span>${esc(name)}</span>`)
+          .join('')}${offLegend}</div>`
+      : '';
 
   return `
 <style>
@@ -179,8 +192,13 @@ export async function renderRoosterMap(db: D1Database): Promise<string> {
   .map-room text { font:600 13px 'DM Sans',sans-serif; fill:#15171a; pointer-events:none; }
   .map-room--empty polygon { fill:rgba(150,150,150,.18); stroke:#aab; }
   .map-room--empty text { fill:#667; }
+  .map-room-off { cursor:default; }
+  .map-room-off polygon { fill:rgba(140,145,150,.14); stroke:#c3c8cd; stroke-width:1.2; stroke-dasharray:4 4; }
+  .map-room-off text { font:500 11px 'DM Sans',sans-serif; fill:#9aa2aa; pointer-events:none; }
   .map-legend { display:flex; flex-wrap:wrap; gap:14px; margin:16px 0; font-size:14px; }
   .map-legend__dot { display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+  .map-legend__item--off { color:#9aa2aa; }
+  .map-legend__dot--off { background:rgba(140,145,150,.14); border:1.2px dashed #c3c8cd; }
   .map-modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:50; }
   .map-modal.open { display:flex; }
   .map-modal__card { background:#fff; border-radius:14px; max-width:520px; width:100%; max-height:85vh; overflow-y:auto; padding:24px 26px; }

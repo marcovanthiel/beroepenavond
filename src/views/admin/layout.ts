@@ -103,8 +103,8 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
   const user = c.get('user');
   const navHtml = NAV.map(
     (g) => `
-      <div class="nav-group">
-        <p class="nav-group__title">${esc(g.title)}</p>
+      <details class="nav-group" data-group="${esc(g.title)}" open>
+        <summary class="nav-group__title">${esc(g.title)}</summary>
         <ul>
           ${g.items
             .map(
@@ -115,7 +115,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
             )
             .join('')}
         </ul>
-      </div>`
+      </details>`
   ).join('');
 
   const ok = opts.flash?.ok;

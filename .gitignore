@@ -4,6 +4,11 @@ node_modules/
 .DS_Store
 *.log
 
+# Plattegrond-generator: build-uitvoer en Python-cache (bron = rooms.py/gen.py;
+# de definitieve SVG's staan in public/assets/plattegrond/).
+scripts/plattegrond/out/
+scripts/plattegrond/__pycache__/
+
 # Machine-lokale agent-instellingen (nooit committen; .claude/settings.json en
 # .claude/commands/ blijven wél in versiebeheer).
 .claude/settings.local.json

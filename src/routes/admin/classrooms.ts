@@ -16,7 +16,6 @@ import {
   select,
   checkbox,
   formActions,
-  filterBar,
   filterEmptyRow,
   deleteButton,
   flashFromQuery,
@@ -36,6 +35,7 @@ interface Classroom {
   map_floor: string | null;
   notes: string | null;
   in_use: number;
+  smartboard: number;
 }
 
 /** Vertaalt de ruwe 'soort' (uit notes, van de plattegrond-import) naar een
@@ -81,47 +81,73 @@ classroomsApp.get('/', async (c) => {
   const total = all.length;
   const used = all.filter((r) => r.in_use).length;
 
+  // Distinct waarden voor de kolom-filters (soort + verdieping).
+  const soorten = Array.from(new Set(all.map((r) => soortLabel(r.notes)).filter(Boolean))).sort();
+  const verdiepingen = Array.from(new Set(all.map((r) => r.floor ?? '').filter(Boolean))).sort();
+
   const list = all
     .map((r) => {
       const cap = r.capacity != null ? String(r.capacity) : '';
-      const kaart = r.map_shape
-        ? '<span class="badge badge--on">Op kaart</span>'
-        : '<span class="badge badge--off">-</span>';
       return `<tr>
-        <td class="cell-check"><input type="checkbox" name="use" value="${esc(r.id)}" ${r.in_use ? 'checked' : ''} aria-label="Lokaal ${esc(r.code)} wordt gebruikt"></td>
+        <td class="cell-check" data-sf="${r.in_use ? 1 : 0}"><input type="checkbox" name="use" value="${esc(r.id)}" ${r.in_use ? 'checked' : ''} aria-label="Lokaal ${esc(r.code)} wordt gebruikt"></td>
         <td><strong>${esc(r.code)}</strong></td>
         <td>${esc(r.name ?? '')}</td>
         <td>${esc(soortLabel(r.notes))}</td>
         <td>${esc(r.floor ?? '')}</td>
-        <td>${esc(cap)}</td>
-        <td>${kaart}</td>
+        <td data-sf="${r.capacity ?? -1}">${esc(cap)}</td>
+        <td class="cell-check" data-sf="${r.smartboard ? 1 : 0}"><input type="checkbox" name="sb" value="${esc(r.id)}" ${r.smartboard ? 'checked' : ''} aria-label="Lokaal ${esc(r.code)} heeft een smartboard"></td>
         <td class="actions"><a class="btn btn--ghost btn--sm" href="/admin/classrooms/${esc(r.id)}">Bewerken</a></td>
       </tr>`;
     })
     .join('');
 
-  const toolbar = filterBar({
-    targetId: 'lok',
-    placeholder: 'Zoek op code, naam, soort of verdieping',
-    total,
-    noun: 'lokalen',
-    actionsHtml: `<span class="list-count" data-usecount role="status" aria-live="polite">${used} van ${total} gebruikt</span>`,
-  });
+  const jaNee = (col: number) =>
+    `<select data-sf-filter="${col}" aria-label="Filter kolom"><option value="">alle</option><option value="1">ja</option><option value="0">nee</option></select>`;
+  const opts = (col: number, values: string[], label: string) =>
+    `<select data-sf-filter="${col}" aria-label="Filter ${label}"><option value="">alle</option>${values
+      .map((v) => `<option value="${esc(v)}">${esc(v)}</option>`)
+      .join('')}</select>`;
+  const txt = (col: number, ph: string) =>
+    `<input type="search" data-sf-filter="${col}" placeholder="${esc(ph)}" aria-label="Filter ${esc(ph)}">`;
 
   const body = `
     ${pageHeader(`Lokalen · ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/classrooms/new">Nieuw lokaal</a>')}
-    <p class="muted">Vink aan welke ruimten op de avond worden gebruikt. Alleen aangevinkte lokalen zijn zaal voor een sessie; de rest (kantoren, bergingen, techniek) blijft in het register staan maar telt niet mee. Klik daarna op <strong>Opslaan</strong>.</p>
-    ${toolbar}
+    <p class="muted">Vink aan welke ruimten op de avond worden gebruikt en welke een smartboard hebben. Alleen aangevinkte lokalen zijn zaal voor een sessie; de rest blijft in het register staan (en staat gedimd op de plattegrond). Klik op een kolomkop om te sorteren, gebruik de filterregel eronder om te filteren, en klik daarna op <strong>Opslaan</strong>.</p>
+    <div class="list-toolbar">
+      <div class="list-search"><input type="search" data-sf-search="lok" placeholder="Zoek in alle kolommen" aria-label="Zoek in alle kolommen"></div>
+      <span class="list-count" data-sf-count="lok" role="status" aria-live="polite">Totaal: ${total} lokalen</span>
+      <span class="list-count" data-usecount role="status" aria-live="polite">${used} van ${total} gebruikt</span>
+    </div>
     <form method="post" action="/admin/classrooms/gebruik" data-no-busy>
       <div class="bulk-tools">
-        <button type="button" class="btn btn--ghost btn--sm" data-check-all="1">Alles in beeld aanvinken</button>
-        <button type="button" class="btn btn--ghost btn--sm" data-check-all="0">Alles in beeld uitvinken</button>
+        <button type="button" class="btn btn--ghost btn--sm" data-check-all="use:1">Alle zichtbare als gebruikt</button>
+        <button type="button" class="btn btn--ghost btn--sm" data-check-all="use:0">Alle zichtbare niet-gebruikt</button>
+        <button type="button" class="btn btn--ghost btn--sm" data-check-all="sb:1">Alle zichtbare smartboard ja</button>
+        <button type="button" class="btn btn--ghost btn--sm" data-check-all="sb:0">Alle zichtbare smartboard nee</button>
       </div>
-      <div class="table-wrap"><table class="data" id="lok">
-        <thead><tr>
-          <th>Gebruikt</th><th>Code</th><th>Naam</th><th>Soort</th>
-          <th>Verdieping</th><th>Cap.</th><th>Kaart</th><th></th>
-        </tr></thead>
+      <div class="table-wrap"><table class="data sortable" id="lok" data-sortfilter>
+        <thead>
+          <tr class="sf-head">
+            <th data-sort="bool" title="Klik om te sorteren">Gebruikt</th>
+            <th data-sort="text" title="Klik om te sorteren">Code</th>
+            <th data-sort="text" title="Klik om te sorteren">Naam</th>
+            <th data-sort="text" title="Klik om te sorteren">Soort</th>
+            <th data-sort="text" title="Klik om te sorteren">Verdieping</th>
+            <th data-sort="num" title="Klik om te sorteren">Cap.</th>
+            <th data-sort="bool" title="Klik om te sorteren">Smartboard</th>
+            <th></th>
+          </tr>
+          <tr class="sf-filter">
+            <th>${jaNee(0)}</th>
+            <th>${txt(1, 'code')}</th>
+            <th>${txt(2, 'naam')}</th>
+            <th>${opts(3, soorten, 'soort')}</th>
+            <th>${opts(4, verdiepingen, 'verdieping')}</th>
+            <th>${txt(5, 'cap.')}</th>
+            <th>${jaNee(6)}</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>${list || '<tr><td colspan="8" class="empty">Nog geen lokalen.</td></tr>'}${filterEmptyRow(8)}</tbody>
       </table></div>
       <div class="form-actions form-actions--sticky">
@@ -132,26 +158,32 @@ classroomsApp.get('/', async (c) => {
   return renderAdminLayout(c, { title: 'Lokalen', activeKey: 'classrooms', body, flash: flashFromQuery(c) });
 });
 
-/** Bewaart de aanvinklijst: alle lokalen van de editie op niet-gebruikt,
- *  daarna de aangevinkte weer op gebruikt. Moet VOOR '/:id' staan, anders
- *  vangt die route 'gebruik' op. */
+/** Bewaart de aanvinklijst: zet per vlag (in_use, smartboard) eerst alle
+ *  lokalen van de editie op 0 en daarna de aangevinkte ids op 1. Moet VOOR
+ *  '/:id' staan, anders vangt die route 'gebruik' op. */
 classroomsApp.post('/gebruik', async (c) => {
   const ev = await getActiveEvent(c.env.DB);
   if (!ev) return redirectErr(c, '/admin/classrooms', 'Geen actieve editie.');
   const b = await c.req.parseBody({ all: true });
-  const raw = b.use;
-  const ids = (Array.isArray(raw) ? raw : raw != null ? [raw] : []).map((x) => String(x));
-  await c.env.DB.prepare('UPDATE classrooms SET in_use = 0 WHERE event_id = ?').bind(ev.id).run();
-  if (ids.length) {
-    const ph = ids.map(() => '?').join(',');
-    await c.env.DB.prepare(
-      `UPDATE classrooms SET in_use = 1 WHERE event_id = ? AND id IN (${ph})`
-    )
-      .bind(ev.id, ...ids)
-      .run();
+  const idsOf = (raw: unknown) =>
+    (Array.isArray(raw) ? raw : raw != null ? [raw] : []).map((x) => String(x));
+  const useIds = idsOf(b.use);
+  const sbIds = idsOf(b.sb);
+  async function apply(col: 'in_use' | 'smartboard', ids: string[]) {
+    await c.env.DB.prepare(`UPDATE classrooms SET ${col} = 0 WHERE event_id = ?`).bind(ev!.id).run();
+    if (ids.length) {
+      const ph = ids.map(() => '?').join(',');
+      await c.env.DB.prepare(
+        `UPDATE classrooms SET ${col} = 1 WHERE event_id = ? AND id IN (${ph})`
+      )
+        .bind(ev!.id, ...ids)
+        .run();
+    }
   }
-  await logAudit(c, 'update', 'classroom', `gebruik:${ids.length}`);
-  return redirectOk(c, '/admin/classrooms', `${ids.length} lokalen op gebruikt gezet.`);
+  await apply('in_use', useIds);
+  await apply('smartboard', sbIds);
+  await logAudit(c, 'update', 'classroom', `gebruik:${useIds.length},smartboard:${sbIds.length}`);
+  return redirectOk(c, '/admin/classrooms', `Opgeslagen: ${useIds.length} gebruikt, ${sbIds.length} met smartboard.`);
 });
 
 async function form(c: any, eventId: string, r: Partial<Classroom>, isNew: boolean): Promise<string> {
@@ -166,7 +198,8 @@ async function form(c: any, eventId: string, r: Partial<Classroom>, isNew: boole
         ${field({ label: 'Verdieping (label)', name: 'floor', value: r.floor ?? '' })}
         ${field({ label: 'Capaciteit', name: 'capacity', value: r.capacity ?? '', type: 'number' })}
         ${floors.length ? select({ label: 'Plattegrond-verdieping', name: 'map_floor', value: r.map_floor ?? '', options: floors, empty: '(geen)' }) : field({ label: 'Plattegrond-verdieping (slug)', name: 'map_floor', value: r.map_floor ?? '' })}
-        <div>${checkbox({ label: 'Wordt op de avond gebruikt', name: 'in_use', checked: inUse, help: 'Uit = staat wel in het register maar is geen zaal voor een sessie.' })}</div>
+        <div>${checkbox({ label: 'Wordt op de avond gebruikt', name: 'in_use', checked: inUse, help: 'Uit = staat wel in het register (gedimd op de plattegrond) maar is geen zaal voor een sessie.' })}</div>
+        <div>${checkbox({ label: 'Heeft een smartboard', name: 'smartboard', checked: !!r.smartboard })}</div>
         <div class="span-2">${textarea({ label: 'map_shape (JSON, meestal via editor)', name: 'map_shape', value: r.map_shape ?? '', rows: 3, mono: true, help: 'Bijv. {"shape":"polygon","points":"10,20 30,40 50,60"}' })}</div>
         <div class="span-2">${textarea({ label: 'Notitie / soort', name: 'notes', value: r.notes ?? '', rows: 2, help: 'Uit de plattegrond-import: les, open, bijz of dienst.' })}</div>
       </div>
@@ -193,9 +226,9 @@ classroomsApp.post('/new', async (c) => {
   const b = await c.req.parseBody();
   const id = genId('room');
   await c.env.DB.prepare(
-    'INSERT INTO classrooms (id, event_id, code, name, floor, capacity, map_shape, map_floor, notes, in_use) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO classrooms (id, event_id, code, name, floor, capacity, map_shape, map_floor, notes, in_use, smartboard) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   )
-    .bind(id, ev.id, str(b.code), strOrNull(b.name), strOrNull(b.floor), intOrNull(b.capacity), strOrNull(b.map_shape), strOrNull(b.map_floor), strOrNull(b.notes), b.in_use ? 1 : 0)
+    .bind(id, ev.id, str(b.code), strOrNull(b.name), strOrNull(b.floor), intOrNull(b.capacity), strOrNull(b.map_shape), strOrNull(b.map_floor), strOrNull(b.notes), b.in_use ? 1 : 0, b.smartboard ? 1 : 0)
     .run();
   await logAudit(c, 'create', 'classroom', id);
   return redirectOk(c, '/admin/classrooms', 'Lokaal aangemaakt.');
@@ -205,9 +238,9 @@ classroomsApp.post('/:id', async (c) => {
   const id = c.req.param('id');
   const b = await c.req.parseBody();
   await c.env.DB.prepare(
-    'UPDATE classrooms SET code = ?, name = ?, floor = ?, capacity = ?, map_shape = ?, map_floor = ?, notes = ?, in_use = ? WHERE id = ?'
+    'UPDATE classrooms SET code = ?, name = ?, floor = ?, capacity = ?, map_shape = ?, map_floor = ?, notes = ?, in_use = ?, smartboard = ? WHERE id = ?'
   )
-    .bind(str(b.code), strOrNull(b.name), strOrNull(b.floor), intOrNull(b.capacity), strOrNull(b.map_shape), strOrNull(b.map_floor), strOrNull(b.notes), b.in_use ? 1 : 0, id)
+    .bind(str(b.code), strOrNull(b.name), strOrNull(b.floor), intOrNull(b.capacity), strOrNull(b.map_shape), strOrNull(b.map_floor), strOrNull(b.notes), b.in_use ? 1 : 0, b.smartboard ? 1 : 0, id)
     .run();
   await logAudit(c, 'update', 'classroom', id);
   return redirectOk(c, '/admin/classrooms', 'Lokaal opgeslagen.');

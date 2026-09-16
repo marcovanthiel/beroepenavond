@@ -6,6 +6,24 @@
 (function () {
   'use strict';
 
+  // ---- Zijbalk: menugroepen in-/uitklappen (onthouden) ----------------
+  // Elke <details.nav-group data-group="..."> onthoudt zijn open/dicht-stand
+  // in localStorage. De groep met de actieve pagina staat altijd open.
+  (function () {
+    var KEY = 'ba_nav_groups';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { saved = {}; }
+    document.querySelectorAll('details.nav-group').forEach(function (d) {
+      var g = d.getAttribute('data-group');
+      var hasActive = !!d.querySelector('a.active');
+      if (!hasActive && g in saved) d.open = !!saved[g];
+      d.addEventListener('toggle', function () {
+        saved[g] = d.open;
+        try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { /* geen opslag */ }
+      });
+    });
+  })();
+
   // ---- Direct zoeken in tabellen --------------------------------------
   // Een <input data-filter-target="#tabel-id" data-filter-count="#teller-id">
   // filtert de <tr>'s van die tabel op tekst. Een rij met [data-filter-empty]
@@ -48,34 +66,143 @@
     });
   });
 
+  // ---- Sorteerbare + per-kolom filterbare tabel -----------------------
+  // <table data-sortfilter> met twee koprijen: <tr class="sf-head"> met per
+  // kolom <th data-sort="text|num|bool"> (klik = sorteren) en <tr class="sf-filter">
+  // met per kolom een <input|select data-sf-filter="<kolomindex>">. Een los
+  // <input data-sf-search="<tabel-id>"> zoekt in alle kolommen; <span
+  // data-sf-count="<tabel-id>"> toont de teller. Cellen mogen data-sf dragen
+  // met de sorteer-/filterwaarde (anders wordt de zichtbare tekst gebruikt).
+  document.querySelectorAll('table[data-sortfilter]').forEach(function (table) {
+    var tbody = table.tBodies[0];
+    if (!tbody) return;
+    var id = table.id;
+    var search = id ? document.querySelector('input[data-sf-search="' + id + '"]') : null;
+    var countEl = id ? document.querySelector('[data-sf-count="' + id + '"]') : null;
+    var countTpl = countEl ? countEl.textContent : '';
+    var emptyRow = table.querySelector('[data-filter-empty]');
+    var headCells = table.querySelectorAll('tr.sf-head > th');
+    var filters = {}; // kolomindex -> zoekwaarde (lowercase)
+
+    function dataRows() {
+      return Array.prototype.filter.call(tbody.rows, function (r) {
+        return !r.hasAttribute('data-filter-empty');
+      });
+    }
+    function cellVal(row, col) {
+      var td = row.cells[col];
+      if (!td) return '';
+      var v = td.getAttribute('data-sf');
+      return (v != null ? v : td.textContent).trim();
+    }
+    function apply() {
+      var q = search ? search.value.trim().toLowerCase() : '';
+      var rows = dataRows();
+      var visible = 0;
+      rows.forEach(function (r) {
+        var ok = !q || r.textContent.toLowerCase().indexOf(q) !== -1;
+        if (ok) {
+          for (var col in filters) {
+            if (!filters[col]) continue;
+            if (cellVal(r, col).toLowerCase().indexOf(filters[col]) === -1) { ok = false; break; }
+          }
+        }
+        r.hidden = !ok;
+        if (ok) visible++;
+      });
+      if (emptyRow) emptyRow.hidden = visible !== 0;
+      if (countEl) {
+        var active = q || Object.keys(filters).some(function (k) { return filters[k]; });
+        countEl.textContent = active ? visible + ' van ' + rows.length + ' gevonden' : countTpl;
+      }
+    }
+
+    if (search) {
+      search.addEventListener('input', apply);
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { search.value = ''; apply(); }
+        if (e.key === 'Enter') e.preventDefault();
+      });
+    }
+    table.querySelectorAll('[data-sf-filter]').forEach(function (ctrl) {
+      var col = parseInt(ctrl.getAttribute('data-sf-filter'), 10);
+      var ev = ctrl.tagName === 'SELECT' ? 'change' : 'input';
+      ctrl.addEventListener(ev, function () { filters[col] = ctrl.value.trim().toLowerCase(); apply(); });
+      ctrl.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+    });
+
+    // Sorteren op kolomkop
+    var sortState = { col: -1, dir: 1 };
+    Array.prototype.forEach.call(headCells, function (th, col) {
+      var type = th.getAttribute('data-sort');
+      if (!type) return;
+      th.classList.add('sortable-th');
+      th.setAttribute('role', 'button');
+      th.setAttribute('tabindex', '0');
+      function doSort() {
+        sortState.dir = sortState.col === col ? -sortState.dir : 1;
+        sortState.col = col;
+        var rows = dataRows();
+        rows.sort(function (a, b) {
+          var va = cellVal(a, col), vb = cellVal(b, col);
+          var r;
+          if (type === 'num' || type === 'bool') {
+            r = (parseFloat(va) || 0) - (parseFloat(vb) || 0);
+          } else {
+            r = va.localeCompare(vb, 'nl', { numeric: true, sensitivity: 'base' });
+          }
+          return r * sortState.dir;
+        });
+        rows.forEach(function (r) { tbody.appendChild(r); });
+        if (emptyRow) tbody.appendChild(emptyRow);
+        Array.prototype.forEach.call(headCells, function (h) { h.removeAttribute('aria-sort'); });
+        th.setAttribute('aria-sort', sortState.dir === 1 ? 'ascending' : 'descending');
+      }
+      th.addEventListener('click', doSort);
+      th.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doSort(); }
+      });
+    });
+
+    apply();
+  });
+
   // ---- Aanvinklijst lokalen: live teller + alles aan/uit --------------
-  // Een <span data-usecount> binnen/boven een formulier telt de aangevinkte
-  // use-checkboxes; knoppen <button data-check-all="1|0"> vinken alle in
-  // beeld zichtbare rijen aan of uit (rijen die de zoekfilter verbergt
-  // blijven ongemoeid). Werkt zonder JS: dan bepaalt de server de stand.
+  // <span data-usecount> telt de aangevinkte use-checkboxes; knoppen
+  // <button data-check-all="use:1|use:0|sb:1|sb:0"> vinken alle in beeld
+  // zichtbare rijen voor dat veld aan/uit. Werkt zonder JS (server bepaalt).
   (function () {
     var form = document.querySelector('form[action="/admin/classrooms/gebruik"]');
     if (!form) return;
-    var boxes = function () {
-      return Array.prototype.slice.call(form.querySelectorAll('input[name="use"]'));
-    };
     var counter = document.querySelector('[data-usecount]');
     function updateCount() {
       if (!counter) return;
-      var all = boxes();
-      var on = all.filter(function (b) { return b.checked; }).length;
+      var all = form.querySelectorAll('input[name="use"]');
+      var on = 0;
+      all.forEach(function (b) { if (b.checked) on++; });
       counter.textContent = on + ' van ' + all.length + ' gebruikt';
     }
+    // Houd data-sf op de cel gelijk aan de checkbox, zodat sorteren klopt.
     form.addEventListener('change', function (e) {
-      if (e.target && e.target.name === 'use') updateCount();
+      var t = e.target;
+      if (t && (t.name === 'use' || t.name === 'sb')) {
+        var td = t.closest('td');
+        if (td) td.setAttribute('data-sf', t.checked ? '1' : '0');
+        if (t.name === 'use') updateCount();
+      }
     });
     document.querySelectorAll('button[data-check-all]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var on = btn.getAttribute('data-check-all') === '1';
-        boxes().forEach(function (b) {
+        var parts = btn.getAttribute('data-check-all').split(':');
+        var field = parts[0], on = parts[1] === '1';
+        form.querySelectorAll('input[name="' + field + '"]').forEach(function (b) {
           var tr = b.closest('tr');
-          if (tr && tr.hidden) return; // door de zoekfilter verborgen: overslaan
-          b.checked = on;
+          if (tr && tr.hidden) return; // door filter verborgen: overslaan
+          if (b.checked !== on) {
+            b.checked = on;
+            var td = b.closest('td');
+            if (td) td.setAttribute('data-sf', on ? '1' : '0');
+          }
         });
         updateCount();
       });
