@@ -1224,3 +1224,40 @@ groep met de actieve pagina staat open.** Dat wordt SERVER-SIDE bepaald in
 ook zonder JS. `admin.js` voegt accordeon-gedrag toe: open je een andere groep,
 dan sluiten de overige. De eerdere localStorage-persistentie is bewust
 verwijderd (die overschreef dit gedrag).
+
+## Automatische beroep-indeling (programma) (16-9-2026)
+
+Nieuwe generator `maakBeroepIndeling(db, eventId)` in `src/lib/indeling.ts` +
+knop **"Maak beroep-indeling"** op `/admin/sessions` (POST `/admin/sessions/
+indeling`, geregistreerd VOOR `/:id`). Verdeelt alle **beroepen** (niet losse
+sprekers) over de rondes en de lokalen die op "in gebruik" staan.
+
+- **Model (keuze Marco):** één beroep = één workshop = één sessie
+  (`sessions_program`-rij, `is_public=1`, `profession` = beroepsnaam). ALLE
+  publieke sprekers van dat beroep worden via `session_speakers` aan die ene
+  sessie gekoppeld (sommige beroepen hebben meerdere sprekers). Elk beroep komt
+  één keer voor (niet herhaald per ronde).
+- **Verdeling:** beroepen gesorteerd op categorie (zodat categorieën gespreid
+  worden), dan `ronde = i % aantalRondes` en `lokaal = floor(i / aantalRondes)`.
+  Zo krijgt elke ronde andere lokalen (geen dubbele boeking) en zijn de
+  categorieën over de rondes gemengd. Lokalen worden gekozen met de
+  **smartboard-/theorielokalen eerst** (`ORDER BY smartboard DESC, capacity IS
+  NULL, capacity DESC, floor, code`). Herdraaibaar: wist eerst de bestaande
+  `sessions_program` + `session_speakers` + `student_schedule` van de editie.
+- **Voorwaarde:** er moeten rondes bestaan (anders foutmelding). Voor 2026 zijn
+  3 rondes gezet (18:45-19:30, 19:40-20:25, 20:35-21:20; aan te passen bij
+  Rondes). Met 49 in-gebruik-lokalen en 3 rondes = 147 plekken; 100 beroepen
+  passen (34/33/33 per ronde, 34 lokalen gebruikt).
+- **Pijplijn:** deze beroep-indeling is de VOORWAARDE voor de bestaande
+  leerling-indeling (`maakIndeling`, leest `sessions_program` met beroep+ronde).
+  Draai dus eerst de beroep-indeling, daarna pas de leerling-indeling.
+- **Remote populeren zonder de live-knop:** de live-knop kan alleen met een
+  echte adminsessie (prod-secret) getriggerd worden. Voor de eerste vulling is
+  de remote-data buiten de Worker om gevuld met een deterministisch script
+  (`scratchpad/gen_remote_indeling.mjs`): dat leest de remote-data met exact
+  dezelfde ORDER BY + verdeling en schrijft SQL. Bij volgende keren gebruikt
+  Marco gewoon de knop. Beide leveren dezelfde indeling.
+- Stand 16-9-2026: lokaal + remote gevuld, 100 sessies, 169 sprekers, 0 dubbele
+  lokaalboekingen, live op `/rooster` en `/beroepen`. LET OP: er zijn nog
+  0 sprekers bevestigd; de indeling gebruikt alle publieke (aangemelde)
+  sprekers. Na bevestigingsronde opnieuw draaien als de deelnemers wijzigen.
