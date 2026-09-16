@@ -48,6 +48,41 @@
     });
   });
 
+  // ---- Aanvinklijst lokalen: live teller + alles aan/uit --------------
+  // Een <span data-usecount> binnen/boven een formulier telt de aangevinkte
+  // use-checkboxes; knoppen <button data-check-all="1|0"> vinken alle in
+  // beeld zichtbare rijen aan of uit (rijen die de zoekfilter verbergt
+  // blijven ongemoeid). Werkt zonder JS: dan bepaalt de server de stand.
+  (function () {
+    var form = document.querySelector('form[action="/admin/classrooms/gebruik"]');
+    if (!form) return;
+    var boxes = function () {
+      return Array.prototype.slice.call(form.querySelectorAll('input[name="use"]'));
+    };
+    var counter = document.querySelector('[data-usecount]');
+    function updateCount() {
+      if (!counter) return;
+      var all = boxes();
+      var on = all.filter(function (b) { return b.checked; }).length;
+      counter.textContent = on + ' van ' + all.length + ' gebruikt';
+    }
+    form.addEventListener('change', function (e) {
+      if (e.target && e.target.name === 'use') updateCount();
+    });
+    document.querySelectorAll('button[data-check-all]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var on = btn.getAttribute('data-check-all') === '1';
+        boxes().forEach(function (b) {
+          var tr = b.closest('tr');
+          if (tr && tr.hidden) return; // door de zoekfilter verborgen: overslaan
+          b.checked = on;
+        });
+        updateCount();
+      });
+    });
+    updateCount();
+  })();
+
   // ---- Direct zoeken in een lijst (bv. spreker-keuzevakjes) -----------
   // <input data-filter-list="#container"> verbergt de directe kinderen van
   // dat element die niet matchen.

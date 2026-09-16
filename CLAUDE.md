@@ -1141,3 +1141,35 @@ je wrangler daar op een nieuwe versie, pas dan ook de workflow aan.
 
 Let op: de bekende R2-token-kwestie uit juni speelt hier niet meer; de
 deploys #107 tot en met #120 waren allemaal groen.
+
+## Lokalen: aanvinklijst wel/niet gebruikt (16-9-2026)
+
+Beheer -> Lokalen (`/admin/classrooms`) is nu een **aanvinklijst** van alle
+86 ruimten met per rij een **Gebruikt-vinkje** plus de bekende info: code,
+naam (incl. m2), soort, verdieping, capaciteit en of het lokaal op de kaart
+staat. Bovenaan een zoekfilter (op code/naam/soort/verdieping) met een live
+teller "X van Y gebruikt" en knoppen "Alles in beeld aan/uitvinken" (werken
+alleen op de door de zoekfilter zichtbare rijen). Onderaan een sticky
+Opslaan-knop. Alles werkt zonder JS (server-side POST); admin.js is enkel
+verfraaiing (live teller + alles-aan/uit).
+
+- **Schema `028_lokaal_gebruik.sql`**: kolom `classrooms.in_use INTEGER NOT
+  NULL DEFAULT 1`. Default AAN voor de 49 les-/leerplein-/bijzondere ruimten
+  (die een `map_shape` hebben), UIT voor de 37 dienstruimten (kantoren,
+  bergingen, techniek) zonder vlak. Lokaal + remote toegepast (49/37).
+- **Opslaan-route `POST /admin/classrooms/gebruik`** staat bewust VOOR `/:id`
+  (anders vangt `/:id` "gebruik" op). Body via `parseBody({ all: true })`
+  zodat de meervoudige `use`-checkboxes als array binnenkomen (zelfde
+  workerd-valkuil als de speakers-bulk; `formData()` gaf lege arrays). De
+  route zet eerst alle lokalen van de editie op 0 en daarna de aangevinkte
+  ids via `IN (...)` op 1.
+- **Soort** komt uit `classrooms.notes` (import-waarde les/open/bijz/dienst),
+  vertaald door `soortLabel()` naar leesbare tekst. De m2 zit in `name`.
+- **in_use** is ook per lokaal te zetten op het bewerk-/nieuw-formulier.
+- Nog niet gekoppeld aan de publieke kaart of de automatische indeling; die
+  tonen/gebruiken lokalen nog los van `in_use`. Wil je dat de indeling alleen
+  gebruikte lokalen vult of de publieke kaart de niet-gebruikte verbergt: filter
+  dan op `in_use = 1` in `src/lib/indeling.ts` resp. `src/views/rooster.ts`.
+- LET OP bij regeneratie plattegrond: `027` doet DELETE+INSERT van de
+  `cr_mcn_`-lokalen en zet `in_use` daarmee terug op de default; draai `028`
+  daarna opnieuw (idempotent) of neem de keuze over.

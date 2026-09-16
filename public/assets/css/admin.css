@@ -159,6 +159,10 @@ textarea.fld__input { resize: vertical; }
 .fld--check span { font-size: 14px; }
 
 .form-actions { display: flex; gap: 10px; margin-top: 8px; align-items: center; }
+.form-actions--sticky { position: sticky; bottom: 0; margin-top: 0; padding: 12px 4px; background: linear-gradient(to top, var(--bg, #fff) 70%, transparent); }
+.bulk-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.cell-check { text-align: center; width: 1%; white-space: nowrap; }
+.cell-check input { width: 18px; height: 18px; }
 
 /* ---- Dashboard ---- */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-bottom: 24px; }
