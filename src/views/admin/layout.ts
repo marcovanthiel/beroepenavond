@@ -103,7 +103,9 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
   const user = c.get('user');
   const navHtml = NAV.map(
     (g) => `
-      <details class="nav-group" data-group="${esc(g.title)}" open>
+      <details class="nav-group" data-group="${esc(g.title)}"${
+      g.items.some((it) => it.key === opts.activeKey) ? ' open' : ''
+    }>
         <summary class="nav-group__title">${esc(g.title)}</summary>
         <ul>
           ${g.items

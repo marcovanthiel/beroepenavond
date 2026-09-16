@@ -1213,9 +1213,14 @@ Vervolg op de aanvinklijst, in één ronde:
 
 ### Admin-zijbalk: menugroepen in-/uitklapbaar (16-9-2026)
 
-Elke navigatiegroep in de zijbalk is nu een `<details class="nav-group"
+Elke navigatiegroep in de zijbalk is een `<details class="nav-group"
 data-group="...">` met `<summary class="nav-group__title">` (chevron ▸ die
-draait). Native, werkt zonder JS en toetsenbord-toegankelijk. `admin.js`
-onthoudt de open/dicht-stand per groep in `localStorage` (`ba_nav_groups`);
-de groep met de actieve pagina staat altijd open (overschrijft de opgeslagen
-stand). CSS in `admin.css` (`.nav-group__title`, chevron via `::before`).
+draait). Native, werkt zonder JS en toetsenbord-toegankelijk. CSS in
+`admin.css` (`.nav-group__title`, chevron via `::before`).
+
+Gedrag (aangepast op verzoek Marco): **standaard alles ingevouwen; alleen de
+groep met de actieve pagina staat open.** Dat wordt SERVER-SIDE bepaald in
+`layout.ts` (`open` alleen op de groep die `activeKey` bevat), dus het klopt
+ook zonder JS. `admin.js` voegt accordeon-gedrag toe: open je een andere groep,
+dan sluiten de overige. De eerdere localStorage-persistentie is bewust
+verwijderd (die overschreef dit gedrag).

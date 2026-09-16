@@ -6,20 +6,19 @@
 (function () {
   'use strict';
 
-  // ---- Zijbalk: menugroepen in-/uitklappen (onthouden) ----------------
-  // Elke <details.nav-group data-group="..."> onthoudt zijn open/dicht-stand
-  // in localStorage. De groep met de actieve pagina staat altijd open.
+  // ---- Zijbalk: menugroepen in-/uitklappen ----------------------------
+  // Standaard staan alle groepen dicht; de server zet alleen de groep met de
+  // actieve pagina open. Klik op een groep om een andere open te klappen; de
+  // rest sluit dan (accordeon), zodat het overzicht rustig blijft. De actieve
+  // groep laat zich ook sluiten. Werkt zonder JS (dan blijft alleen de actieve
+  // groep open, en zijn de <details> los te openen).
   (function () {
-    var KEY = 'ba_nav_groups';
-    var saved = {};
-    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { saved = {}; }
-    document.querySelectorAll('details.nav-group').forEach(function (d) {
-      var g = d.getAttribute('data-group');
-      var hasActive = !!d.querySelector('a.active');
-      if (!hasActive && g in saved) d.open = !!saved[g];
+    var groups = document.querySelectorAll('details.nav-group');
+    if (!groups.length) return;
+    groups.forEach(function (d) {
       d.addEventListener('toggle', function () {
-        saved[g] = d.open;
-        try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { /* geen opslag */ }
+        if (!d.open) return;
+        groups.forEach(function (o) { if (o !== d) o.open = false; });
       });
     });
   })();
