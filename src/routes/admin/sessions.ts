@@ -16,6 +16,7 @@ import {
   flashFromQuery,
 } from '../../views/admin/layout';
 import { str, strOrNull, bool, intOrNull, genId, redirectOk, redirectErr } from '../../lib/forms';
+import { maakBeroepIndeling } from '../../lib/indeling';
 
 export const sessionsApp = new Hono<AdminEnv>();
 
@@ -104,13 +105,42 @@ sessionsApp.get('/', async (c) => {
       </tr>`
     )
     .join('');
+  const nRounds = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM rounds WHERE event_id = ?').bind(ev.id).first<{ n: number }>();
+  const rondes = nRounds?.n ?? 0;
+  const actions = `<a class="btn btn--primary" href="/admin/sessions/new">Nieuwe sessie</a>`;
   const body = `
-    ${pageHeader(`Sessies · ${esc(ev.title)}`, '<a class="btn btn--primary" href="/admin/sessions/new">Nieuwe sessie</a>')}
+    ${pageHeader(`Sessies · ${esc(ev.title)}`, actions)}
+    <div class="card">
+      <h2 style="margin-top:0">Automatische indeling</h2>
+      <p class="muted">Verdeelt alle beroepen (workshops) automatisch over de rondes en de lokalen die op "in gebruik" staan. Eén beroep is één sessie; alle sprekers van dat beroep komen samen in dat lokaal. De smartboard-/theorielokalen worden als eerste ingezet. Dit vervangt de bestaande sessies (en de eventuele leerling-indeling).</p>
+      <p class="muted">Er ${rondes === 1 ? 'is' : 'zijn'} nu <strong>${rondes} ronde${rondes === 1 ? '' : 's'}</strong> ingesteld${rondes === 0 ? ' — maak die eerst aan bij <a href="/admin/rounds">Rondes</a>' : ''}.</p>
+      <form method="post" action="/admin/sessions/indeling" class="inline-form">
+        <button type="submit" class="btn btn--primary" ${rondes === 0 ? 'disabled' : ''} data-confirm="Alle beroepen automatisch over de rondes en lokalen verdelen? Dit vervangt de huidige sessies en de leerling-indeling.">Maak beroep-indeling</button>
+      </form>
+    </div>
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Beroep</th><th>Categorie</th><th>Lokaal</th><th>Ronde</th><th>Sprekers</th><th></th></tr></thead>
       <tbody>${list || '<tr><td colspan="6" class="empty">Nog geen sessies.</td></tr>'}</tbody>
     </table></div>`;
   return renderAdminLayout(c, { title: 'Sessies', activeKey: 'sessions', body, flash: flashFromQuery(c) });
+});
+
+/** Automatische beroep-indeling. Vóór '/:id' registreren. */
+sessionsApp.post('/indeling', async (c) => {
+  const ev = await getActiveEvent(c.env.DB);
+  if (!ev) return redirectErr(c, '/admin/sessions', 'Geen actieve editie.');
+  try {
+    const r = await maakBeroepIndeling(c.env.DB, ev.id);
+    await logAudit(c, 'update', 'sessions_program', `indeling:${r.sessies}`);
+    const extra = r.nietGeplaatst ? ` ${r.nietGeplaatst} beroepen pasten niet (te weinig lokalen of rondes).` : '';
+    return redirectOk(
+      c,
+      '/admin/sessions',
+      `Indeling gemaakt: ${r.sessies} sessies over ${r.rondes} rondes in ${r.lokalen} lokalen, ${r.sprekers} sprekers geplaatst.${extra}`
+    );
+  } catch (e: any) {
+    return redirectErr(c, '/admin/sessions', e?.message ?? 'Indeling mislukt.');
+  }
 });
 
 async function form(c: any, eventId: string, s: Partial<Session>, selectedSpeakers: Set<string>, isNew: boolean): Promise<string> {

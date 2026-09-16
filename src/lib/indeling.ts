@@ -7,7 +7,106 @@
  * wensen. Er wordt rekening gehouden met geblokkeerde tijdblokken
  * (student_blocked_rounds) en lokaal-capaciteit (default 30).
  */
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
+import { genId } from './forms';
+
+export interface BeroepIndelingResultaat {
+  beroepen: number;
+  sessies: number;
+  sprekers: number;
+  rondes: number;
+  lokalen: number;
+  nietGeplaatst: number;
+}
+
+/**
+ * Automatische programma-indeling: verdeelt de beroepen (workshops) over de
+ * rondes en lokalen. Eén beroep = één workshop = één sessie; alle publieke
+ * sprekers van dat beroep worden aan die sessie gekoppeld (sommige beroepen
+ * hebben meerdere sprekers). Elk beroep komt één keer voor.
+ *
+ * Verdeling: beroepen gesorteerd op categorie (zodat categorieën over de
+ * rondes gespreid worden), dan ronde = index % aantalRondes en lokaal =
+ * floor(index / aantalRondes). Zo krijgt elke ronde andere lokalen (geen
+ * dubbele boeking) en zijn de categorieën gemengd. Lokalen worden gekozen met
+ * de smartboard-/theorielokalen eerst. Herdraaibaar: de oude sessies (en de
+ * daarvan afhankelijke leerling-indeling) worden eerst gewist.
+ */
+export async function maakBeroepIndeling(db: D1Database, eventId: string): Promise<BeroepIndelingResultaat> {
+  const [rondesQ, lokalenQ, beroepenQ, sprekersQ] = await Promise.all([
+    db.prepare('SELECT id FROM rounds WHERE event_id = ? ORDER BY round_no').bind(eventId).all<{ id: string }>(),
+    db
+      .prepare(
+        "SELECT id FROM classrooms WHERE event_id = ? AND in_use = 1 ORDER BY smartboard DESC, capacity IS NULL, capacity DESC, floor, code"
+      )
+      .bind(eventId)
+      .all<{ id: string }>(),
+    db
+      .prepare(
+        "SELECT b.id AS beroep_id, b.name, b.category_id FROM beroepen b WHERE EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id AND s.is_public = 1) ORDER BY b.category_id, b.name"
+      )
+      .all<{ beroep_id: number; name: string; category_id: number | null }>(),
+    db
+      .prepare('SELECT id, beroep_id FROM speakers WHERE is_public = 1 AND beroep_id IS NOT NULL ORDER BY beroep_id, full_name')
+      .all<{ id: string; beroep_id: number }>(),
+  ]);
+
+  const rondes = (rondesQ.results ?? []).map((r) => r.id);
+  const lokalen = (lokalenQ.results ?? []).map((r) => r.id);
+  const beroepen = beroepenQ.results ?? [];
+  if (!rondes.length) throw new Error('Er zijn nog geen rondes. Maak die eerst aan bij Rondes.');
+  if (!lokalen.length) throw new Error('Er zijn geen lokalen die op "in gebruik" staan.');
+
+  const sprekersPerBeroep = new Map<number, string[]>();
+  for (const s of sprekersQ.results ?? []) {
+    (sprekersPerBeroep.get(s.beroep_id) ?? sprekersPerBeroep.set(s.beroep_id, []).get(s.beroep_id)!).push(s.id);
+  }
+
+  const R = rondes.length;
+
+  // Opschonen (herdraaibaar). session_speakers en de leerling-indeling hangen
+  // aan de sessies, dus die eerst weg.
+  await db
+    .prepare('DELETE FROM session_speakers WHERE session_id IN (SELECT id FROM sessions_program WHERE event_id = ?)')
+    .bind(eventId)
+    .run();
+  await db.prepare('DELETE FROM student_schedule WHERE event_id = ?').bind(eventId).run();
+  await db.prepare('DELETE FROM sessions_program WHERE event_id = ?').bind(eventId).run();
+
+  const sesInsert = db.prepare(
+    'INSERT INTO sessions_program (id, event_id, category_id, classroom_id, round_id, beroep_id, profession, title, description_md, is_public, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, 1, unixepoch(), unixepoch())'
+  );
+  const spkInsert = db.prepare('INSERT INTO session_speakers (session_id, speaker_id, sort_order) VALUES (?, ?, ?)');
+
+  const stmts: D1PreparedStatement[] = [];
+  let sessies = 0;
+  let sprekers = 0;
+  let nietGeplaatst = 0;
+  const gebruikteLokalen = new Set<string>();
+  for (let i = 0; i < beroepen.length; i++) {
+    const roomIdx = Math.floor(i / R);
+    if (roomIdx >= lokalen.length) {
+      nietGeplaatst++;
+      continue;
+    }
+    const b = beroepen[i];
+    const roundId = rondes[i % R];
+    const roomId = lokalen[roomIdx];
+    gebruikteLokalen.add(roomId);
+    const sid = genId('ses');
+    stmts.push(sesInsert.bind(sid, eventId, b.category_id ?? null, roomId, roundId, b.beroep_id, b.name));
+    sessies++;
+    for (const [idx, spId] of (sprekersPerBeroep.get(b.beroep_id) ?? []).entries()) {
+      stmts.push(spkInsert.bind(sid, spId, idx));
+      sprekers++;
+    }
+  }
+  for (let i = 0; i < stmts.length; i += 50) {
+    await db.batch(stmts.slice(i, i + 50));
+  }
+
+  return { beroepen: beroepen.length, sessies, sprekers, rondes: R, lokalen: gebruikteLokalen.size, nietGeplaatst };
+}
 
 export interface IndelingResultaat {
   leerlingen: number;
