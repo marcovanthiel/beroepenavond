@@ -1225,6 +1225,32 @@ ook zonder JS. `admin.js` voegt accordeon-gedrag toe: open je een andere groep,
 dan sluiten de overige. De eerdere localStorage-persistentie is bewust
 verwijderd (die overschreef dit gedrag).
 
+## Sprekende beroep-URLs / slugs (17-9-2026)
+
+De beroep-detailpagina's gebruiken nu een **slug** in plaats van het nummer:
+`/beroepen/anesthesiemedewerker` i.p.v. `/beroepen/8` (beter voor SEO en
+leesbaarheid).
+
+- **Data:** de kolom `beroepen.slug` bestond al maar was leeg; alle 120 beroepen
+  hebben nu een unieke slug (gegenereerd uit de naam, `&`->`en`, rest -> `-`,
+  botsingen krijgen -2/-3). Eenmalig gevuld via `scratchpad/gen_slugs.mjs`
+  (leest remote, zelfde `slugify` als de code) op remote + lokaal.
+- **Helpers** in `src/lib/forms.ts`: `slugify()` en `uniekeSlug()`.
+- **Route** (`src/routes/public.ts`): `/beroepen/:slug`. Is de parameter puur
+  numeriek (oude URL), dan **301** naar de slug van dat beroep; anders lookup op
+  slug. `renderBeroepDetail(c, slug)` zoekt op slug (daarna `beroep.id` voor de
+  vervolgqueries en de leerling-formulieren).
+- **Links op slug:** treklijst + JSON-LD ItemList + canonical (`beroepen.ts`,
+  helper `berHref`), home-drawer (`home.ts`, via `getCategoriesWithBeroepen` die
+  slug al meelevert) en de **sitemap** (`index.ts`). Overal fallback `slug || id`.
+- **Admin** (`src/routes/admin/beroepen.ts`): bij nieuw/bewerkt beroep wordt de
+  slug automatisch bepaald (`uniekeBeroepSlug`, uniek t.o.v. de rest; self
+  uitgezonderd). Slugveld leeg laten = uit de naam. Wijzig een slug alleen
+  bewust; de oude nummer-URL blijft via de 301 werken (een gewijzigde slug laat
+  de vorige slug-URL wel 404'en, dus alleen doen als nodig).
+- Live geverifieerd: oude nummer-URL 301 -> slug, slug 200, onbekend 404,
+  canonical/JSON-LD/sitemap op slug.
+
 ## Automatische beroep-indeling (programma) (16-9-2026)
 
 Nieuwe generator `maakBeroepIndeling(db, eventId)` in `src/lib/indeling.ts` +
