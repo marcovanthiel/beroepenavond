@@ -23,7 +23,7 @@ import { renderLogin, renderSetup, renderCodeForm } from '../../views/admin/logi
 import { renderAdminLayout, esc, pageHeader } from '../../views/admin/layout';
 import { relatiebeheerderMagBewerken } from '../../lib/perms';
 import { str, redirectErr } from '../../lib/forms';
-import { getSettings } from '../../lib/db';
+import { getSettings, getActiveEvent } from '../../lib/db';
 import { mailConfig, sendEmail, emailShell } from '../../lib/email';
 import pkg from '../../../package.json';
 
@@ -36,7 +36,7 @@ import { beroepenApp } from './beroepen';
 import { speakersApp } from './speakers';
 import { classroomsApp } from './classrooms';
 import { floorplansApp } from './floorplans';
-import { sessionsApp } from './sessions';
+import { sessionsApp, indelingsAlert } from './sessions';
 import { editorApp } from './floorplan-editor';
 import { inboxApp } from './inbox';
 import { subscribersApp } from './subscribers';
@@ -260,8 +260,12 @@ adminApp.get('/', async (c) => {
     <a class="btn btn--ghost btn--sm" href="/admin/inbox">Formulieren</a>
     <a class="btn btn--ghost btn--sm" href="/" target="_blank">Bekijk site ↗</a>`;
 
+  const evForAlert = await getActiveEvent(db);
+  const alert = evForAlert ? (await indelingsAlert(db, evForAlert.id)).html : '';
+
   const body = `
     <header class="page-head"><h1>Overzicht</h1><div class="page-head__actions">${quickActions}</div></header>
+    ${alert}
     <div class="card">
       <p style="margin:0">${ev ? `Actieve editie: <strong>${esc(ev.title)}</strong> (${esc(ev.date)})` : '⚠️ Geen actieve editie ingesteld. <a href="/admin/events">Stel er een in →</a>'}</p>
     </div>

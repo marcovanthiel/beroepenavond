@@ -43,10 +43,64 @@ interface UitnodigingVals {
   name?: string; email?: string; phone?: string; organization?: string; job_title?: string; linkedin?: string; sponsor?: boolean;
 }
 
+interface RondeRij { id: string; round_no: number; start_time: string | null; end_time: string | null }
+
+async function loadRondes(db: Env['DB']): Promise<RondeRij[]> {
+  const ev = await getActiveEvent(db);
+  if (!ev) return [];
+  const r = await db.prepare('SELECT id, round_no, start_time, end_time FROM rounds WHERE event_id = ? ORDER BY round_no').bind(ev.id).all<RondeRij>();
+  return r.results ?? [];
+}
+
+async function loadPrefs(db: Env['DB'], speakerId: string | null): Promise<Record<string, string>> {
+  if (!speakerId) return {};
+  const r = await db.prepare('SELECT round_id, status FROM speaker_round_prefs WHERE speaker_id = ?').bind(speakerId).all<{ round_id: string; status: string }>();
+  const m: Record<string, string> = {};
+  for (const x of r.results ?? []) m[x.round_id] = x.status;
+  return m;
+}
+
+/** Slaat de beschikbaarheid/voorkeur per tijdvak op (uit form-body). */
+async function saveSpeakerPrefs(db: Env['DB'], speakerId: string, rondes: RondeRij[], body: Record<string, unknown>): Promise<void> {
+  await db.prepare('DELETE FROM speaker_round_prefs WHERE speaker_id = ?').bind(speakerId).run();
+  const stmts = [] as any[];
+  for (const r of rondes) {
+    const v = str(body[`ronde_${r.id}`]);
+    if (v === 'nee' || v === 'voorkeur') {
+      stmts.push(db.prepare('INSERT INTO speaker_round_prefs (speaker_id, round_id, status) VALUES (?, ?, ?)').bind(speakerId, r.id, v));
+    }
+  }
+  if (stmts.length) await db.batch(stmts);
+}
+
+/** Tijdvak-keuze (per ronde: kan / voorkeur / kan niet). */
+function tijdvakSectie(rondes: RondeRij[], huidig: Record<string, string>): string {
+  if (!rondes.length) return '';
+  const rows = rondes
+    .map((r) => {
+      const cur = huidig[r.id] ?? '';
+      const tijd = r.start_time ? `${r.start_time}${r.end_time ? ` tot ${r.end_time}` : ''}` : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.08)">
+        <span><strong>Ronde ${r.round_no}</strong>${tijd ? ` <small style="color:#667">${esc(tijd)}</small>` : ''}</span>
+        <select name="ronde_${esc(r.id)}" aria-label="Beschikbaarheid ronde ${r.round_no}" style="min-width:150px;padding:8px 10px">
+          <option value=""${cur === '' ? ' selected' : ''}>Ik kan</option>
+          <option value="voorkeur"${cur === 'voorkeur' ? ' selected' : ''}>Voorkeur</option>
+          <option value="nee"${cur === 'nee' ? ' selected' : ''}>Ik kan niet</option>
+        </select>
+      </div>`;
+    })
+    .join('');
+  return `<fieldset style="border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:14px 16px;margin:6px 0 4px">
+    <legend style="padding:0 6px;font-weight:700">Wanneer kun je? <small style="font-weight:400;color:#667">(helpt ons bij het indelen)</small></legend>
+    <p class="muted" style="margin:0 0 6px">Geef per tijdvak aan of je kunt. "Ik kan niet" respecteren we altijd; "Voorkeur" proberen we te volgen.</p>
+    ${rows}</fieldset>`;
+}
+
 /** Bouwt de uitnodigingspagina (gedeeld door GET en de fout-herrender van POST). */
 function uitnodigingPage(
   c: any, inv: InviteRow, herhaal: boolean, v: UitnodigingVals,
-  settings: Record<string, string>, navItems: any, error?: string
+  settings: Record<string, string>, navItems: any, error?: string,
+  rondes: RondeRij[] = [], huidig: Record<string, string> = {}
 ) {
   const intro = herhaal
     ? `Fijn dat je er (hopelijk) weer bij bent! Controleer hieronder of je gegevens nog kloppen, pas aan wat gewijzigd is en bevestig je deelname.`
@@ -69,6 +123,7 @@ function uitnodigingPage(
         <span><strong>Ik heb interesse om sponsor te worden.</strong><br>
         <small>Je logo komt dan op de website en we maken er extra reclame mee. De organisatie neemt contact op over de mogelijkheden.</small></span>
       </label></div>
+      ${tijdvakSectie(rondes, huidig)}
       <div class="form__actions">
         <button type="submit" class="btn btn--primary btn--lg">${herhaal ? 'Bevestig mijn deelname' : 'Meld mij aan als voorlichter'}</button>
       </div>
@@ -113,13 +168,17 @@ procesApp.get('/voorlichter/uitnodiging', async (c) => {
   if (!inv) return ongeldigeUitnodiging(c, settings, navItems);
 
   if (c.req.query('klaar') || inv.status === 'aangemeld') {
+    const portaal = `/voorlichter/beschikbaarheid?token=${esc(inv.token)}`;
     return c.html(renderLayout({
       title: 'Aanmelding ontvangen · Beroepenavond Nijmegen',
       metaDescription: null, navItems, activeSlug: '',
       hero: { eyebrow: 'Voorlichter', title: 'Dank, je staat genoteerd!', compact: true },
       bodyHtml: `<p class="lede">We hebben je gegevens ontvangen. Richting ${esc(settings['event_date_long'] || 'de avond')}
         hoor je van ons over je indeling (tijden en lokaal); je krijgt daar bericht van per e-mail.</p>
-        <p><a class="btn btn--primary" href="/">Naar de site</a></p>`,
+        <p>Wil je je beschikbaarheid voor de tijdvakken nog aanpassen? Dat kan hier:</p>
+        <p style="display:flex;gap:12px;flex-wrap:wrap">
+          <a class="btn btn--primary" href="${portaal}">Mijn beschikbaarheid</a>
+          <a class="btn btn--ghost" href="/">Naar de site</a></p>`,
       settings,
     }));
   }
@@ -131,10 +190,11 @@ procesApp.get('/voorlichter/uitnodiging', async (c) => {
       .bind(inv.speaker_id).first()) ?? {};
   }
   const herhaal = inv.kind === 'herhaal';
+  const [rondes, huidig] = await Promise.all([loadRondes(c.env.DB), loadPrefs(c.env.DB, inv.speaker_id)]);
   return uitnodigingPage(c, inv, herhaal, {
     name: sp.full_name ?? inv.name ?? '', email: sp.email ?? inv.email, phone: sp.phone ?? '',
     organization: sp.organization ?? '', job_title: sp.job_title ?? '', linkedin: sp.linkedin ?? '',
-  }, settings, navItems);
+  }, settings, navItems, undefined, rondes, huidig);
 });
 
 procesApp.post('/voorlichter/uitnodiging', async (c) => {
@@ -148,11 +208,14 @@ procesApp.post('/voorlichter/uitnodiging', async (c) => {
   const email = str(b.email).toLowerCase();
   const jobTitle = str(b.job_title);
   const sponsor = str(b.sponsor) ? 1 : 0;
+  const rondes = await loadRondes(c.env.DB);
   if (!name || !EMAIL_RE.test(email) || !jobTitle) {
+    const huidig: Record<string, string> = {};
+    for (const r of rondes) { const v = str(b[`ronde_${r.id}`]); if (v) huidig[r.id] = v; }
     return uitnodigingPage(c, inv, inv.kind === 'herhaal', {
       name, email: str(b.email), phone: str(b.phone), organization: str(b.organization),
       job_title: jobTitle, linkedin: str(b.linkedin), sponsor: !!sponsor,
-    }, settings, navItems, 'Controleer je naam, een geldig e-mailadres en het beroep dat je presenteert.');
+    }, settings, navItems, 'Controleer je naam, een geldig e-mailadres en het beroep dat je presenteert.', rondes, huidig);
   }
   const now = Math.floor(Date.now() / 1000);
   let speakerId = inv.speaker_id;
@@ -170,6 +233,7 @@ procesApp.post('/voorlichter/uitnodiging', async (c) => {
   }
   await c.env.DB.prepare("UPDATE speaker_invites SET status='aangemeld', responded_at=?, speaker_id=? WHERE token=?")
     .bind(now, speakerId, inv.token).run();
+  await saveSpeakerPrefs(c.env.DB, speakerId, rondes, b);
 
   // Bevestiging direct (bevestigingsmails wachten niet op 9:30) + notificatie.
   try {
@@ -186,6 +250,56 @@ procesApp.post('/voorlichter/uitnodiging', async (c) => {
     console.error('uitnodiging-mails faalden:', e);
   }
   return c.redirect(`/voorlichter/uitnodiging?token=${inv.token}&klaar=1`, 302);
+});
+
+// ----------------------------------------------------------------------
+// Voorlichter-portaal: beschikbaarheid/voorkeur later wijzigen (tokenlink)
+// ----------------------------------------------------------------------
+
+function beschikbaarheidPage(c: any, inv: InviteRow, rondes: RondeRij[], huidig: Record<string, string>, settings: Record<string, string>, navItems: any, opgeslagen: boolean) {
+  const body = `
+    ${opgeslagen ? '<div class="notice notice--ok" role="status">Je beschikbaarheid is opgeslagen. Dank!</div>' : ''}
+    <p class="lede">Geef per tijdvak aan wanneer je kunt op ${esc(settings['event_date_long'] || 'de avond')}. We houden hier rekening mee bij het indelen van de sessies.</p>
+    <form class="form card-box" method="post" action="/voorlichter/beschikbaarheid?token=${esc(inv.token)}">
+      ${tijdvakSectie(rondes, huidig)}
+      <div class="form__actions"><button type="submit" class="btn btn--primary btn--lg">Opslaan</button></div>
+    </form>`;
+  return c.html(renderLayout({
+    title: 'Mijn beschikbaarheid · Beroepenavond Nijmegen',
+    metaDescription: null, navItems, activeSlug: '',
+    hero: { eyebrow: 'Voorlichter', title: 'Mijn beschikbaarheid', compact: true },
+    bodyHtml: body, settings,
+  }));
+}
+
+procesApp.get('/voorlichter/beschikbaarheid', async (c) => {
+  const inv = await getInvite(c.env.DB, c.req.query('token') ?? '');
+  const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
+  if (!inv) return ongeldigeUitnodiging(c, settings, navItems);
+  // Nog niet aangemeld? Eerst het aanmeldformulier.
+  if (!inv.speaker_id) return c.redirect(`/voorlichter/uitnodiging?token=${inv.token}`, 302);
+  const [rondes, huidig] = await Promise.all([loadRondes(c.env.DB), loadPrefs(c.env.DB, inv.speaker_id)]);
+  if (!rondes.length) {
+    return c.html(renderLayout({
+      title: 'Mijn beschikbaarheid · Beroepenavond Nijmegen',
+      metaDescription: null, navItems, activeSlug: '',
+      hero: { eyebrow: 'Voorlichter', title: 'Mijn beschikbaarheid', compact: true },
+      bodyHtml: '<p class="lede">De tijdvakken zijn nog niet bekend. Je hoort van ons zodra je je beschikbaarheid kunt doorgeven.</p>',
+      settings,
+    }));
+  }
+  return beschikbaarheidPage(c, inv, rondes, huidig, settings, navItems, !!c.req.query('klaar'));
+});
+
+procesApp.post('/voorlichter/beschikbaarheid', async (c) => {
+  const inv = await getInvite(c.env.DB, c.req.query('token') ?? '');
+  const [settings, navItems] = await Promise.all([getSettings(c.env.DB), getNavPages(c.env.DB)]);
+  if (!inv) return ongeldigeUitnodiging(c, settings, navItems);
+  if (!inv.speaker_id) return c.redirect(`/voorlichter/uitnodiging?token=${inv.token}`, 302);
+  const b = await c.req.parseBody();
+  const rondes = await loadRondes(c.env.DB);
+  await saveSpeakerPrefs(c.env.DB, inv.speaker_id, rondes, b);
+  return c.redirect(`/voorlichter/beschikbaarheid?token=${inv.token}&klaar=1`, 302);
 });
 
 // ----------------------------------------------------------------------

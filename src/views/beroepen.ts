@@ -207,8 +207,10 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, slug: st
   const rondes = [...new Set(sesRows.map((s) => s.round_no))];
   const lokaal = sesRows.find((s) => s.lokaal)?.lokaal ?? null;
   const verdieping = sesRows.find((s) => s.verdieping)?.verdieping ?? null;
+  // Alleen tonen als de indeling gepubliceerd is (zelfde schakelaar); een
+  // proefindeling blijft zo intern.
   const metaHtml =
-    rondes.length || lokaal
+    published && (rondes.length || lokaal)
       ? `<div class="ber-meta">
           ${rondes.length ? `<div><b>Ronde ${rondes.join(' &amp; ')}</b><span>25 minuten per ronde</span></div>` : ''}
           ${lokaal ? `<div><b>Lokaal ${esc(lokaal)}</b>${verdieping ? `<span>${esc(verdieping)}</span>` : '<span>zie plattegrond</span>'}</div>` : ''}

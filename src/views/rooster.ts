@@ -7,7 +7,7 @@
  * zodat de pagina dan gewoon de placeholdertekst toont.
  */
 import type { D1Database } from '@cloudflare/workers-types';
-import { getActiveEvent } from '../lib/db';
+import { getActiveEvent, getSettings } from '../lib/db';
 
 function esc(s: unknown): string {
   return String(s ?? '')
@@ -64,6 +64,11 @@ interface SessionInfo {
 export async function renderRoosterMap(db: D1Database): Promise<string> {
   const ev = await getActiveEvent(db);
   if (!ev) return '';
+  // Publicatie via de bestaande schakelaar: zolang de voorlichters niet
+  // gepubliceerd zijn, tonen we het programma (de indeling) niet publiek.
+  // Zo lekt een proefindeling niet naar de site.
+  const pubSettings = await getSettings(db);
+  if ((pubSettings['voorlichters_published'] ?? '0') !== '1') return '';
 
   const [fps, rooms, sess, spk] = await Promise.all([
     db.prepare('SELECT id, floor_slug, floor_label, image_url, viewbox FROM floorplans WHERE event_id = ? ORDER BY sort_order')

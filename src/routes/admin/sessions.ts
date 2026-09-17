@@ -74,7 +74,7 @@ function beroepSelectHtml(beroepen: any[], current: number | null | undefined): 
 }
 
 /** Waarschuwingsblok op de sessiespagina (en dashboard) over de indeling. */
-async function indelingsAlert(db: any, eventId: string): Promise<{ rondes: number; html: string }> {
+export async function indelingsAlert(db: any, eventId: string): Promise<{ rondes: number; html: string }> {
   const [rondesQ, sessiesQ, zonderQ, gatenQ, conflictQ] = await Promise.all([
     db.prepare('SELECT COUNT(*) AS n FROM rounds WHERE event_id = ?').bind(eventId).first(),
     db.prepare('SELECT COUNT(*) AS n FROM sessions_program WHERE event_id = ?').bind(eventId).first(),
