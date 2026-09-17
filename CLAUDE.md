@@ -1237,6 +1237,12 @@ de `secties`-array in het script bewerken en opnieuw draaien
 (`node scripts/overzicht/build-overzicht.mjs`). Niet publiek gehost (interne
 overdracht); zet het in `public/assets/` als het wel op de site moet.
 
+Er is ook een **één-pagina infographic-variant**: `build-infographic.mjs`
+(drie kolommen naast elkaar + workflow-balk), die de inhoud (`secties`, `C`,
+`DATUM`, `URL`) uit `build-overzicht.mjs` importeert (één bron, geen drift; de
+render van build-overzicht draait alleen bij direct uitvoeren). Uitvoer:
+`docs/overzicht-functies-1a4.pdf`.
+
 ## Sprekende beroep-URLs / slugs (17-9-2026)
 
 De beroep-detailpagina's gebruiken nu een **slug** in plaats van het nummer:

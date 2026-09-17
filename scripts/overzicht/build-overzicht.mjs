@@ -27,13 +27,13 @@ const black = readFileSync(join(FONTS, 'archivo-black.woff2')).toString('base64'
 const varf = readFileSync(join(FONTS, 'archivo-var.woff2')).toString('base64');
 
 // Kleurblok-palet (zes categoriekleuren) + inkt.
-const C = { roze: '#E14B64', blauw: '#2E7ED4', geel: '#F0A400', groen: '#55862A', paars: '#8A4FD0', teal: '#0A9B9B', ink: '#0d0d0d' };
+export const C = { roze: '#E14B64', blauw: '#2E7ED4', geel: '#F0A400', groen: '#55862A', paars: '#8A4FD0', teal: '#0A9B9B', ink: '#0d0d0d' };
 
-const DATUM = 'Donderdag 12 november 2026';
-const URL = 'beroepenavond2026.nl';
+export const DATUM = 'Donderdag 12 november 2026';
+export const URL = 'beroepenavond2026.nl';
 
-// --- Inhoud ---------------------------------------------------------------
-const secties = [
+// --- Inhoud (gedeeld met build-infographic.mjs) ---------------------------
+export const secties = [
   {
     kleur: C.blauw,
     nr: '01',
@@ -175,21 +175,23 @@ body{font-family:'Archivo',system-ui,sans-serif;color:${C.ink}}
 ${secties.map((s, i) => sectie(s, i === 0)).join('')}
 </body></html>`;
 
-const dir = mkdtempSync(join(tmpdir(), 'overzicht-'));
-const htmlPath = join(dir, 'overzicht.html');
-writeFileSync(htmlPath, html);
-
-execFileSync(
-  CHROME,
-  [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-pdf-header-footer',
-    '--run-all-compositor-stages-before-draw',
-    '--virtual-time-budget=3000',
-    `--print-to-pdf=${OUT}`,
-    `file://${htmlPath}`,
-  ],
-  { stdio: 'ignore' }
-);
-console.log('PDF geschreven:', OUT);
+// Alleen renderen als dit script direct wordt uitgevoerd (niet bij import).
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const dir = mkdtempSync(join(tmpdir(), 'overzicht-'));
+  const htmlPath = join(dir, 'overzicht.html');
+  writeFileSync(htmlPath, html);
+  execFileSync(
+    CHROME,
+    [
+      '--headless=new',
+      '--disable-gpu',
+      '--no-pdf-header-footer',
+      '--run-all-compositor-stages-before-draw',
+      '--virtual-time-budget=3000',
+      `--print-to-pdf=${OUT}`,
+      `file://${htmlPath}`,
+    ],
+    { stdio: 'ignore' }
+  );
+  console.log('PDF geschreven:', OUT);
+}
