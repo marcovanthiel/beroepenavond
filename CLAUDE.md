@@ -1313,9 +1313,20 @@ proefdraaien en aan zodra de definitieve indeling klaar is.
 **Voorwaarde:** rondes/tijdvakken en hun tijden blijven handmatig (bij Rondes);
 de module maakt ze niet en waarschuwt als er nog geen zijn.
 
-**Nog open (bewust niet in deze ronde):** beschikbaarheid tonen/bewerken op de
-admin-sprekerpagina; de portaal-link ook in de bevestigingsmail; beschikbaarheid
-uitvragen op het losse `/aanmelden`-formulier (dat maakt nu nog geen speaker).
+**Beschikbaarheid overal (17-9-2026, aanvulling):** gedeelde datalaag in
+`src/lib/tijdvak.ts` (`loadRondes`, `loadSpeakerPrefs`, `saveSpeakerPrefs`,
+`prefsFromBody`, `applyPrefsMap`). De beschikbaarheid/voorkeur is nu op drie
+plekken invoerbaar:
+- **Voorlichter**: aanmeldformulier + portaal (zie boven).
+- **Beheer**: sectie "Beschikbaarheid per tijdvak" op de admin-sprekerpagina
+  (`/admin/speakers/:id`, ook bij nieuw), zodat de relatiebeheerder het kan
+  inzien/bijstellen (handig om onplaatsbare beroepen op te lossen).
+- **Spontane aanmelding** (`/aanmelden`): het formulier vraagt de beschikbaarheid
+  uit en bewaart die in `submissions.payload` (JSON `{tijdvak:{roundId:status}}`);
+  bij "Maak spreker aan" (admin → Formulieren) wordt het overgezet naar
+  `speaker_round_prefs` (`applyPrefsMap`).
+- De **bevestigingsmail** aan de voorlichter bevat een knop naar het
+  beschikbaarheid-portaal (`speakerConfirmedMail` kreeg een optionele URL-param).
 
 ## Automatische beroep-indeling (programma) (16-9-2026) — ACHTERHAALD, zie hierboven
 
