@@ -27,7 +27,13 @@ function initials(name: string): string {
 }
 
 interface CatRow { id: string; name: string; color: string | null; }
-interface BeroepRow { id: number; category_id: string | null; name: string; description_md: string | null; }
+interface BeroepRow { id: number; category_id: string | null; name: string; slug: string | null; description_md: string | null; }
+
+/** URL van een beroep: slug indien aanwezig, anders het id (de route stuurt
+ *  dat 301 door naar de slug). */
+function berHref(b: { slug?: string | null; id: number }): string {
+  return `/beroepen/${b.slug || b.id}`;
+}
 
 async function speakerCounts(db: Env['DB']): Promise<Map<number, number>> {
   const filter = await publiekSprekerFilter(db);
@@ -50,7 +56,7 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
     getSettings(db),
     getNavPages(db),
     db.prepare('SELECT id, name, color FROM categories ORDER BY sort_order').all<CatRow>(),
-    db.prepare('SELECT id, category_id, name, description_md FROM beroepen ORDER BY category_id, sort_order, name').all<BeroepRow>(),
+    db.prepare('SELECT id, category_id, name, slug, description_md FROM beroepen ORDER BY category_id, sort_order, name').all<BeroepRow>(),
   ]);
   const published = (settings['voorlichters_published'] ?? '0') === '1';
   const counts = published ? await speakerCounts(db) : new Map<number, number>();
@@ -75,7 +81,7 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
       itemListElement: alle.map((b, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `${host}/beroepen/${b.id}`,
+        url: `${host}${berHref(b)}`,
         name: b.name,
       })),
     },
@@ -91,7 +97,7 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
           const rechts = published
             ? `${n} voorlichter${n === 1 ? '' : 's'} <span class="pijl" aria-hidden="true">→</span>`
             : `<span class="pijl" aria-hidden="true">→</span>`;
-          return `<a class="acc-rij" href="/beroepen/${b.id}"><b>${esc(b.name)}</b><span class="n">${rechts}</span></a>`;
+          return `<a class="acc-rij" href="${berHref(b)}"><b>${esc(b.name)}</b><span class="n">${rechts}</span></a>`;
         })
         .join('\n');
       const open = cat.id === openCat ? ' open' : '';
@@ -130,19 +136,20 @@ export async function renderBeroepenPagina(c: Context<{ Bindings: Env }>) {
 // /beroepen/:id — detail
 // ----------------------------------------------------------------------
 
-export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId: number) {
+export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, slug: string) {
   const db = c.env.DB;
   const beroep = await db
-    .prepare('SELECT id, category_id, name, description_md FROM beroepen WHERE id = ?')
-    .bind(beroepId)
+    .prepare('SELECT id, category_id, name, slug, description_md FROM beroepen WHERE slug = ?')
+    .bind(slug)
     .first<BeroepRow>();
   if (!beroep) return null;
+  const beroepId = beroep.id;
 
   const [settings, navItems, cats, siblings, sessies] = await Promise.all([
     getSettings(db),
     getNavPages(db),
     db.prepare('SELECT id, name, color FROM categories ORDER BY sort_order').all<CatRow>(),
-    db.prepare('SELECT id, name FROM beroepen WHERE category_id = ? ORDER BY sort_order, name').bind(beroep.category_id).all<{ id: number; name: string }>(),
+    db.prepare('SELECT id, name, slug FROM beroepen WHERE category_id = ? ORDER BY sort_order, name').bind(beroep.category_id).all<{ id: number; name: string; slug: string | null }>(),
     db.prepare(
       `SELECT r.round_no, cl.code AS lokaal, cl.floor AS verdieping
        FROM sessions_program sp
@@ -189,8 +196,8 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
     .slice(0, 12)
     .map((s) =>
       s.id === beroep.id
-        ? `<a href="/beroepen/${s.id}" aria-current="page" style="color:${opKleur === '#ffffff' ? esc(kleur) : '#0d0d0d'}">${esc(s.name)}</a>`
-        : `<a href="/beroepen/${s.id}">${esc(s.name)}</a>`
+        ? `<a href="${berHref(s)}" aria-current="page" style="color:${opKleur === '#ffffff' ? esc(kleur) : '#0d0d0d'}">${esc(s.name)}</a>`
+        : `<a href="${berHref(s)}">${esc(s.name)}</a>`
     )
     .join('');
   const tabsMeer = `<a class="meer" href="/beroepen?cat=${esc(beroep.category_id ?? '')}">alle ${sibs.length} →</a>`;
@@ -287,7 +294,7 @@ export async function renderBeroepDetail(c: Context<{ Bindings: Env }>, beroepId
       noindex: !heeftVoorlichter,
       navItems,
       activeSlug: '/beroepen',
-      canonicalPath: `/beroepen/${beroep.id}`,
+      canonicalPath: berHref(beroep),
       hero: null,
       bare: true,
       breadcrumbs: [{ label: 'Beroepen', href: '/beroepen' }, { label: beroep.name }],

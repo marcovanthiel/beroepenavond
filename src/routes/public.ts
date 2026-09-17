@@ -277,10 +277,18 @@ publicApp.get('/beroepen', (c) => renderBeroepenPagina(c));
 // duplicate-URL (en dat /beroepen/ via de catch-all de oude pagina toont).
 publicApp.get('/beroepen/', (c) => c.redirect('/beroepen', 301));
 
-publicApp.get('/beroepen/:id', async (c) => {
-  const id = parseInt(c.req.param('id'), 10);
-  if (!Number.isFinite(id)) return renderError(c, 404, 'Beroep niet gevonden');
-  const res = await renderBeroepDetail(c, id);
+publicApp.get('/beroepen/:slug', async (c) => {
+  const param = c.req.param('slug');
+  // Oude numerieke URL (/beroepen/8): 301 naar de slug-URL, zodat gedeelde
+  // links en de zoekindex blijven werken en de waarde meeverhuist.
+  if (/^\d+$/.test(param)) {
+    const row = await c.env.DB.prepare('SELECT slug FROM beroepen WHERE id = ?')
+      .bind(parseInt(param, 10))
+      .first<{ slug: string | null }>();
+    if (row?.slug) return c.redirect(`/beroepen/${row.slug}`, 301);
+    return renderError(c, 404, 'Beroep niet gevonden');
+  }
+  const res = await renderBeroepDetail(c, param);
   if (!res) return renderError(c, 404, 'Beroep niet gevonden');
   return res;
 });

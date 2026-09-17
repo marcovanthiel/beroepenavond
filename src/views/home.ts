@@ -140,7 +140,7 @@ export async function renderHome(c: Context<{ Bindings: Env }>) {
       const items = cat.beroepen
         .map(
           (b) =>
-            `<li><a href="/beroepen/${b.id}"><span>${esc(b.name)}</span><span class="cat-drawer__pijl" aria-hidden="true">→</span></a></li>`
+            `<li><a href="/beroepen/${b.slug || b.id}"><span>${esc(b.name)}</span><span class="cat-drawer__pijl" aria-hidden="true">→</span></a></li>`
         )
         .join('');
       return `<template data-cat="${esc(cat.id)}">

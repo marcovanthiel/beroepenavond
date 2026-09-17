@@ -17,7 +17,23 @@ import {
   emptyState,
   backLink,
 } from '../../views/admin/layout';
-import { str, strOrNull, intOr, redirectOk, redirectErr } from '../../lib/forms';
+import { str, strOrNull, intOr, redirectOk, redirectErr, slugify } from '../../lib/forms';
+
+/** Bepaalt een unieke slug voor een beroep. Gebruikt de ingevulde slug of
+ *  anders de naam; voegt -2, -3, ... toe bij botsing (self uitgezonderd). */
+async function uniekeBeroepSlug(db: any, wens: string, naam: string, exclId: number | null): Promise<string> {
+  const basis = slugify(wens || naam);
+  let slug = basis;
+  let n = 2;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const row = exclId != null
+      ? await db.prepare('SELECT id FROM beroepen WHERE slug = ? AND id != ?').bind(slug, exclId).first()
+      : await db.prepare('SELECT id FROM beroepen WHERE slug = ?').bind(slug).first();
+    if (!row) return slug;
+    slug = `${basis}-${n++}`;
+  }
+}
 import { buildWerflijstPdf } from '../../lib/pdf';
 
 const MAAND = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
@@ -155,7 +171,7 @@ async function form(c: any, b: Partial<Beroep>, isNew: boolean): Promise<string>
         <div class="span-2">${field({ label: 'Naam', name: 'name', value: b.name ?? '', required: true })}</div>
         ${select({ label: 'Categorie', name: 'category_id', value: b.category_id ?? '', options, empty: '(kies)' })}
         ${field({ label: 'Volgorde', name: 'sort_order', value: b.sort_order ?? 0, type: 'number' })}
-        <div class="span-2">${field({ label: 'Slug / anker (optioneel)', name: 'slug', value: b.slug ?? '' })}</div>
+        <div class="span-2">${field({ label: 'Slug (URL)', name: 'slug', value: b.slug ?? '', help: 'Deel van de webadres-URL (/beroepen/<slug>). Leeg laten = automatisch uit de naam. Wijzig alleen bewust; oude links blijven werken.' })}</div>
         <div class="span-2">${textarea({ label: 'Omschrijving (markdown, optioneel)', name: 'description_md', value: b.description_md ?? '', rows: 5 })}</div>
       </div>
       ${formActions('Opslaan', '/admin/beroepen')}
@@ -196,10 +212,11 @@ beroepenApp.get('/:id', async (c) => {
 beroepenApp.post('/new', async (c) => {
   const b = await c.req.parseBody();
   if (!str(b.category_id)) return redirectErr(c, '/admin/beroepen', 'Kies een categorie.');
+  const slug = await uniekeBeroepSlug(c.env.DB, str(b.slug), str(b.name), null);
   const res = await c.env.DB.prepare(
     'INSERT INTO beroepen (category_id, name, slug, sort_order, description_md) VALUES (?, ?, ?, ?, ?)'
   )
-    .bind(str(b.category_id), str(b.name), strOrNull(b.slug), intOr(b.sort_order, 0), strOrNull(b.description_md))
+    .bind(str(b.category_id), str(b.name), slug, intOr(b.sort_order, 0), strOrNull(b.description_md))
     .run();
   await logAudit(c, 'create', 'beroep', String(res.meta?.last_row_id ?? ''));
   return redirectOk(c, '/admin/beroepen', 'Beroep aangemaakt.');
@@ -208,10 +225,11 @@ beroepenApp.post('/new', async (c) => {
 beroepenApp.post('/:id', async (c) => {
   const id = c.req.param('id');
   const b = await c.req.parseBody();
+  const slug = await uniekeBeroepSlug(c.env.DB, str(b.slug), str(b.name), parseInt(id, 10));
   await c.env.DB.prepare(
     'UPDATE beroepen SET category_id = ?, name = ?, slug = ?, sort_order = ?, description_md = ? WHERE id = ?'
   )
-    .bind(str(b.category_id), str(b.name), strOrNull(b.slug), intOr(b.sort_order, 0), strOrNull(b.description_md), id)
+    .bind(str(b.category_id), str(b.name), slug, intOr(b.sort_order, 0), strOrNull(b.description_md), id)
     .run();
   await logAudit(c, 'update', 'beroep', id);
   return redirectOk(c, '/admin/beroepen', 'Beroep opgeslagen.');

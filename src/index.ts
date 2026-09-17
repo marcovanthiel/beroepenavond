@@ -113,13 +113,13 @@ app.get('/sitemap.xml', async (c) => {
     c.env.DB.prepare('SELECT slug, updated_at FROM pages WHERE is_published = 1').all<{ slug: string; updated_at: number }>(),
     c.env.DB.prepare('SELECT slug, updated_at FROM announcements WHERE is_published = 1').all<{ slug: string; updated_at: number }>(),
     c.env.DB.prepare(
-      'SELECT b.id AS id, MAX(s.updated_at) AS lastmod FROM beroepen b LEFT JOIN speakers s ON s.beroep_id = b.id GROUP BY b.id'
-    ).all<{ id: number; lastmod: number | null }>(),
+      'SELECT b.id AS id, b.slug AS slug, MAX(s.updated_at) AS lastmod FROM beroepen b LEFT JOIN speakers s ON s.beroep_id = b.id GROUP BY b.id'
+    ).all<{ id: number; slug: string | null; lastmod: number | null }>(),
   ]);
   const urls: { loc: string; lastmod?: number }[] = [];
   for (const p of pages.results ?? []) urls.push({ loc: host + p.slug, lastmod: p.updated_at });
   for (const n of news.results ?? []) urls.push({ loc: `${host}/nieuws/${n.slug}`, lastmod: n.updated_at });
-  for (const b of beroepen.results ?? []) urls.push({ loc: `${host}/beroepen/${b.id}`, lastmod: b.lastmod ?? undefined });
+  for (const b of beroepen.results ?? []) urls.push({ loc: `${host}/beroepen/${b.slug || b.id}`, lastmod: b.lastmod ?? undefined });
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls

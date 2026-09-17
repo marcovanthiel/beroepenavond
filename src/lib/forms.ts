@@ -38,6 +38,36 @@ export function intOr(v: unknown, fallback: number): number {
   return n === null ? fallback : n;
 }
 
+/**
+ * Maakt een URL-veilige slug van een naam: kleine letters, accenten eraf,
+ * '&' -> 'en', alles wat geen letter/cijfer is wordt een koppelteken. Geeft
+ * 'beroep' terug als er niets leesbaars overblijft.
+ */
+export function slugify(s: string): string {
+  const out = String(s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // combining accenten weg
+    .replace(/&/g, ' en ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+  return out || 'beroep';
+}
+
+/**
+ * Zorgt dat een slug uniek is binnen `bestaand` (een set al gebruikte slugs)
+ * door zo nodig -2, -3, ... toe te voegen. Voegt de gekozen slug toe aan de set.
+ */
+export function uniekeSlug(basis: string, bestaand: Set<string>): string {
+  let s = basis;
+  let n = 2;
+  while (bestaand.has(s)) s = `${basis}-${n++}`;
+  bestaand.add(s);
+  return s;
+}
+
 function withFlash(path: string, key: 'ok' | 'err', msg: string): string {
   const sep = path.includes('?') ? '&' : '?';
   return `${path}${sep}${key}=${encodeURIComponent(msg)}`;
