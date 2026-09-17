@@ -16,7 +16,7 @@ import {
   flashFromQuery,
 } from '../../views/admin/layout';
 import { str, strOrNull, bool, intOrNull, genId, redirectOk, redirectErr } from '../../lib/forms';
-import { maakBeroepIndeling } from '../../lib/indeling';
+import { berekenBeroepIndeling, pasBeroepIndelingToe, type IndelingModus, type IndelingVoorstel } from '../../lib/indeling';
 
 export const sessionsApp = new Hono<AdminEnv>();
 
@@ -73,6 +73,92 @@ function beroepSelectHtml(beroepen: any[], current: number | null | undefined): 
     <span class="fld__help">Koppelt de sessie aan een beroep uit de beroepenlijst.</span></label>`;
 }
 
+/** Waarschuwingsblok op de sessiespagina (en dashboard) over de indeling. */
+async function indelingsAlert(db: any, eventId: string): Promise<{ rondes: number; html: string }> {
+  const [rondesQ, sessiesQ, zonderQ, gatenQ, conflictQ] = await Promise.all([
+    db.prepare('SELECT COUNT(*) AS n FROM rounds WHERE event_id = ?').bind(eventId).first(),
+    db.prepare('SELECT COUNT(*) AS n FROM sessions_program WHERE event_id = ?').bind(eventId).first(),
+    // beroepen met een publieke voorlichter maar zonder sessie
+    db.prepare(`SELECT COUNT(*) AS n FROM beroepen b WHERE EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id=b.id AND s.is_public=1) AND NOT EXISTS (SELECT 1 FROM sessions_program sp WHERE sp.beroep_id=b.id AND sp.event_id=?)`).bind(eventId).first(),
+    // sessies zonder tijdvak of lokaal
+    db.prepare(`SELECT COUNT(*) AS n FROM sessions_program WHERE event_id=? AND (round_id IS NULL OR classroom_id IS NULL)`).bind(eventId).first(),
+    // dubbele bezetting lokaal+tijdvak
+    db.prepare(`SELECT COUNT(*) AS n FROM (SELECT round_id, classroom_id FROM sessions_program WHERE event_id=? AND round_id IS NOT NULL AND classroom_id IS NOT NULL GROUP BY round_id, classroom_id HAVING COUNT(*)>1)`).bind(eventId).first(),
+  ]);
+  const rondes = rondesQ?.n ?? 0;
+  const sessies = sessiesQ?.n ?? 0;
+  const zonderSessie = zonderQ?.n ?? 0;
+  const gaten = gatenQ?.n ?? 0;
+  const conflicten = conflictQ?.n ?? 0;
+  const punten: string[] = [];
+  if (rondes === 0) punten.push('Er zijn nog geen <strong>tijdvakken (rondes)</strong>. Maak die eerst aan bij <a href="/admin/rounds">Rondes</a> voordat je een indeling maakt.');
+  if (sessies === 0 && rondes > 0) punten.push('Er is nog <strong>geen sessie-indeling</strong>. Bekijk hieronder de proef- of definitieve indeling.');
+  if (gaten > 0) punten.push(`<strong>${gaten}</strong> sessie(s) hebben nog geen tijdvak of lokaal.`);
+  if (conflicten > 0) punten.push(`<strong>${conflicten}</strong> keer staat er meer dan één sessie in hetzelfde lokaal én tijdvak.`);
+  if (zonderSessie > 0 && sessies > 0) punten.push(`<strong>${zonderSessie}</strong> beroep(en) met een voorlichter staan nog niet in de indeling. Draai de indeling opnieuw of plaats ze handmatig.`);
+  if (!punten.length) return { rondes, html: '' };
+  const soort = rondes === 0 || gaten > 0 || conflicten > 0 ? 'err' : 'warn';
+  return {
+    rondes,
+    html: `<div class="flash flash--${soort === 'err' ? 'err' : 'warn'}" role="alert" style="display:block"><strong>Let op bij de indeling</strong><ul style="margin:6px 0 0;padding-left:20px">${punten.map((p) => `<li>${p}</li>`).join('')}</ul></div>`,
+  };
+}
+
+/** Rendert het indelingsvoorstel (preview, schrijft niets weg). */
+function previewBody(v: IndelingVoorstel, huidigAantal: number): string {
+  const modusLabel = v.modus === 'definitief' ? 'Definitieve indeling' : 'Proefindeling';
+  const rondeGroepen = new Map<number, typeof v.sessies>();
+  for (const s of v.sessies) (rondeGroepen.get(s.rondeNo) ?? rondeGroepen.set(s.rondeNo, []).get(s.rondeNo)!).push(s);
+  const rondesHtml = [...rondeGroepen.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([no, lijst]) => {
+      const tijd = lijst[0]?.rondeTijd ? ` · ${esc(lijst[0].rondeTijd)}` : '';
+      const rijen = lijst
+        .map(
+          (s) => `<tr>
+            <td><strong>${esc(s.lokaalCode)}</strong></td>
+            <td><span class="swatch" style="background:${esc(s.kleur ?? '#ccc')}"></span>${esc(s.naam)}</td>
+            <td>${esc(s.sprekerNamen.join(', '))}</td>
+            <td>${s.voorkeurGevolgd === null ? '<span class="muted">-</span>' : s.voorkeurGevolgd ? '<span class="badge badge--on">voorkeur</span>' : '<span class="badge badge--off">afwijking</span>'}</td>
+          </tr>`
+        )
+        .join('');
+      return `<h3 style="margin:18px 0 6px">Ronde ${no}${tijd} <span class="muted">(${lijst.length} sessies)</span></h3>
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th>Lokaal</th><th>Beroep</th><th>Voorlichters</th><th>Tijdvak-voorkeur</th></tr></thead>
+          <tbody>${rijen}</tbody></table></div>`;
+    })
+    .join('');
+
+  const onplaatsbaar = v.onplaatsbaar.length
+    ? `<div class="flash flash--warn" role="alert" style="display:block"><strong>${v.onplaatsbaar.length} beroep(en) kunnen niet automatisch geplaatst worden</strong>
+        <ul style="margin:6px 0 0;padding-left:20px">${v.onplaatsbaar
+          .map((o) => `<li><strong>${esc(o.naam)}</strong> — ${esc(o.reden)}${o.sprekerNamen.length ? ` (${esc(o.sprekerNamen.join(', '))})` : ''}</li>`)
+          .join('')}</ul>
+        <p style="margin:6px 0 0">Los dit op door tijdvakken/beschikbaarheid aan te passen of deze beroepen handmatig in te delen.</p></div>`
+    : '';
+
+  return `
+    ${pageHeader(`Voorstel · ${modusLabel}`)}
+    <div class="card">
+      <p>Dit is een <strong>voorstel</strong>. Er is nog niets gewijzigd. Toepassen vervangt de huidige indeling (${huidigAantal} sessies) en de eventuele leerling-indeling.</p>
+      <p class="muted" style="margin-top:6px">
+        <strong>${v.stats.sessies}</strong> sessies · <strong>${v.stats.sprekers}</strong> voorlichters · ${v.stats.rondes} rondes · ${v.stats.lokalen} lokalen
+        ${v.stats.voorkeurGemist ? ` · <strong>${v.stats.voorkeurGemist}</strong> keer voorkeur niet gehaald` : ''}
+        ${v.onplaatsbaar.length ? ` · <strong>${v.onplaatsbaar.length}</strong> onplaatsbaar` : ''}
+      </p>
+      <div class="form-actions" style="margin-top:12px">
+        <form method="post" action="/admin/sessions/indeling/toepassen" class="inline-form">
+          <input type="hidden" name="modus" value="${esc(v.modus)}">
+          <button type="submit" class="btn btn--primary" data-confirm="Dit voorstel toepassen? De huidige sessies en de leerling-indeling worden vervangen.">Deze indeling toepassen</button>
+        </form>
+        <a class="btn btn--ghost" href="/admin/sessions">Annuleren</a>
+      </div>
+    </div>
+    ${onplaatsbaar}
+    ${rondesHtml || '<div class="card"><p class="muted">Geen sessies in dit voorstel.</p></div>'}`;
+}
+
 sessionsApp.get('/', async (c) => {
   const ev = await getActiveEvent(c.env.DB);
   if (!ev)
@@ -105,18 +191,20 @@ sessionsApp.get('/', async (c) => {
       </tr>`
     )
     .join('');
-  const nRounds = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM rounds WHERE event_id = ?').bind(ev.id).first<{ n: number }>();
-  const rondes = nRounds?.n ?? 0;
+  const alert = await indelingsAlert(c.env.DB, ev.id);
+  const rondes = alert.rondes;
   const actions = `<a class="btn btn--primary" href="/admin/sessions/new">Nieuwe sessie</a>`;
   const body = `
     ${pageHeader(`Sessies · ${esc(ev.title)}`, actions)}
+    ${alert.html}
     <div class="card">
-      <h2 style="margin-top:0">Automatische indeling</h2>
-      <p class="muted">Verdeelt alle beroepen (workshops) automatisch over de rondes en de lokalen die op "in gebruik" staan. Eén beroep is één sessie; alle sprekers van dat beroep komen samen in dat lokaal. De smartboard-/theorielokalen worden als eerste ingezet. Dit vervangt de bestaande sessies (en de eventuele leerling-indeling).</p>
-      <p class="muted">Er ${rondes === 1 ? 'is' : 'zijn'} nu <strong>${rondes} ronde${rondes === 1 ? '' : 's'}</strong> ingesteld${rondes === 0 ? ' — maak die eerst aan bij <a href="/admin/rounds">Rondes</a>' : ''}.</p>
-      <form method="post" action="/admin/sessions/indeling" class="inline-form">
-        <button type="submit" class="btn btn--primary" ${rondes === 0 ? 'disabled' : ''} data-confirm="Alle beroepen automatisch over de rondes en lokalen verdelen? Dit vervangt de huidige sessies en de leerling-indeling.">Maak beroep-indeling</button>
-      </form>
+      <h2 style="margin-top:0">Automatische sessie-indeling</h2>
+      <p class="muted">Maakt van elk beroep met een voorlichter één sessie en verdeelt die over de tijdvakken en lokalen. Voorlichters komen alleen in een tijdvak waarin ze allemaal kunnen; de opgegeven voorkeuren wegen mee, lokalen worden per vakgebied geclusterd. Je krijgt eerst een <strong>voorstel te zien</strong>; pas na jouw akkoord wordt de bestaande indeling vervangen.</p>
+      <div class="bulk-tools">
+        <a class="btn btn--primary ${rondes === 0 ? 'is-disabled' : ''}" href="${rondes === 0 ? '#' : '/admin/sessions/indeling?modus=proef'}" ${rondes === 0 ? 'aria-disabled="true" tabindex="-1"' : ''}>Proefindeling bekijken</a>
+        <a class="btn btn--ghost ${rondes === 0 ? 'is-disabled' : ''}" href="${rondes === 0 ? '#' : '/admin/sessions/indeling?modus=definitief'}" ${rondes === 0 ? 'aria-disabled="true" tabindex="-1"' : ''}>Definitieve indeling bekijken</a>
+      </div>
+      <p class="muted" style="margin-top:8px">Proef = alle aangemelde voorlichters (nog niet bevestigd mag). Definitief = alleen bevestigde voorlichters.</p>
     </div>
     <div class="table-wrap"><table class="data">
       <thead><tr><th>Beroep</th><th>Categorie</th><th>Lokaal</th><th>Ronde</th><th>Sprekers</th><th></th></tr></thead>
@@ -125,21 +213,35 @@ sessionsApp.get('/', async (c) => {
   return renderAdminLayout(c, { title: 'Sessies', activeKey: 'sessions', body, flash: flashFromQuery(c) });
 });
 
-/** Automatische beroep-indeling. Vóór '/:id' registreren. */
-sessionsApp.post('/indeling', async (c) => {
+/** Voorstel-preview (GET). Berekent maar schrijft niet. Vóór '/:id'. */
+sessionsApp.get('/indeling', async (c) => {
   const ev = await getActiveEvent(c.env.DB);
   if (!ev) return redirectErr(c, '/admin/sessions', 'Geen actieve editie.');
+  const modus: IndelingModus = c.req.query('modus') === 'definitief' ? 'definitief' : 'proef';
+  let voorstel: IndelingVoorstel;
   try {
-    const r = await maakBeroepIndeling(c.env.DB, ev.id);
-    await logAudit(c, 'update', 'sessions_program', `indeling:${r.sessies}`);
-    const extra = r.nietGeplaatst ? ` ${r.nietGeplaatst} beroepen pasten niet (te weinig lokalen of rondes).` : '';
-    return redirectOk(
-      c,
-      '/admin/sessions',
-      `Indeling gemaakt: ${r.sessies} sessies over ${r.rondes} rondes in ${r.lokalen} lokalen, ${r.sprekers} sprekers geplaatst.${extra}`
-    );
+    voorstel = await berekenBeroepIndeling(c.env.DB, ev.id, modus);
   } catch (e: any) {
-    return redirectErr(c, '/admin/sessions', e?.message ?? 'Indeling mislukt.');
+    return redirectErr(c, '/admin/sessions', e?.message ?? 'Voorstel mislukt.');
+  }
+  const huidig = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM sessions_program WHERE event_id = ?').bind(ev.id).first<{ n: number }>();
+  return renderAdminLayout(c, { title: 'Indelingsvoorstel', activeKey: 'sessions', body: previewBody(voorstel, huidig?.n ?? 0) });
+});
+
+/** Voorstel toepassen (POST). Herberekent hetzelfde voorstel en schrijft weg. */
+sessionsApp.post('/indeling/toepassen', async (c) => {
+  const ev = await getActiveEvent(c.env.DB);
+  if (!ev) return redirectErr(c, '/admin/sessions', 'Geen actieve editie.');
+  const b = await c.req.parseBody();
+  const modus: IndelingModus = b.modus === 'definitief' ? 'definitief' : 'proef';
+  try {
+    const voorstel = await berekenBeroepIndeling(c.env.DB, ev.id, modus);
+    const n = await pasBeroepIndelingToe(c.env.DB, ev.id, voorstel);
+    await logAudit(c, 'update', 'sessions_program', `indeling:${modus}:${n}`);
+    const rest = voorstel.onplaatsbaar.length ? ` ${voorstel.onplaatsbaar.length} beroep(en) konden niet worden geplaatst, zie de lijst.` : '';
+    return redirectOk(c, '/admin/sessions', `${modus === 'definitief' ? 'Definitieve' : 'Proef'}indeling toegepast: ${n} sessies.${rest}`);
+  } catch (e: any) {
+    return redirectErr(c, '/admin/sessions', e?.message ?? 'Toepassen mislukt.');
   }
 });
 

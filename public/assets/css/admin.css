@@ -121,6 +121,8 @@ a { color: var(--lime-dark); }
 .flash { padding: 11px 15px; border-radius: var(--radius); margin-bottom: 18px; font-size: 14px; }
 .flash--ok { background: #e7f6ec; color: #1f6c3a; border: 1px solid #b9e3c6; }
 .flash--err { background: #fbeae8; color: #a5352c; border: 1px solid #f0c2bd; }
+.flash--warn { background: #fef7e6; color: #8a5a00; border: 1px solid #f5dea6; }
+.btn.is-disabled { opacity: .45; pointer-events: none; }
 
 /* ---- Cards / tabellen ---- */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 22px; }
