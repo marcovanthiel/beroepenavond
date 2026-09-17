@@ -51,6 +51,7 @@ export const secties = [
       ['📣', 'Nieuws, vragen, contact', 'Nieuwsberichten, veelgestelde vragen, contact en nieuwsbrief.'],
       ['♿', 'Toegankelijk & privacy', 'Streeft naar WCAG 2.2 AA (EAA) en werkt AVG-proof.'],
       ['🔎', 'Goed vindbaar', 'Sitemap, rich-result-data en snelle laadtijd; campagneposter te downloaden.'],
+      ['📱', 'Vlot op elk scherm', 'Werkt even goed op telefoon, tablet en laptop.'],
     ],
   },
   {
