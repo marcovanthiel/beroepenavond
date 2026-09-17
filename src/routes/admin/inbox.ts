@@ -4,6 +4,7 @@ import type { AdminEnv } from '../../lib/auth';
 import { logAudit } from '../../lib/auth';
 import { renderAdminLayout, esc, pageHeader, flashFromQuery, filterBar, filterEmptyRow, emptyState } from '../../views/admin/layout';
 import { genId, redirectOk, redirectErr } from '../../lib/forms';
+import { applyPrefsMap } from '../../lib/tijdvak';
 
 export const inboxApp = new Hono<AdminEnv>();
 
@@ -124,6 +125,13 @@ inboxApp.post('/:id/to-speaker', async (c) => {
   )
     .bind(sid, s.name ?? 'Onbekend', s.email, s.phone, s.organization, s.profession, `Aangemaakt vanuit aanmelding #${s.id}`)
     .run();
+  // Tijdvak-beschikbaarheid uit de aanmelding overnemen (indien opgegeven).
+  try {
+    const payload = (s as any).payload ? JSON.parse((s as any).payload) : null;
+    if (payload?.tijdvak && typeof payload.tijdvak === 'object') {
+      await applyPrefsMap(c.env.DB, sid, payload.tijdvak);
+    }
+  } catch { /* payload niet leesbaar: overslaan */ }
   await c.env.DB.prepare("UPDATE submissions SET status='handled' WHERE id=?").bind(id).run();
   await logAudit(c, 'convert', 'submission', id, { speaker: sid });
   return redirectOk(c, `/admin/speakers/${sid}`, 'Spreker aangemaakt vanuit aanmelding.');

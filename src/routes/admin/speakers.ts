@@ -22,6 +22,7 @@ import { str, strOrNull, bool, intOrNull, redirectOk, redirectErr } from '../../
 import { uploadImage, deleteMedia, r2Available, UploadError } from '../../lib/media';
 import { getSettings } from '../../lib/db';
 import { mailConfig, speakerConfirmedMail } from '../../lib/email';
+import { loadRondes, loadSpeakerPrefs, saveSpeakerPrefs } from '../../lib/tijdvak';
 
 export const speakersApp = new Hono<AdminEnv>();
 
@@ -207,6 +208,28 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
     </select>
     <span class="fld__help">Categorie volgt automatisch uit het beroep. <a href="/admin/beroepen/new" target="_blank">Nieuw beroep ↗</a></span>
   </label>`;
+  // Beschikbaarheid per tijdvak (voor de automatische sessie-indeling).
+  const rondes = await loadRondes(c.env.DB);
+  const huidigPrefs = await loadSpeakerPrefs(c.env.DB, s.id ?? null);
+  const tijdvakHtml = rondes.length
+    ? `<div class="span-2"><h3 style="margin:14px 0 2px;font-size:15px">Beschikbaarheid per tijdvak</h3>
+        <p class="fld__help" style="margin:0 0 8px">Weegt mee bij de automatische indeling. "Kan niet" wordt altijd gerespecteerd; "Voorkeur" proberen we te volgen.</p></div>
+      ${rondes
+        .map((r) => {
+          const tijd = r.start_time ? ` (${r.start_time}${r.end_time ? ` tot ${r.end_time}` : ''})` : '';
+          return select({
+            label: `Ronde ${r.round_no}${tijd}`,
+            name: `ronde_${r.id}`,
+            value: huidigPrefs[r.id] ?? '',
+            options: [
+              { value: 'voorkeur', label: 'Voorkeur' },
+              { value: 'nee', label: 'Kan niet' },
+            ],
+            empty: 'Kan',
+          });
+        })
+        .join('')}`
+    : '<div class="span-2"><p class="fld__help">Er zijn nog geen tijdvakken (rondes) om de beschikbaarheid op in te stellen.</p></div>';
   const portrait = s.portrait_url
     ? `<div style="margin-bottom:8px"><img src="${esc(s.portrait_url)}" alt="" style="width:90px;height:90px;border-radius:10px;object-fit:cover"></div>`
     : '';
@@ -235,6 +258,7 @@ async function form(c: any, s: Partial<Speaker>, isNew: boolean): Promise<string
         <div class="span-2">${textarea({ label: 'Biografie (markdown)', name: 'bio_md', value: s.bio_md ?? '', rows: 5 })}</div>
         <div class="span-2">${textarea({ label: 'Interne notities (niet publiek)', name: 'notes', value: s.notes ?? '', rows: 2 })}</div>
         <div class="span-2">${checkbox({ label: 'Toon op de publieke site', name: 'is_public', checked: s.is_public !== 0 })}</div>
+        ${tijdvakHtml}
       </div>
       ${formActions('Opslaan', '/admin/speakers')}
     </form>
@@ -300,6 +324,7 @@ speakersApp.post('/new', async (c) => {
   )
     .bind(id, str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), categoryId, beroepId, bool(b.is_public), strOrNull(b.notes))
     .run();
+  await saveSpeakerPrefs(c.env.DB, id, await loadRondes(c.env.DB), b);
   await logAudit(c, 'create', 'speaker', id);
   return redirectOk(c, '/admin/speakers', 'Spreker aangemaakt.');
 });
@@ -321,6 +346,7 @@ speakersApp.post('/:id', async (c) => {
   )
     .bind(str(b.full_name), strOrNull(b.email), strOrNull(b.phone), strOrNull(b.organization), strOrNull(b.job_title), strOrNull(b.bio_md), portrait, strOrNull(b.website), strOrNull(b.linkedin), categoryId, beroepId, bool(b.is_public), strOrNull(b.notes), id)
     .run();
+  await saveSpeakerPrefs(c.env.DB, id, await loadRondes(c.env.DB), b);
   await logAudit(c, 'update', 'speaker', id);
   return redirectOk(c, '/admin/speakers', 'Spreker opgeslagen.');
 });

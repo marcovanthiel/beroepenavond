@@ -17,6 +17,7 @@ import { mailConfig, notifySubmission, confirmToSender, newsletterConfirm } from
 import { renderLayout } from '../views/layout';
 import { getNavPages } from '../lib/db';
 import { isSpam, verifyTurnstile } from '../lib/spam';
+import { loadRondes, prefsFromBody } from '../lib/tijdvak';
 
 export const publicApp = new Hono<{ Bindings: Env }>();
 
@@ -36,11 +37,12 @@ async function storeSubmission(
     organization?: string;
     profession?: string;
     message?: string;
+    payload?: string | null;
   }
 ): Promise<number> {
   const res = await c.env.DB.prepare(
-    `INSERT INTO submissions (type, name, email, phone, organization, profession, message, ip_address, user_agent)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO submissions (type, name, email, phone, organization, profession, message, payload, ip_address, user_agent)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       data.type,
@@ -50,6 +52,7 @@ async function storeSubmission(
       data.organization ?? null,
       data.profession ?? null,
       data.message ?? null,
+      data.payload ?? null,
       c.req.header('cf-connecting-ip') ?? null,
       (c.req.header('user-agent') ?? '').slice(0, 300)
     )
@@ -107,15 +110,17 @@ publicApp.post('/contact', async (c) => {
 
 publicApp.post('/aanmelden', async (c) => {
   const b = await c.req.parseBody();
+  const rondes = await loadRondes(c.env.DB);
   if (isBot(b)) return c.redirect('/aanmelden?sent=1', 302);
   if (!(await verifyTurnstile(c.env.TURNSTILE_SECRET_KEY, str(b['cf-turnstile-response']), c.req.header('cf-connecting-ip')))) {
     const page = await getPage(c.env.DB, '/aanmelden');
     const settings = await getSettings(c.env.DB);
     if (!page) return renderError(c, 404, 'Pagina niet gevonden');
-    return renderPage(c, page, volunteerFormHtml(settings, b as any), {
+    return renderPage(c, page, volunteerFormHtml(settings, b as any, rondes), {
       notice: { type: 'err', text: 'Bevestig even dat je geen robot bent en verstuur opnieuw.' },
     });
   }
+  const prefs = prefsFromBody(rondes, b);
   const data = {
     type: 'volunteer',
     name: str(b.name),
@@ -125,12 +130,13 @@ publicApp.post('/aanmelden', async (c) => {
     profession: str(b.profession),
     message: str(b.message),
     sponsor: str(b.sponsor) ? 1 : 0,
+    payload: Object.keys(prefs).length ? JSON.stringify({ tijdvak: prefs }) : null,
   };
   if (!data.name || !EMAIL_RE.test(data.email) || !data.profession) {
     const page = await getPage(c.env.DB, '/aanmelden');
     const settings = await getSettings(c.env.DB);
     if (!page) return renderError(c, 404, 'Pagina niet gevonden');
-    return renderPage(c, page, volunteerFormHtml(settings, b as any), {
+    return renderPage(c, page, volunteerFormHtml(settings, b as any, rondes), {
       notice: { type: 'err', text: 'Vul je naam, e-mailadres en het beroep in.' },
     });
   }
@@ -351,7 +357,7 @@ publicApp.get('/*', async (c) => {
       if (q.sent) {
         notice = { type: 'ok', text: 'Bedankt voor je aanmelding! We nemen contact met je op met de details.' };
       } else {
-        append = volunteerFormHtml(settings);
+        append = volunteerFormHtml(settings, undefined, await loadRondes(c.env.DB));
       }
       break;
     case '/nieuwsbrief':

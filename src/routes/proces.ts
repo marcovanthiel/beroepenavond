@@ -12,6 +12,7 @@ import { renderLayout } from '../views/layout';
 import { renderError } from '../views/public';
 import { mailConfig, speakerConfirmedMail, sendEmail, emailShell } from '../lib/email';
 import { randomHex } from '../lib/auth';
+import { loadRondes, loadSpeakerPrefs, saveSpeakerPrefs, type RondeRij } from '../lib/tijdvak';
 
 export const procesApp = new Hono<{ Bindings: Env }>();
 
@@ -41,36 +42,6 @@ function veld(label: string, name: string, value: string, opts?: { type?: string
 
 interface UitnodigingVals {
   name?: string; email?: string; phone?: string; organization?: string; job_title?: string; linkedin?: string; sponsor?: boolean;
-}
-
-interface RondeRij { id: string; round_no: number; start_time: string | null; end_time: string | null }
-
-async function loadRondes(db: Env['DB']): Promise<RondeRij[]> {
-  const ev = await getActiveEvent(db);
-  if (!ev) return [];
-  const r = await db.prepare('SELECT id, round_no, start_time, end_time FROM rounds WHERE event_id = ? ORDER BY round_no').bind(ev.id).all<RondeRij>();
-  return r.results ?? [];
-}
-
-async function loadPrefs(db: Env['DB'], speakerId: string | null): Promise<Record<string, string>> {
-  if (!speakerId) return {};
-  const r = await db.prepare('SELECT round_id, status FROM speaker_round_prefs WHERE speaker_id = ?').bind(speakerId).all<{ round_id: string; status: string }>();
-  const m: Record<string, string> = {};
-  for (const x of r.results ?? []) m[x.round_id] = x.status;
-  return m;
-}
-
-/** Slaat de beschikbaarheid/voorkeur per tijdvak op (uit form-body). */
-async function saveSpeakerPrefs(db: Env['DB'], speakerId: string, rondes: RondeRij[], body: Record<string, unknown>): Promise<void> {
-  await db.prepare('DELETE FROM speaker_round_prefs WHERE speaker_id = ?').bind(speakerId).run();
-  const stmts = [] as any[];
-  for (const r of rondes) {
-    const v = str(body[`ronde_${r.id}`]);
-    if (v === 'nee' || v === 'voorkeur') {
-      stmts.push(db.prepare('INSERT INTO speaker_round_prefs (speaker_id, round_id, status) VALUES (?, ?, ?)').bind(speakerId, r.id, v));
-    }
-  }
-  if (stmts.length) await db.batch(stmts);
 }
 
 /** Tijdvak-keuze (per ronde: kan / voorkeur / kan niet). */
@@ -190,7 +161,7 @@ procesApp.get('/voorlichter/uitnodiging', async (c) => {
       .bind(inv.speaker_id).first()) ?? {};
   }
   const herhaal = inv.kind === 'herhaal';
-  const [rondes, huidig] = await Promise.all([loadRondes(c.env.DB), loadPrefs(c.env.DB, inv.speaker_id)]);
+  const [rondes, huidig] = await Promise.all([loadRondes(c.env.DB), loadSpeakerPrefs(c.env.DB, inv.speaker_id)]);
   return uitnodigingPage(c, inv, herhaal, {
     name: sp.full_name ?? inv.name ?? '', email: sp.email ?? inv.email, phone: sp.phone ?? '',
     organization: sp.organization ?? '', job_title: sp.job_title ?? '', linkedin: sp.linkedin ?? '',
@@ -239,7 +210,8 @@ procesApp.post('/voorlichter/uitnodiging', async (c) => {
   try {
     const settings = await getSettings(c.env.DB);
     const cfg = mailConfig(c.env, settings);
-    await speakerConfirmedMail(cfg, { full_name: name, email, job_title: jobTitle }, settings);
+    const beschikbaarheidUrl = `https://${settings['site_host'] || 'beroepenavond2026.nl'}/voorlichter/beschikbaarheid?token=${inv.token}`;
+    await speakerConfirmedMail(cfg, { full_name: name, email, job_title: jobTitle }, settings, beschikbaarheidUrl);
     const sponsorRegel = sponsor ? '<p><strong>Let op:</strong> deze voorlichter heeft interesse om sponsor te worden.</p>' : '';
     await sendEmail(cfg, {
       to: cfg.to,
@@ -278,7 +250,7 @@ procesApp.get('/voorlichter/beschikbaarheid', async (c) => {
   if (!inv) return ongeldigeUitnodiging(c, settings, navItems);
   // Nog niet aangemeld? Eerst het aanmeldformulier.
   if (!inv.speaker_id) return c.redirect(`/voorlichter/uitnodiging?token=${inv.token}`, 302);
-  const [rondes, huidig] = await Promise.all([loadRondes(c.env.DB), loadPrefs(c.env.DB, inv.speaker_id)]);
+  const [rondes, huidig] = await Promise.all([loadRondes(c.env.DB), loadSpeakerPrefs(c.env.DB, inv.speaker_id)]);
   if (!rondes.length) {
     return c.html(renderLayout({
       title: 'Mijn beschikbaarheid · Beroepenavond Nijmegen',

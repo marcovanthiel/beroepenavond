@@ -246,10 +246,16 @@ export async function confirmToSender(
 export async function speakerConfirmedMail(
   cfg: MailConfig,
   speaker: { full_name: string; email?: string | null; job_title?: string | null },
-  settings: SettingsMap
+  settings: SettingsMap,
+  beschikbaarheidUrl?: string | null
 ): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
   if (!speaker.email) return { ok: false, skipped: true };
   const datum = settings['event_date_long'] || '';
+  const beschikbaarBlok = beschikbaarheidUrl
+    ? `<p>Geef je door wanneer je kunt? Dan houden we daar rekening mee bij het indelen van de sessies:</p>
+       <p>${emailButton(beschikbaarheidUrl, 'Mijn beschikbaarheid doorgeven')}</p>`
+    : '';
+  const beschikbaarText = beschikbaarheidUrl ? `\n\nGeef je beschikbaarheid door zodat we daar rekening mee houden: ${beschikbaarheidUrl}` : '';
   const inner = `
     <p>Beste ${esc(speaker.full_name)},</p>
     <p>Wat leuk dat je meedoet aan de <strong>Beroepenavond Nijmegen</strong>${
@@ -257,6 +263,7 @@ export async function speakerConfirmedMail(
     }! Je deelname${
       speaker.job_title ? ` als <strong>${esc(speaker.job_title)}</strong>` : ''
     } is bevestigd en je komt op de website te staan zodra we het voorlichters-overzicht publiceren.</p>
+    ${beschikbaarBlok}
     <p>We nemen tijdig contact op met de praktische details voor de avond.
     Heb je tussentijds vragen? Mail gerust naar ${esc(cfg.to)}.</p>
     <p>Hartelijke groet,<br>Organisatie Beroepenavond Nijmegen</p>`;
@@ -264,7 +271,7 @@ export async function speakerConfirmedMail(
     to: speaker.email,
     subject: 'Je deelname aan de Beroepenavond is bevestigd',
     html: emailShell('Bevestiging deelname', inner, cfg.brand),
-    text: `Beste ${speaker.full_name},\n\nWat leuk dat je meedoet aan de Beroepenavond Nijmegen${datum ? ` op ${datum}` : ''}! Je deelname${speaker.job_title ? ` als ${speaker.job_title}` : ''} is bevestigd en je komt op de website te staan zodra we het voorlichters-overzicht publiceren. We nemen tijdig contact op met de praktische details. Vragen? Mail ${cfg.to}.\n\nHartelijke groet,\nOrganisatie Beroepenavond Nijmegen`,
+    text: `Beste ${speaker.full_name},\n\nWat leuk dat je meedoet aan de Beroepenavond Nijmegen${datum ? ` op ${datum}` : ''}! Je deelname${speaker.job_title ? ` als ${speaker.job_title}` : ''} is bevestigd en je komt op de website te staan zodra we het voorlichters-overzicht publiceren.${beschikbaarText} We nemen tijdig contact op met de praktische details. Vragen? Mail ${cfg.to}.\n\nHartelijke groet,\nOrganisatie Beroepenavond Nijmegen`,
   });
 }
 

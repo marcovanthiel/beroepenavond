@@ -309,7 +309,31 @@ export function contactFormHtml(settings: SettingsMap, values?: Vals): string {
     </div>`;
 }
 
-export function volunteerFormHtml(settings: SettingsMap, values?: Vals): string {
+export function volunteerFormHtml(
+  settings: SettingsMap,
+  values?: Vals,
+  rondes: { id: string; round_no: number; start_time: string | null; end_time: string | null }[] = []
+): string {
+  const tijdvak = rondes.length
+    ? `<fieldset style="border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:14px 16px;margin:4px 0">
+        <legend style="padding:0 6px;font-weight:700">Wanneer kun je? <small style="font-weight:400;color:#667">(helpt ons bij het indelen)</small></legend>
+        <p class="muted" style="margin:0 0 6px">Geef per tijdvak aan of je kunt. "Ik kan niet" respecteren we altijd; "Voorkeur" proberen we te volgen.</p>
+        ${rondes
+          .map((r) => {
+            const cur = val(values, `ronde_${r.id}`);
+            const tijd = r.start_time ? `${r.start_time}${r.end_time ? ` tot ${r.end_time}` : ''}` : '';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.08)">
+              <span><strong>Ronde ${r.round_no}</strong>${tijd ? ` <small style="color:#667">${esc(tijd)}</small>` : ''}</span>
+              <select name="ronde_${esc(r.id)}" aria-label="Beschikbaarheid ronde ${r.round_no}" style="min-width:150px;padding:8px 10px">
+                <option value=""${cur === '' ? ' selected' : ''}>Ik kan</option>
+                <option value="voorkeur"${cur === 'voorkeur' ? ' selected' : ''}>Voorkeur</option>
+                <option value="nee"${cur === 'nee' ? ' selected' : ''}>Ik kan niet</option>
+              </select>
+            </div>`;
+          })
+          .join('')}
+      </fieldset>`
+    : '';
   return `
     <form class="form card-box" method="post" action="/aanmelden">
       <p class="form-legend muted">Velden met <span class="req" aria-hidden="true">*</span> zijn verplicht.</p>
@@ -332,6 +356,7 @@ export function volunteerFormHtml(settings: SettingsMap, values?: Vals): string 
         <span><strong>Ik heb interesse om sponsor te worden.</strong><br>
         <small>Je logo komt op de website en we maken er extra reclame mee. De organisatie neemt contact op over de mogelijkheden.</small></span>
       </label></div>
+      ${tijdvak}
       <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       ${settings['turnstile_site_key'] ? `<div class="cf-turnstile" data-sitekey="${esc(settings['turnstile_site_key'])}" style="margin:4px 0 12px"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
       <noscript><p class="notice notice--err">Aanmelden via dit formulier heeft JavaScript nodig (voor de spamcheck). Zet JavaScript aan, of mail ons rechtstreeks op <a href="mailto:${esc(settings['contact_email'] || '')}">${esc(settings['contact_email'] || '')}</a>.</p></noscript>` : ''}
