@@ -1269,7 +1269,55 @@ leesbaarheid).
 - Live geverifieerd: oude nummer-URL 301 -> slug, slug 200, onbekend 404,
   canonical/JSON-LD/sitemap op slug.
 
-## Automatische beroep-indeling (programma) (16-9-2026)
+## Sessie-indelingsmodule met preview + beschikbaarheid (17-9-2026)
+
+Uitbreiding van de automatische indeling tot een volwaardige module. Vervangt de
+eerdere één-klik-knop (zie sectie hieronder, nu achterhaald).
+
+**Kern (src/lib/indeling.ts):**
+- `berekenBeroepIndeling(db, eventId, modus)` = **preview**, schrijft NIETS. Eén
+  beroep-met-voorlichter = één sessie. Tijdvak per beroep = een ronde waarin
+  ALLE voorlichters van dat beroep kunnen (harde beschikbaarheid, doorsnede);
+  binnen de toegestane rondes weegt de zachte voorkeur mee; lokalen per ronde
+  per vakgebied geclusterd (categorie-volgorde over de lokaallijst). Beroepen
+  zonder gezamenlijk tijdvak of waar alle tijdvakken vol zijn → `onplaatsbaar`
+  met reden. Retourneert rijke data (namen, kleuren, tijden) voor het scherm.
+- `pasBeroepIndelingToe(db, eventId, voorstel)` = **toepassen**: volledige
+  herbouw van sessions_program + session_speakers (wist ook student_schedule).
+- **Modus** `proef` = alle publieke (aangemelde) voorlichters; `definitief` =
+  alleen `confirmed=1`.
+
+**Admin (src/routes/admin/sessions.ts):** twee knoppen "Proefindeling bekijken"
+en "Definitieve indeling bekijken" → GET `/admin/sessions/indeling?modus=…`
+toont het **voorstel** (stats, per ronde lokaal/beroep/voorlichters, voorkeur
+gehaald ja/nee, onplaatsbaar-lijst). Pas na "Deze indeling toepassen" (POST
+`/admin/sessions/indeling/toepassen`) wordt weggeschreven; die **herberekent**
+hetzelfde voorstel (deterministisch), dus het voorstel hoeft niet in een form
+mee). Beide routes VÓÓR `/:id`. `indelingsAlert()` (geëxporteerd, ook op het
+dashboard) waarschuwt bij: geen rondes, sessies zonder tijdvak/lokaal,
+lokaal+tijdvak-conflicten, en beroepen-met-voorlichter zonder sessie.
+
+**Beschikbaarheid/voorkeur voorlichter (schema 031 `speaker_round_prefs`:**
+`status 'nee'`=kan niet/hard, `'voorkeur'`=zacht, geen rij=beschikbaar):
+- In het **aanmeldformulier** (`/voorlichter/uitnodiging`, proces.ts): sectie
+  "Wanneer kun je?" met per ronde kan/voorkeur/kan-niet; opgeslagen bij aanmelden.
+- **Portaal** om later te wijzigen: `/voorlichter/beschikbaarheid?token=<invite>`
+  (hergebruikt de persistente invite-token, geen login). Link staat op de
+  klaar-pagina na aanmelden.
+
+**Publicatie via de bestaande schakelaar:** `/rooster` en de ronde/lokaal-info op
+de beroeppagina tonen het programma alleen als `voorlichters_published=1`. Zo
+lekt een proefindeling niet naar de site; zet de schakelaar uit tijdens het
+proefdraaien en aan zodra de definitieve indeling klaar is.
+
+**Voorwaarde:** rondes/tijdvakken en hun tijden blijven handmatig (bij Rondes);
+de module maakt ze niet en waarschuwt als er nog geen zijn.
+
+**Nog open (bewust niet in deze ronde):** beschikbaarheid tonen/bewerken op de
+admin-sprekerpagina; de portaal-link ook in de bevestigingsmail; beschikbaarheid
+uitvragen op het losse `/aanmelden`-formulier (dat maakt nu nog geen speaker).
+
+## Automatische beroep-indeling (programma) (16-9-2026) — ACHTERHAALD, zie hierboven
 
 Nieuwe generator `maakBeroepIndeling(db, eventId)` in `src/lib/indeling.ts` +
 knop **"Maak beroep-indeling"** op `/admin/sessions` (POST `/admin/sessions/
