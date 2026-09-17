@@ -9,6 +9,7 @@
  */
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 import { genId } from './forms';
+import { loadBezoek, verwachtAantal } from './bezoek';
 
 export type IndelingModus = 'proef' | 'definitief';
 
@@ -23,6 +24,10 @@ export interface VoorstelSessie {
   rondeTijd: string;
   lokaalId: string;
   lokaalCode: string;
+  capaciteit: number | null;
+  verwacht: number | null; // verwacht aantal leerlingen (laatst bekende jaar), null = onbekend
+  verwachtJaar: number | null;
+  krap: boolean; // verwacht > capaciteit van het toegewezen lokaal
   speakerIds: string[];
   sprekerNamen: string[];
   voorkeurGevolgd: boolean | null; // null = geen voorkeur opgegeven
@@ -46,10 +51,15 @@ export interface IndelingVoorstel {
     rondes: number;
     lokalen: number;
     voorkeurGemist: number;
+    metVerwachting: number; // beroepen met een bekend leerlingenaantal
+    krap: number; // sessies waar het verwachte aantal boven de lokaalcapaciteit ligt
   };
 }
 
 interface SprekerRij { id: string; beroep_id: number; full_name: string }
+
+/** Lokaalcapaciteit als die niet is ingevuld (zelfde aanname als de leerling-indeling). */
+const DEFAULT_CAPACITEIT = 30;
 
 /**
  * Berekent een voorstel voor de sessie-indeling ZONDER iets weg te schrijven
@@ -61,7 +71,14 @@ interface SprekerRij { id: string; beroep_id: number; full_name: string }
  *
  * Tijdvak per beroep = een ronde waarin ALLE voorlichters van dat beroep kunnen
  * (harde beschikbaarheid; doorsnede). Binnen de toegestane rondes weegt de
- * zachte voorkeur mee. Lokalen worden per ronde per vakgebied geclusterd.
+ * zachte voorkeur mee; bij gelijke voorkeur gaat het beroep naar het tijdvak
+ * met de minste verwachte leerlingen (drukke beroepen worden zo gespreid).
+ *
+ * Lokalen: beroepen met een bekend leerlingenaantal (beroep_bezoek, laatste
+ * jaar) krijgen eerst een lokaal, grootste beroep eerst, telkens het kleinste
+ * vrije lokaal dat past (best fit); past er geen, dan het grootste vrije lokaal
+ * en de sessie krijgt de vlag `krap`. Beroepen zonder bekend aantal volgen
+ * daarna, per vakgebied geclusterd over de overgebleven lokalen.
  * Beroepen zonder gezamenlijk tijdvak (of waar alle tijdvakken vol zijn) komen
  * in de lijst 'onplaatsbaar' en moeten handmatig worden opgelost.
  */
@@ -71,13 +88,14 @@ export async function berekenBeroepIndeling(
   modus: IndelingModus
 ): Promise<IndelingVoorstel> {
   const sprekerFilter = modus === 'definitief' ? 'is_public = 1 AND confirmed = 1' : 'is_public = 1';
-  const [rondesQ, lokalenQ, catsQ, beroepenQ, sprekersQ, prefsQ] = await Promise.all([
+  const [rondesQ, lokalenQ, catsQ, beroepenQ, sprekersQ, prefsQ, bezoek] = await Promise.all([
     db.prepare('SELECT id, round_no, start_time, end_time FROM rounds WHERE event_id = ? ORDER BY round_no').bind(eventId).all<{ id: string; round_no: number; start_time: string | null; end_time: string | null }>(),
     db.prepare("SELECT id, code, floor, smartboard, capacity FROM classrooms WHERE event_id = ? AND in_use = 1 ORDER BY smartboard DESC, capacity IS NULL, capacity DESC, floor, code").bind(eventId).all<{ id: string; code: string; floor: string | null; smartboard: number; capacity: number | null }>(),
     db.prepare('SELECT id, name, color, sort_order FROM categories ORDER BY sort_order').all<{ id: string; name: string; color: string | null; sort_order: number }>(),
     db.prepare(`SELECT b.id AS beroep_id, b.name, b.category_id FROM beroepen b WHERE EXISTS (SELECT 1 FROM speakers s WHERE s.beroep_id = b.id AND ${sprekerFilter}) ORDER BY b.category_id, b.sort_order, b.name`).all<{ beroep_id: number; name: string; category_id: string | null }>(),
     db.prepare(`SELECT id, beroep_id, full_name FROM speakers WHERE ${sprekerFilter} AND beroep_id IS NOT NULL ORDER BY beroep_id, full_name`).all<SprekerRij>(),
     db.prepare('SELECT speaker_id, round_id, status FROM speaker_round_prefs').all<{ speaker_id: string; round_id: string; status: string }>(),
+    loadBezoek(db),
   ]);
 
   const rondes = rondesQ.results ?? [];
@@ -102,8 +120,9 @@ export async function berekenBeroepIndeling(
     (m.get(p.speaker_id) ?? m.set(p.speaker_id, new Set()).get(p.speaker_id)!).add(p.round_id);
   }
 
-  // Per beroep: toegestane rondes (doorsnede beschikbaarheid) + voorkeurscore.
-  interface Kandidaat { beroep: { beroep_id: number; name: string; category_id: string | null }; sprekers: SprekerRij[]; toegestaan: string[]; heeftVoorkeur: boolean; prefScore: (r: string) => number; }
+  // Per beroep: toegestane rondes (doorsnede beschikbaarheid) + voorkeurscore
+  // + verwacht aantal leerlingen (laatst bekende jaar, kan ontbreken).
+  interface Kandidaat { beroep: { beroep_id: number; name: string; category_id: string | null }; sprekers: SprekerRij[]; toegestaan: string[]; heeftVoorkeur: boolean; prefScore: (r: string) => number; verwacht: number | null; verwachtJaar: number | null; }
   const kandidaten: Kandidaat[] = [];
   const onplaatsbaar: OnplaatsbaarBeroep[] = [];
   for (const b of beroepen) {
@@ -118,13 +137,22 @@ export async function berekenBeroepIndeling(
       onplaatsbaar.push({ beroepId: b.beroep_id, naam: b.name, reden: 'Geen tijdvak waarin alle voorlichters kunnen', sprekerNamen: namen });
       continue;
     }
-    kandidaten.push({ beroep: b, sprekers, toegestaan, heeftVoorkeur, prefScore });
+    const vw = verwachtAantal(bezoek, b.beroep_id);
+    kandidaten.push({ beroep: b, sprekers, toegestaan, heeftVoorkeur, prefScore, verwacht: vw?.aantal ?? null, verwachtJaar: vw?.jaar ?? null });
   }
 
-  // Pass A: rondekeuze. Meest beperkte beroepen eerst (minste toegestane rondes).
-  kandidaten.sort((a, b) => a.toegestaan.length - b.toegestaan.length);
+  // Onbekende aantallen tellen in de drukte-balans als het gemiddelde van de
+  // bekende aantallen (of de standaardcapaciteit als niets bekend is).
+  const bekend = kandidaten.map((k) => k.verwacht).filter((n): n is number => n != null);
+  const aannameOnbekend = bekend.length ? Math.round(bekend.reduce((a, b) => a + b, 0) / bekend.length) : DEFAULT_CAPACITEIT;
+  const last = (k: Kandidaat) => k.verwacht ?? aannameOnbekend;
+
+  // Pass A: rondekeuze. Meest beperkte beroepen eerst (minste toegestane
+  // rondes), daarbinnen de drukste beroepen eerst zodat die goed gespreid raken.
+  kandidaten.sort((a, b) => a.toegestaan.length - b.toegestaan.length || last(b) - last(a));
   const perRonde = new Map<string, Kandidaat[]>();
-  rondes.forEach((r) => perRonde.set(r.id, []));
+  const lastPerRonde = new Map<string, number>(); // verwachte leerlingen per ronde
+  rondes.forEach((r) => { perRonde.set(r.id, []); lastPerRonde.set(r.id, 0); });
   const gekozenRonde = new Map<number, string>();
   for (const k of kandidaten) {
     const opties = k.toegestaan.filter((rid) => (perRonde.get(rid)?.length ?? 0) < capPerRonde);
@@ -132,28 +160,60 @@ export async function berekenBeroepIndeling(
       onplaatsbaar.push({ beroepId: k.beroep.beroep_id, naam: k.beroep.name, reden: 'Alle beschikbare tijdvakken zitten vol', sprekerNamen: k.sprekers.map((s) => s.full_name) });
       continue;
     }
-    // Kies: hoogste voorkeurscore, dan de minst gevulde ronde (balans).
-    opties.sort((r1, r2) => k.prefScore(r2) - k.prefScore(r1) || (perRonde.get(r1)!.length - perRonde.get(r2)!.length));
+    // Kies: hoogste voorkeurscore, dan de ronde met de minste verwachte
+    // leerlingen (spreiding van drukke beroepen), dan de minst gevulde ronde.
+    opties.sort(
+      (r1, r2) =>
+        k.prefScore(r2) - k.prefScore(r1) ||
+        lastPerRonde.get(r1)! - lastPerRonde.get(r2)! ||
+        perRonde.get(r1)!.length - perRonde.get(r2)!.length
+    );
     const rid = opties[0];
     perRonde.get(rid)!.push(k);
+    lastPerRonde.set(rid, lastPerRonde.get(rid)! + last(k));
     gekozenRonde.set(k.beroep.beroep_id, rid);
   }
 
-  // Pass B: lokaaltoewijzing per ronde, geclusterd op vakgebied.
+  // Pass B: lokaaltoewijzing per ronde. Eerst de beroepen met een bekend
+  // aantal (grootste eerst, best fit op capaciteit), daarna de rest geclusterd
+  // op vakgebied over de overgebleven lokalen (in de vaste lokaalvolgorde:
+  // smartboard eerst, dan grootste capaciteit).
   const catOrder = (id: string | null): number => (id ? catById.get(id)?.sort_order ?? 999 : 999);
+  const capVan = (l: { capacity: number | null }) => l.capacity ?? DEFAULT_CAPACITEIT;
   const sessies: VoorstelSessie[] = [];
   let voorkeurGemist = 0;
+  let krapTotaal = 0;
   const gebruikteLokalen = new Set<string>();
   for (const r of rondes) {
-    const lijst = (perRonde.get(r.id) ?? []).slice().sort(
-      (a, b) => catOrder(a.beroep.category_id) - catOrder(b.beroep.category_id) || a.beroep.name.localeCompare(b.beroep.name, 'nl')
-    );
-    lijst.forEach((k, i) => {
-      const lok = lokalen[i];
+    const inRonde = perRonde.get(r.id) ?? [];
+    const vrij = lokalen.slice();
+    const toewijzing: { k: Kandidaat; lok: (typeof lokalen)[number] }[] = [];
+
+    const metAantal = inRonde.filter((k) => k.verwacht != null).sort((a, b) => b.verwacht! - a.verwacht! || a.beroep.name.localeCompare(b.beroep.name, 'nl'));
+    for (const k of metAantal) {
+      // Best fit: kleinste vrije lokaal dat het verwachte aantal aankan.
+      let idx = -1;
+      let bestCap = Infinity;
+      vrij.forEach((l, i) => { const cap = capVan(l); if (cap >= k.verwacht! && cap < bestCap) { bestCap = cap; idx = i; } });
+      if (idx < 0) {
+        // Niets past: neem het grootste vrije lokaal (sessie wordt 'krap').
+        vrij.forEach((l, i) => { if (idx < 0 || capVan(l) > capVan(vrij[idx])) idx = i; });
+      }
+      toewijzing.push({ k, lok: vrij.splice(idx, 1)[0] });
+    }
+
+    const zonderAantal = inRonde
+      .filter((k) => k.verwacht == null)
+      .sort((a, b) => catOrder(a.beroep.category_id) - catOrder(b.beroep.category_id) || a.beroep.name.localeCompare(b.beroep.name, 'nl'));
+    for (const k of zonderAantal) toewijzing.push({ k, lok: vrij.shift()! });
+
+    for (const { k, lok } of toewijzing) {
       gebruikteLokalen.add(lok.id);
       const cat = k.beroep.category_id ? catById.get(k.beroep.category_id) : null;
       const gevolgd = k.heeftVoorkeur ? k.prefScore(r.id) > 0 : null;
       if (gevolgd === false) voorkeurGemist++;
+      const krap = k.verwacht != null && k.verwacht > capVan(lok);
+      if (krap) krapTotaal++;
       sessies.push({
         beroepId: k.beroep.beroep_id,
         naam: k.beroep.name,
@@ -165,11 +225,15 @@ export async function berekenBeroepIndeling(
         rondeTijd: r.start_time ? `${r.start_time}${r.end_time ? ` tot ${r.end_time}` : ''}` : '',
         lokaalId: lok.id,
         lokaalCode: lok.code,
+        capaciteit: lok.capacity,
+        verwacht: k.verwacht,
+        verwachtJaar: k.verwachtJaar,
+        krap,
         speakerIds: k.sprekers.map((s) => s.id),
         sprekerNamen: k.sprekers.map((s) => s.full_name),
         voorkeurGevolgd: gevolgd,
       });
-    });
+    }
   }
   sessies.sort((a, b) => a.rondeNo - b.rondeNo || a.lokaalCode.localeCompare(b.lokaalCode, 'nl', { numeric: true }));
 
@@ -184,6 +248,8 @@ export async function berekenBeroepIndeling(
       rondes: rondes.length,
       lokalen: gebruikteLokalen.size,
       voorkeurGemist,
+      metVerwachting: kandidaten.filter((k) => k.verwacht != null).length,
+      krap: krapTotaal,
     },
   };
 }
@@ -219,7 +285,6 @@ export interface IndelingResultaat {
   zonderEnkelePlek: number;
 }
 
-const DEFAULT_CAPACITEIT = 30;
 
 export async function maakIndeling(db: D1Database, eventId: string): Promise<IndelingResultaat> {
   const [rondesQ, sessiesQ, picksQ, blokkadesQ, studentenQ] = await Promise.all([

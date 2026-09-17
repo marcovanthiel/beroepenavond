@@ -160,7 +160,7 @@ export function renderAdminLayout(c: Context<AdminEnv>, opts: AdminLayoutOpts) {
 <meta name="robots" content="noindex, nofollow">
 <title>${opts.title} · Beheer Beroepenavond</title>
 <link rel="icon" href="/assets/img/favicon.png" type="image/png">
-<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/admin.css?v=20260917">
 </head>
 <body>
 <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">

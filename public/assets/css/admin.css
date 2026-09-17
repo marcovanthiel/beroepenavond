@@ -142,6 +142,7 @@ table.data td.actions { text-align: right; white-space: nowrap; }
 .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 500; }
 .badge--on { background: #e7f6ec; color: #1f6c3a; }
 .badge--off { background: #eef0f2; color: #6b7280; }
+.badge--warn { background: #fdf1d6; color: #8a5a00; }
 .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; margin-right: 6px; border: 1px solid rgba(0,0,0,.12); }
 
 /* ---- Buttons ---- */

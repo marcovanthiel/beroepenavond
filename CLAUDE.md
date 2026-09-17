@@ -1328,6 +1328,66 @@ plekken invoerbaar:
 - De **bevestigingsmail** aan de voorlichter bevat een knop naar het
   beschikbaarheid-portaal (`speakerConfirmedMail` kreeg een optionele URL-param).
 
+## Leerlingenaantallen per beroep + lokaal op maat (17-9-2026)
+
+Statistiek "hoeveel leerlingen kwamen er op dit beroep af" per editie, als
+invoer voor de sessie-indeling én automatisch gevuld door de evaluaties.
+
+**Data (schema 032 `beroep_bezoek`):** `(beroep_id, jaar) -> aantal, bron`.
+`bron` = `handmatig` (ingevoerd in beheer; wint altijd) of `evaluatie`
+(afgeleid uit `speaker_evaluations`). Jaar is een los getal, geen event-id:
+de statistiek van 2025 bestaat terwijl er geen editie-rij 2025 is. Datalaag
+`src/lib/bezoek.ts`: `loadBezoek`, `verwachtAantal` (= meest recente jaar met
+een aantal), `saveBezoekVelden` (formulier per beroep), `saveBezoekJaar`
+(bulk per jaar), `verwerkEvaluatieAantallen` (uit evaluaties; per sessie het
+hoogste getal dat een voorlichter opgaf, want voorlichters van hetzelfde
+beroep zaten samen in dat lokaal; sessies van één beroep opgeteld; zonder
+sessie telt het losse totaal; `ON CONFLICT ... WHERE bron='evaluatie'` laat
+handmatige rijen staan). Onveranderde waarden worden niet herschreven, zodat
+een evaluatie-rij zijn bron houdt zolang niemand het getal wijzigt.
+
+**Invoer in beheer:**
+- **Bulk**: `/admin/beroepen/aantallen?jaar=YYYY` (knop "Leerlingenaantallen
+  invoeren" op Beroepen). Alle beroepen onder elkaar met één invulveld voor
+  het gekozen jaar (default = editiejaar - 1, want daar komt de statistiek
+  van vorig jaar), bron-badge en de andere jaren als tekst; zoekfilter en
+  sticky Opslaan. Leeg = onbekend (rij weg). Routes GET+POST staan VÓÓR
+  `/:id`.
+- **Per beroep**: kaart "Leerlingen per editie" op `/admin/beroepen/:id`
+  (velden `bezoek_<jaar>` voor de vier edities t/m de actieve plus jaren met
+  data), opgeslagen door dezelfde POST als het beroep.
+- Lijst Beroepen heeft een kolom **Leerlingen** (laatst bekende aantal + jaar).
+
+**Indeling (`berekenBeroepIndeling`):**
+- Pass A (tijdvak): bij gelijke voorkeurscore gaat het beroep naar het tijdvak
+  met de minste verwachte leerlingen (onbekend telt als het gemiddelde van de
+  bekende aantallen, of 30). Kandidaten worden op beperktheid en daarna op
+  drukte gesorteerd, zodat drukke beroepen als eerste gespreid worden.
+- Pass B (lokaal): per ronde eerst de beroepen met een bekend aantal, grootste
+  eerst, elk naar het **kleinste vrije lokaal dat past** (best fit op
+  `classrooms.capacity`, leeg = 30). Past niets, dan het grootste vrije lokaal
+  en de sessie krijgt `krap`. Daarna de onbekende beroepen per vakgebied
+  geclusterd over de rest (oude gedrag). Het voorstel toont per sessie
+  "Verwacht (jaar)" + capaciteit, een krap-badge, per ronde de verwachte
+  leerlingen en bovenaan hoeveel beroepen een aantal hebben.
+- De leerling-indeling (`maakIndeling`) is ongewijzigd; die rekent al met
+  `classrooms.capacity`.
+
+**Evaluatie (`/evaluatie`, proces.ts):** het aantal leerlingen per sessie is
+nu **verplicht** en duidelijker gevraagd ("Hoeveel leerlingen waren er bij je
+sessie in ronde N ...?", met uitleg waarom). Na opslaan roept de POST
+`verwerkEvaluatieAantallen` aan voor het beroep van de voorlichter (jaar =
+`events.year`), in een try/catch zodat de evaluatie nooit faalt. Beheer →
+Evaluaties toont een tegel "beroepen met leerlingenaantal <jaar>" en een knop
+**"Aantallen uit evaluaties opnieuw overnemen"** (POST
+`/admin/evaluaties/aantallen-overnemen`) voor alle beroepen in één keer.
+
+Jaarlijkse cyclus: na de avond staan de aantallen van dit jaar automatisch
+klaar; volgend jaar kiest de indeling daar direct lokalen op. Statistiek van
+een eerdere editie zonder site: bulkpagina met dat jaar. Overzicht-PDF's in
+`docs/` (build-overzicht/infographic) noemen deze functie; `admin.css` kreeg
+`.badge--warn` en een cachebuster `?v=20260917` op de admin-stylesheet.
+
 ## Automatische beroep-indeling (programma) (16-9-2026) — ACHTERHAALD, zie hierboven
 
 Nieuwe generator `maakBeroepIndeling(db, eventId)` in `src/lib/indeling.ts` +

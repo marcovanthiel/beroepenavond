@@ -13,6 +13,7 @@ import { renderError } from '../views/public';
 import { mailConfig, speakerConfirmedMail, sendEmail, emailShell } from '../lib/email';
 import { randomHex } from '../lib/auth';
 import { loadRondes, loadSpeakerPrefs, saveSpeakerPrefs, type RondeRij } from '../lib/tijdvak';
+import { verwerkEvaluatieAantallen } from '../lib/bezoek';
 
 export const procesApp = new Hono<{ Bindings: Env }>();
 
@@ -283,8 +284,9 @@ interface EvalTokenRow { token: string; speaker_id: string; event_id: string; }
 async function getEvalCtx(c: { env: Env }, token: string) {
   const t = (await c.env.DB.prepare('SELECT * FROM speaker_eval_tokens WHERE token = ?').bind(token).first<EvalTokenRow>()) ?? null;
   if (!t) return null;
-  const speaker = await c.env.DB.prepare('SELECT id, full_name FROM speakers WHERE id = ?').bind(t.speaker_id).first<{ id: string; full_name: string }>();
+  const speaker = await c.env.DB.prepare('SELECT id, full_name, beroep_id FROM speakers WHERE id = ?').bind(t.speaker_id).first<{ id: string; full_name: string; beroep_id: number | null }>();
   if (!speaker) return null;
+  const event = await c.env.DB.prepare('SELECT year FROM events WHERE id = ?').bind(t.event_id).first<{ year: number }>();
   const sessies = await c.env.DB.prepare(
     `SELECT s.id, r.round_no, r.start_time, r.end_time, cl.code AS lokaal
      FROM sessions_program s
@@ -294,7 +296,7 @@ async function getEvalCtx(c: { env: Env }, token: string) {
      WHERE sp.id = ? AND s.event_id = ?
      ORDER BY r.round_no`
   ).bind(t.speaker_id, t.event_id).all<{ id: string; round_no: number | null; start_time: string | null; end_time: string | null; lokaal: string | null }>();
-  return { t, speaker, sessies: sessies.results ?? [] };
+  return { t, speaker, jaar: event?.year ?? new Date().getUTCFullYear(), sessies: sessies.results ?? [] };
 }
 
 procesApp.get('/evaluatie', async (c) => {
@@ -312,21 +314,22 @@ procesApp.get('/evaluatie', async (c) => {
     }));
   }
 
-  const bestaand = await c.env.DB.prepare('SELECT counts, questions, remarks, again FROM speaker_evaluations WHERE speaker_id = ? AND event_id = ?')
-    .bind(ctx.t.speaker_id, ctx.t.event_id).first<{ counts: string | null; questions: string | null; remarks: string | null; again: string | null }>();
+  const bestaand = await c.env.DB.prepare('SELECT counts, total_participants, questions, remarks, again FROM speaker_evaluations WHERE speaker_id = ? AND event_id = ?')
+    .bind(ctx.t.speaker_id, ctx.t.event_id).first<{ counts: string | null; total_participants: number | null; questions: string | null; remarks: string | null; again: string | null }>();
   let counts: Record<string, number> = {};
   try { counts = bestaand?.counts ? JSON.parse(bestaand.counts) : {}; } catch { /* leeg */ }
 
   const sessieVelden = ctx.sessies.length
     ? ctx.sessies.map((s) => `
-      <div class="field"><label for="c-${esc(s.id)}">Aantal deelnemers, ronde ${s.round_no ?? '?'}${s.start_time ? ` (${esc(s.start_time)}${s.end_time ? ` tot ${esc(s.end_time)}` : ''})` : ''}${s.lokaal ? `, lokaal ${esc(s.lokaal)}` : ''}</label>
-      <input id="c-${esc(s.id)}" type="number" min="0" max="500" name="count_${esc(s.id)}" value="${counts[s.id] ?? ''}"></div>`).join('')
-    : `<div class="field"><label for="c-los">Hoeveel deelnemers had je in totaal?</label><input id="c-los" type="number" min="0" max="999" name="count_totaal" value=""></div>`;
+      <div class="field"><label for="c-${esc(s.id)}">Hoeveel leerlingen waren er bij je sessie in ronde ${s.round_no ?? '?'}${s.start_time ? ` (${esc(s.start_time)}${s.end_time ? ` tot ${esc(s.end_time)}` : ''})` : ''}${s.lokaal ? `, lokaal ${esc(s.lokaal)}` : ''}? <span class="req" aria-hidden="true">*</span></label>
+      <input id="c-${esc(s.id)}" type="number" min="0" max="500" inputmode="numeric" required name="count_${esc(s.id)}" value="${counts[s.id] ?? ''}"></div>`).join('')
+    : `<div class="field"><label for="c-los">Hoeveel leerlingen waren er in totaal bij je sessie(s)? <span class="req" aria-hidden="true">*</span></label><input id="c-los" type="number" min="0" max="999" inputmode="numeric" required name="count_totaal" value="${bestaand?.total_participants ?? ''}"></div>`;
 
   const again = bestaand?.again ?? '';
   const body = `
     <p class="lede">Beste ${esc(ctx.speaker.full_name)}, bedankt voor vanavond! Vul hieronder in twee minuten je evaluatie in.</p>
     <form class="form card-box" method="post" action="/evaluatie?token=${esc(ctx.t.token)}">
+      <p class="muted">Een schatting is prima. Met het aantal leerlingen kiezen we volgend jaar een lokaal dat bij de belangstelling voor jouw beroep past.</p>
       ${sessieVelden}
       <div class="field"><label for="f-questions">Wat voor vragen kreeg je van de leerlingen?</label>
         <textarea id="f-questions" name="questions" rows="3">${esc(bestaand?.questions ?? '')}</textarea></div>
@@ -370,5 +373,11 @@ procesApp.post('/evaluatie', async (c) => {
        counts=excluded.counts, total_participants=excluded.total_participants,
        questions=excluded.questions, remarks=excluded.remarks, again=excluded.again`
   ).bind(ctx.t.speaker_id, ctx.t.event_id, JSON.stringify(counts), totaal, str(b.questions).slice(0, 4000) || null, str(b.remarks).slice(0, 4000) || null, again).run();
+  // Het getelde aantal meteen als leerlingenaantal van dit beroep voor deze
+  // editie vastleggen (bron 'evaluatie'), zodat de indeling van volgend jaar
+  // er direct mee kan rekenen. Mag nooit de evaluatie zelf laten falen.
+  if (ctx.speaker.beroep_id != null) {
+    try { await verwerkEvaluatieAantallen(c.env.DB, ctx.t.event_id, ctx.jaar, ctx.speaker.beroep_id); } catch (e) { console.error('beroep_bezoek uit evaluatie mislukt', e); }
+  }
   return c.redirect(`/evaluatie?token=${ctx.t.token}&klaar=1`, 302);
 });

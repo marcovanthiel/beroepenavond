@@ -113,19 +113,22 @@ function previewBody(v: IndelingVoorstel, huidigAantal: number): string {
     .sort((a, b) => a[0] - b[0])
     .map(([no, lijst]) => {
       const tijd = lijst[0]?.rondeTijd ? ` · ${esc(lijst[0].rondeTijd)}` : '';
+      const verwachtRonde = lijst.reduce((n, s) => n + (s.verwacht ?? 0), 0);
+      const bekendRonde = lijst.filter((s) => s.verwacht != null).length;
       const rijen = lijst
         .map(
           (s) => `<tr>
-            <td><strong>${esc(s.lokaalCode)}</strong></td>
+            <td><strong>${esc(s.lokaalCode)}</strong>${s.capaciteit != null ? ` <span class="muted">(${s.capaciteit})</span>` : ''}</td>
             <td><span class="swatch" style="background:${esc(s.kleur ?? '#ccc')}"></span>${esc(s.naam)}</td>
             <td>${esc(s.sprekerNamen.join(', '))}</td>
+            <td style="text-align:right">${s.verwacht == null ? '<span class="muted" title="Geen leerlingenaantal bekend">-</span>' : `<strong>${s.verwacht}</strong> <span class="muted">(${s.verwachtJaar})</span>${s.krap ? ' <span class="badge badge--warn" title="Verwacht aantal is groter dan de capaciteit van dit lokaal">krap</span>' : ''}`}</td>
             <td>${s.voorkeurGevolgd === null ? '<span class="muted">-</span>' : s.voorkeurGevolgd ? '<span class="badge badge--on">voorkeur</span>' : '<span class="badge badge--off">afwijking</span>'}</td>
           </tr>`
         )
         .join('');
-      return `<h3 style="margin:18px 0 6px">Ronde ${no}${tijd} <span class="muted">(${lijst.length} sessies)</span></h3>
+      return `<h3 style="margin:18px 0 6px">Ronde ${no}${tijd} <span class="muted">(${lijst.length} sessies${bekendRonde ? `, ${verwachtRonde} verwachte leerlingen bij ${bekendRonde} bekende beroepen` : ''})</span></h3>
         <div class="table-wrap"><table class="data">
-          <thead><tr><th>Lokaal</th><th>Beroep</th><th>Voorlichters</th><th>Tijdvak-voorkeur</th></tr></thead>
+          <thead><tr><th>Lokaal (cap.)</th><th>Beroep</th><th>Voorlichters</th><th style="text-align:right">Verwacht</th><th>Tijdvak-voorkeur</th></tr></thead>
           <tbody>${rijen}</tbody></table></div>`;
     })
     .join('');
@@ -133,7 +136,7 @@ function previewBody(v: IndelingVoorstel, huidigAantal: number): string {
   const onplaatsbaar = v.onplaatsbaar.length
     ? `<div class="flash flash--warn" role="alert" style="display:block"><strong>${v.onplaatsbaar.length} beroep(en) kunnen niet automatisch geplaatst worden</strong>
         <ul style="margin:6px 0 0;padding-left:20px">${v.onplaatsbaar
-          .map((o) => `<li><strong>${esc(o.naam)}</strong> — ${esc(o.reden)}${o.sprekerNamen.length ? ` (${esc(o.sprekerNamen.join(', '))})` : ''}</li>`)
+          .map((o) => `<li><strong>${esc(o.naam)}</strong>: ${esc(o.reden)}${o.sprekerNamen.length ? ` (${esc(o.sprekerNamen.join(', '))})` : ''}</li>`)
           .join('')}</ul>
         <p style="margin:6px 0 0">Los dit op door tijdvakken/beschikbaarheid aan te passen of deze beroepen handmatig in te delen.</p></div>`
     : '';
@@ -146,6 +149,11 @@ function previewBody(v: IndelingVoorstel, huidigAantal: number): string {
         <strong>${v.stats.sessies}</strong> sessies · <strong>${v.stats.sprekers}</strong> voorlichters · ${v.stats.rondes} rondes · ${v.stats.lokalen} lokalen
         ${v.stats.voorkeurGemist ? ` · <strong>${v.stats.voorkeurGemist}</strong> keer voorkeur niet gehaald` : ''}
         ${v.onplaatsbaar.length ? ` · <strong>${v.onplaatsbaar.length}</strong> onplaatsbaar` : ''}
+      </p>
+      <p class="muted" style="margin-top:6px">
+        Leerlingenaantal bekend bij <strong>${v.stats.metVerwachting}</strong> van ${v.stats.beroepenMetVoorlichter} beroepen; die kregen een lokaal op maat (grootste beroep, grootste passend lokaal) en zijn over de tijdvakken gespreid.
+        ${v.stats.krap ? ` <strong>${v.stats.krap}</strong> sessie(s) zijn <span class="badge badge--warn">krap</span>: het verwachte aantal is groter dan het grootste vrije lokaal. Overweeg een groter lokaal aan te zetten bij <a href="/admin/classrooms">Lokalen</a> of de sessie handmatig te verplaatsen.` : ''}
+        ${v.stats.metVerwachting < v.stats.beroepenMetVoorlichter ? ` Aantallen invullen kan bij <a href="/admin/beroepen/aantallen">Leerlingenaantallen</a>.` : ''}
       </p>
       <div class="form-actions" style="margin-top:12px">
         <form method="post" action="/admin/sessions/indeling/toepassen" class="inline-form">
@@ -199,7 +207,7 @@ sessionsApp.get('/', async (c) => {
     ${alert.html}
     <div class="card">
       <h2 style="margin-top:0">Automatische sessie-indeling</h2>
-      <p class="muted">Maakt van elk beroep met een voorlichter één sessie en verdeelt die over de tijdvakken en lokalen. Voorlichters komen alleen in een tijdvak waarin ze allemaal kunnen; de opgegeven voorkeuren wegen mee, lokalen worden per vakgebied geclusterd. Je krijgt eerst een <strong>voorstel te zien</strong>; pas na jouw akkoord wordt de bestaande indeling vervangen.</p>
+      <p class="muted">Maakt van elk beroep met een voorlichter één sessie en verdeelt die over de tijdvakken en lokalen. Voorlichters komen alleen in een tijdvak waarin ze allemaal kunnen; de opgegeven voorkeuren wegen mee. Beroepen met een bekend <a href="/admin/beroepen/aantallen">leerlingenaantal</a> (vorig jaar of uit de evaluaties) krijgen een lokaal dat groot genoeg is en worden over de tijdvakken gespreid; de overige lokalen worden per vakgebied geclusterd. Je krijgt eerst een <strong>voorstel te zien</strong>; pas na jouw akkoord wordt de bestaande indeling vervangen.</p>
       <div class="bulk-tools">
         <a class="btn btn--primary ${rondes === 0 ? 'is-disabled' : ''}" href="${rondes === 0 ? '#' : '/admin/sessions/indeling?modus=proef'}" ${rondes === 0 ? 'aria-disabled="true" tabindex="-1"' : ''}>Proefindeling bekijken</a>
         <a class="btn btn--ghost ${rondes === 0 ? 'is-disabled' : ''}" href="${rondes === 0 ? '#' : '/admin/sessions/indeling?modus=definitief'}" ${rondes === 0 ? 'aria-disabled="true" tabindex="-1"' : ''}>Definitieve indeling bekijken</a>

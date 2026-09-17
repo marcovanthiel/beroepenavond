@@ -10,6 +10,7 @@ import { str, redirectOk, redirectErr } from '../../lib/forms';
 import { getSettings, getActiveEvent } from '../../lib/db';
 import { queueMail, volgende930, getTemplate } from '../../lib/outbox';
 import { maakIndeling, studentRooster } from '../../lib/indeling';
+import { verwerkEvaluatieAantallen } from '../../lib/bezoek';
 
 const nu = () => Math.floor(Date.now() / 1000);
 const dat = (unix: number | null | undefined) =>
@@ -331,9 +332,10 @@ async function evalData(db: AdminEnv['Bindings']['DB'], eventId: string): Promis
 evaluatiesApp.get('/', async (c) => {
   const event = await getActiveEvent(c.env.DB);
   if (!event) return renderAdminLayout(c, { title: 'Evaluaties', activeKey: 'evaluaties', body: pageHeader('Evaluaties') + '<p>Geen actieve editie.</p>' });
-  const [evals, gemaild] = await Promise.all([
+  const [evals, gemaild, bezoekQ] = await Promise.all([
     evalData(c.env.DB, event.id),
     c.env.DB.prepare('SELECT COUNT(*) AS n FROM speaker_eval_tokens WHERE event_id = ?').bind(event.id).first<{ n: number }>(),
+    c.env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN bron = 'evaluatie' THEN 1 ELSE 0 END) AS uit_eval FROM beroep_bezoek WHERE jaar = ?").bind(event.year).first<{ n: number; uit_eval: number | null }>(),
   ]);
   const totDeelnemers = evals.reduce((a, e) => a + (e.total_participants ?? 0), 0);
   const weer = { ja: 0, misschien: 0, nee: 0 } as Record<string, number>;
@@ -358,6 +360,15 @@ evaluatiesApp.get('/', async (c) => {
       <div class="card"><strong style="font-size:1.6rem">${totDeelnemers}</strong><br><span class="muted">deelnemers geteld</span></div>
       <div class="card"><strong style="font-size:1.6rem">${weer.ja}</strong><br><span class="muted">doen volgend jaar weer mee</span></div>
       <div class="card"><strong style="font-size:1.6rem">${weer.misschien} / ${weer.nee}</strong><br><span class="muted">misschien / nee</span></div>
+      <div class="card"><strong style="font-size:1.6rem">${bezoekQ?.n ?? 0}</strong><br><span class="muted">beroepen met leerlingenaantal ${event.year}</span></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Leerlingenaantallen voor volgend jaar</h2>
+      <p class="muted">Elke ingevulde evaluatie zet het getelde aantal leerlingen automatisch bij het beroep (jaar ${event.year}, bron "evaluaties"); de sessie-indeling van de volgende editie gebruikt dat om lokalen op maat te kiezen. Staan er evaluaties die nog niet zijn overgenomen (bijvoorbeeld na een handmatige correctie in de database of een gewijzigde beroepskoppeling), draai het dan hier opnieuw. Handmatig ingevulde aantallen blijven staan.
+        Nu overgenomen uit evaluaties: <strong>${bezoekQ?.uit_eval ?? 0}</strong> beroepen. Bekijken of aanpassen: <a href="/admin/beroepen/aantallen?jaar=${event.year}">Leerlingenaantallen ${event.year}</a>.</p>
+      <form method="post" action="/admin/evaluaties/aantallen-overnemen" class="inline-form">
+        <button type="submit" class="btn btn--ghost" ${evals.length ? '' : 'disabled'}>Aantallen uit evaluaties opnieuw overnemen</button>
+      </form>
     </div>
     ${filterBar({ targetId: 'eval-tabel', placeholder: 'Filter op naam, beroep of categorie…', total: evals.length, noun: 'evaluaties' })}
     <div class="table-wrap"><table class="data" id="eval-tabel">
@@ -366,6 +377,14 @@ evaluatiesApp.get('/', async (c) => {
     </table></div>
     <p class="muted" style="margin-top:12px;font-size:.85rem">Flexibel rapporteren: filter hierboven en gebruik de CSV voor eigen draaitabellen (alle velden, incl. aantallen per sessie en volledige teksten).</p>`;
   return renderAdminLayout(c, { title: 'Evaluaties', activeKey: 'evaluaties', body, flash: flashFromQuery(c) });
+});
+
+evaluatiesApp.post('/aantallen-overnemen', async (c) => {
+  const event = await getActiveEvent(c.env.DB);
+  if (!event) return redirectErr(c, '/admin/evaluaties', 'Geen actieve editie.');
+  const n = await verwerkEvaluatieAantallen(c.env.DB, event.id, event.year);
+  await logAudit(c, 'update', 'beroep_bezoek', `evaluaties:${event.year}`, { beroepen: n });
+  return redirectOk(c, '/admin/evaluaties', n ? `Leerlingenaantallen ${event.year} overgenomen voor ${n} beroepen.` : 'Geen evaluaties met aantallen gevonden.');
 });
 
 evaluatiesApp.get('/export.csv', async (c) => {
