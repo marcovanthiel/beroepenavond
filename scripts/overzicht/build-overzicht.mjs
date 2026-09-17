@@ -68,7 +68,7 @@ export const secties = [
       ['🎤', 'Voorlichters', 'Toevoegen, foto, aan een beroep koppelen en bevestigen (ook in bulk).'],
       ['🚪', 'Lokalen', 'Aanvinklijst wel/niet gebruikt en smartboard; sorteren en filteren op elke kolom.'],
       ['✏️', 'Plattegronden', 'Plattegrond-editor om lokalen op de kaart te tekenen.'],
-      ['🧩', 'Sessies + auto-indeling', 'Verdeel alle beroepen met één klik over de rondes en lokalen.'],
+      ['🧩', 'Automatische indeling', 'Sprekers en lokalen worden met één klik automatisch over de rondes ingedeeld, volledig binnen de website.'],
       ['📥', 'Communicatie', 'Formulieren, inkomende e-mail, uitgaande mail met sjablonen en planning, uitnodigingen, nieuwsbrief, evaluaties.'],
       ['🖼️', 'Systeem', 'Mediatheek, gebruikers en rollen, logboek, versiebeheer en eigen account.'],
     ],
