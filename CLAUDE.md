@@ -454,6 +454,15 @@ DB-wijziging uitrollen:
 npx wrangler d1 execute beroepenavond --remote --file=schema/00X_xxx.sql
 ```
 
+Lokale D1 herbouwen (bij schema-drift tussen de machines, 17-9-2026 liep de
+MacBook negen migraties achter): `rm -rf .wrangler/state/v3/d1`, daarna alle
+`schema/*.sql` op volgorde met `CI=true` (niet-interactief). Let op:
+`006_speakers.sql` faalt bij een verse DB omdat `speakers.category_id` pas in
+008 komt; draai 006 daarna nog een keer (en 009 t/m 016, 018, 022 opnieuw:
+idempotent). Voor ingelogde tests: user + `sessions`-rij inserten en de cookie
+`ba_session=<id>.<base64url HMAC-SHA256(SESSION_SECRET, id)>` zelf munten
+(secret uit `.dev.vars`), plus drie `rounds` voor `ev_2026`.
+
 Remote D1 vanaf de terminal (wrangler is non-interactief en eist een
 token in de omgeving): Mac mini → `export CLOUDFLARE_API_TOKEN=$(cat
 ~/.cf-token)`; MacBook → `source ~/Developer/dandanshop/.mailconfig.env`
