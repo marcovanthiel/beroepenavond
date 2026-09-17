@@ -1225,6 +1225,18 @@ ook zonder JS. `admin.js` voegt accordeon-gedrag toe: open je een andere groep,
 dan sluiten de overige. De eerdere localStorage-persistentie is bewust
 verwijderd (die overschreef dit gedrag).
 
+## A4-PDF "Overzicht functies" (17-9-2026)
+
+Grafisch A4-overzicht (3 pagina's) in de Kleurblok-huisstijl met de functies van
+de website, het beheerpaneel en het werk voor de relatiebeheerder
+(accountmanager). Generator `scripts/overzicht/build-overzicht.mjs`: bouwt HTML
+(Archivo Black self-hosted als base64, de zes categoriekleuren) en rendert met
+**headless Google Chrome** (`--headless=new --print-to-pdf`, geen Playwright
+nodig). Uitvoer: `docs/overzicht-functies-beroepenavond.pdf`. Inhoud aanpassen =
+de `secties`-array in het script bewerken en opnieuw draaien
+(`node scripts/overzicht/build-overzicht.mjs`). Niet publiek gehost (interne
+overdracht); zet het in `public/assets/` als het wel op de site moet.
+
 ## Sprekende beroep-URLs / slugs (17-9-2026)
 
 De beroep-detailpagina's gebruiken nu een **slug** in plaats van het nummer:
